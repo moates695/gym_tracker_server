@@ -78,6 +78,7 @@ export const verify = async (req: Request, res: Response) => {
     await pool.query(`update users
 set is_verified = true
 where email = $1;`, [decoded!.email]);
+    
   } catch (error) {
     res.status(500).send('User data not updated.')
   }

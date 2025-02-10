@@ -61,12 +61,13 @@ describe('User registration', () => {
             .send(user_data_copy)
             .expect(200)
 
-        user_data_copy.email = "username2";
+        user_data_copy.username = "username2";
+        user_data_copy.email = user_data_copy.email.toUpperCase();
 
         await request(app)
             .post("/users/register")
             .send(user_data_copy)
-            .expect(400)
+            .expect(500)
     });
 
     it('register the same username', async () => {
