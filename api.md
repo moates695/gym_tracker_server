@@ -6,20 +6,21 @@
 
 ```javascript
 req.json = {
-    email, // format checked on FE
+    email,
     password, // already hashed
-    username, // unique case in-sensitive db constraint
-    first_name, 
-    last_name, 
+    username, // unique, case insensitive
+    first_name,
+    last_name,
     gender, // male, female, other
-    height, // cm: 0 < height < 300
-    weight, // kg: 0 < weight < 500
+    height: number, // cm: 0 < height < 300
+    weight: number, // kg: 0 < weight < 500
     goal_status // bulking, cutting, maintaining
 }
+
+res = {}
 ```
 
-```javascript
-res = {
-    // todo
-}
-```
+Assumptions, 
+- `[email, username, first_name, last_name]` are `length > 0`
+- `password` is already hashed by `bycrypt`
+- `gender` & `goal_status` are values of db enum

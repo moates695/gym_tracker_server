@@ -42,19 +42,29 @@ describe('User registration', () => {
             .expect(200)
     })
 
+    it('register with invalid email', async () => {
+        const user_data_copy =  {...user_data};
+        user_data_copy.email = "invalid"
+
+        await request(app)
+            .post("/users/register")
+            .send(user_data)
+            .expect(200)
+    })
+
     it('register the same email', async () => {
         const user_data_copy =  {...user_data};
         
         await request(app)
             .post("/users/register")
-            .send(user_data)
+            .send(user_data_copy)
             .expect(200)
 
         user_data_copy.email = "username2";
 
         await request(app)
             .post("/users/register")
-            .send(user_data)
+            .send(user_data_copy)
             .expect(500)
     });
 
@@ -63,7 +73,7 @@ describe('User registration', () => {
         
         await request(app)
             .post("/users/register")
-            .send(user_data)
+            .send(user_data_copy)
             .expect(200)
 
         user_data_copy.email = "test2@gmail.com"
@@ -71,9 +81,19 @@ describe('User registration', () => {
 
         await request(app)
             .post("/users/register")
-            .send(user_data)
+            .send(user_data_copy)
             .expect(500)
     });
+
+    it('register with invalid gender', async () => {
+        const user_data_copy = {...user_data};
+        user_data_copy.gender = "none";
+
+        await request(app)
+            .post("/users/register")
+            .send(user_data_copy)
+            .expect(500);
+    })
 
     it('register with invalid gender', async () => {
         const user_data_copy = {...user_data};

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../db';
+import validator from "email-validator"
 
 export const register = async (req: Request, res: Response) => {
   const {
@@ -13,13 +14,14 @@ export const register = async (req: Request, res: Response) => {
     weight,
     goal_status 
   } = req.body;
-  
-  if (height <= 0 || height >= 300) {
+
+  if (!validator.validate(email)) {
+    res.status(500).send('invalid email');
+    return;
+  } else if (height <= 0 || height >= 300) {
     res.status(500).send('invalid height');
     return;
-  }
-  
-  if (weight <= 0 || weight >= 500) {
+  } else if (weight <= 0 || weight >= 500) {
     res.status(500).send('invalid weight');
     return;
   }
