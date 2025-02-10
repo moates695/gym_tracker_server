@@ -39,12 +39,12 @@ values
 
     if (send_email) {
       const token = jwt.sign({ email }, process.env.SECRET_KEY!, { expiresIn: '15m' });
-      const verificationLink = `${process.env.SERVER_ADDRESS}:${process.env.SERVER_PORT}/users/verify?token=${token}`;
+      const link = `${process.env.SERVER_ADDRESS}:${process.env.SERVER_PORT}/users/verify?token=${token}`;
 
       const mailOptions = {
         to: email,
         subject: 'Email Verification: Gym Tracker',
-        text: `Please verify your email by clicking on the link: ${verificationLink}`,
+        text: `Please verify your email by clicking on the link: ${link}`,
       };
 
       transporter.sendMail(mailOptions, (error, info) => {
