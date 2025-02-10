@@ -77,7 +77,7 @@ describe('User registration', () => {
             .expect(200)
 
         user_data_copy.email = "test2@gmail.com"
-        user_data_copy.username = user_data_copy.email.toUpperCase();
+        user_data_copy.username = user_data_copy.username.toUpperCase();
 
         await request(app)
             .post("/users/register")
