@@ -32,7 +32,8 @@ describe('User registration', () => {
         gender: "male", 
         height: 180, 
         weight: 90, 
-        goal_status: "bulking"
+        goal_status: "bulking",
+        send_email: false
     }
 
     it('register a new user', async () => {
@@ -65,7 +66,7 @@ describe('User registration', () => {
         await request(app)
             .post("/users/register")
             .send(user_data_copy)
-            .expect(500)
+            .expect(400)
     });
 
     it('register the same username', async () => {
@@ -95,16 +96,6 @@ describe('User registration', () => {
             .expect(500);
     })
 
-    it('register with invalid gender', async () => {
-        const user_data_copy = {...user_data};
-        user_data_copy.gender = "none";
-
-        await request(app)
-            .post("/users/register")
-            .send(user_data_copy)
-            .expect(500);
-    })
-
     it('register with invalid height', async () => {
         const user_data_copy = {...user_data};
         user_data_copy.height = 0;
@@ -112,7 +103,7 @@ describe('User registration', () => {
         await request(app)
             .post("/users/register")
             .send(user_data_copy)
-            .expect(500);
+            .expect(400);
 
 
         user_data_copy.height = 300;
@@ -120,7 +111,7 @@ describe('User registration', () => {
         await request(app)
             .post("/users/register")
             .send(user_data_copy)
-            .expect(500);
+            .expect(400);
     })
 
     it('register with invalid weight', async () => {
@@ -130,9 +121,19 @@ describe('User registration', () => {
         await request(app)
             .post("/users/register")
             .send(user_data_copy)
-            .expect(500);
+            .expect(400);
 
         user_data_copy.weight = 500;
+
+        await request(app)
+            .post("/users/register")
+            .send(user_data_copy)
+            .expect(400);
+    })
+
+    it('register with invalid goal_status', async () => {
+        const user_data_copy = {...user_data};
+        user_data_copy.gender = "none";
 
         await request(app)
             .post("/users/register")
