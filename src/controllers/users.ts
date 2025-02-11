@@ -50,17 +50,20 @@ values
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.log(error);
-          return res.status(500).send('Error sending email.');
+          res.status(500).send('Error sending email.');
+          return;
         }
         console.log('Email sent: ' + info.response);
       });
     }
 
     res.status(200).send();
-    
+    return;
+
   } catch (error) {
     console.log(error)
     res.status(500).send('error registering user');
+    return;
   }
 };
 
@@ -72,6 +75,26 @@ export const verify = async (req: Request, res: Response) => {
     decoded = jwt.verify(token, process.env.SECRET_KEY!) as { email: string };
   } catch (error) {
     res.status(400).send('Invalid or expired token.');
+    return;
+  }
+    
+  try {
+    const response1 = await pool.query(`select exists (
+select 1
+from users
+where email = $1
+and is_verified = false
+);`, [decoded.email]);
+
+    if (!response1.rows[0].exists) {
+      res.status(400).send("Email not found.");
+      return;
+    }
+
+  } catch (error) {
+    console.log(error)
+    res.status(500).send();
+    return;
   }
 
   try {
@@ -80,9 +103,11 @@ set is_verified = true
 where email = $1;`, [decoded!.email]);
     
   } catch (error) {
-    res.status(500).send('User data not updated.')
+    res.status(500).send('User data not updated.');
+    return;
   }
 
   res.send(`Email ${decoded!.email} verified successfully!`);
+  return;
 
 };

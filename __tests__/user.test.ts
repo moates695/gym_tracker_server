@@ -37,19 +37,6 @@ const user_data = {
 }
 
 describe('User registration', () => {
-    // const user_data = {
-    //     email: "test@gmail.com", 
-    //     password: "password", 
-    //     username: "username",
-    //     first_name: "first1", 
-    //     last_name: "last1", 
-    //     gender: "male", 
-    //     height: 180, 
-    //     weight: 90, 
-    //     goal_status: "bulking",
-    //     send_email: false
-    // }
-
   it('register a new user', async () => {
     await request(app)
       .post("/users/register")
@@ -189,4 +176,66 @@ where email = $1;`, [email]);
     expect(response2.rows[0].is_verified)
 
   })
+
+  it('expired verification', async () => {
+    await request(app)
+      .post("/users/register")
+      .send(user_data)
+      .expect(200);
+
+    const email = user_data.email;
+
+    const response1 = await pool.query(`select is_verified
+from users
+where email = $1;`, [email]);
+      
+    expect(!response1.rows[0].is_verified)
+
+    const token = jwt.sign({ email }, process.env.SECRET_KEY!, { expiresIn: '0m' });
+    await request(app)
+      .get("/users/verify")
+      .query({
+        token: token
+      })
+      .expect(400)
+
+    const response2 = await pool.query(`select is_verified
+from users
+where email = $1;`, [email]);
+
+    expect(!response2.rows[0].is_verified)
+
+  })
+
+  it("incorrect token", async () => {
+    await request(app)
+      .post("/users/register")
+      .send(user_data)
+      .expect(200)
+
+    const email = user_data.email;
+    
+    const response1 = await pool.query(`select is_verified
+from users
+where email = $1;`, [email]);
+            
+    expect(!response1.rows[0].is_verified);
+    
+    const token = jwt.sign({ email: "not-email" }, process.env.SECRET_KEY!, { expiresIn: '1m' });
+    await request(app)
+      .get("/users/verify")
+      .query({
+        token: token
+      })
+      .expect(400)
+
+    const response2 = await pool.query(`select is_verified
+from users
+where email = $1;`, [email]);
+
+    expect(!response2.rows[0].is_verified)
+
+
+  })
+
 })
