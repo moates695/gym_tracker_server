@@ -4,7 +4,10 @@ import pool from '../src/db'
 import jwt from 'jsonwebtoken';
 
 const clear_users = async () => {
-  await pool.query("delete from users");
+  await pool.query(`delete
+    from users
+    where email ilike '%@jest.com'`
+  );
 };
 
 beforeEach(async () => {
@@ -24,9 +27,9 @@ describe('Express API Tests', () => {
 });
 
 const user_data = {
-  email: "test@gmail.com", 
+  email: "test@jest.com", 
   password: "password", 
-  username: "username",
+  username: "jest",
   first_name: "first1", 
   last_name: "last1", 
   gender: "male", 
@@ -62,7 +65,7 @@ describe('User registration', () => {
       .send(user_data_copy)
       .expect(200)
 
-    user_data_copy.username = "username2";
+    user_data_copy.username = "jest2";
     user_data_copy.email = user_data_copy.email.toUpperCase();
 
     await request(app)
@@ -79,7 +82,7 @@ describe('User registration', () => {
       .send(user_data_copy)
       .expect(200)
 
-    user_data_copy.email = "test2@gmail.com"
+    user_data_copy.email = "test2@jest.com"
     user_data_copy.username = user_data_copy.username.toUpperCase();
 
     await request(app)
@@ -156,8 +159,8 @@ describe('User verification', () => {
 
 
     const response1 = await pool.query(`select is_verified
-from users
-where email = $1;`, [email]);
+      from users
+      where email = $1;`, [email]);
       
     expect(!response1.rows[0].is_verified)
 
@@ -170,8 +173,8 @@ where email = $1;`, [email]);
       .expect(200)
 
     const response2 = await pool.query(`select is_verified
-from users
-where email = $1;`, [email]);
+      from users
+      where email = $1;`, [email]);
 
     expect(response2.rows[0].is_verified)
 
@@ -186,8 +189,8 @@ where email = $1;`, [email]);
     const email = user_data.email;
 
     const response1 = await pool.query(`select is_verified
-from users
-where email = $1;`, [email]);
+      from users
+      where email = $1;`, [email]);
       
     expect(!response1.rows[0].is_verified)
 
@@ -200,8 +203,8 @@ where email = $1;`, [email]);
       .expect(400)
 
     const response2 = await pool.query(`select is_verified
-from users
-where email = $1;`, [email]);
+      from users
+      where email = $1;`, [email]);
 
     expect(!response2.rows[0].is_verified)
 
@@ -216,8 +219,8 @@ where email = $1;`, [email]);
     const email = user_data.email;
     
     const response1 = await pool.query(`select is_verified
-from users
-where email = $1;`, [email]);
+      from users
+      where email = $1;`, [email]);
             
     expect(!response1.rows[0].is_verified);
     
@@ -230,11 +233,10 @@ where email = $1;`, [email]);
       .expect(400)
 
     const response2 = await pool.query(`select is_verified
-from users
-where email = $1;`, [email]);
+      from users
+      where email = $1;`, [email]);
 
     expect(!response2.rows[0].is_verified)
-
 
   })
 

@@ -3,6 +3,7 @@ import pool from '../db';
 import validator from 'email-validator';
 import { transporter } from '../server';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 export const register = async (req: Request, res: Response) => {
   const {
@@ -29,12 +30,14 @@ export const register = async (req: Request, res: Response) => {
     return;
   }
 
+  const hashed_password = await bcrypt.hash(password, 10);
+
   try {
     await pool.query(`insert into users
 (email, password, username, first_name, last_name, gender, height, weight, goal_status)
 values
 ($1, $2, $3, $4, $5, $6, $7, $8, $9);`,
-      [email, password, username, first_name, last_name, gender, height, weight, goal_status]
+      [email, hashed_password, username, first_name, last_name, gender, height, weight, goal_status]
     );
 
     if (send_email) {

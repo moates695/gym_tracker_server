@@ -7,7 +7,7 @@
 ```javascript
 req.json = {
     email,
-    password, // already hashed
+    password,
     username, // unique, case insensitive
     first_name,
     last_name,
