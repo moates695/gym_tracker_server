@@ -1,7 +1,7 @@
 import app from './server';
 import pool from './db';
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.SERVER_PORT;
 
 const database_connect = async () => {
   try {
