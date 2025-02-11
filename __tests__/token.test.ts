@@ -34,7 +34,7 @@ const user_data = {
 }
 
 describe("Authorisation tests", () => {
-  it("Correct flow", async () => {
+  it("valid token request", async () => {
     await request(app)
       .post("/users/register")
       .send(user_data)
@@ -55,4 +55,32 @@ describe("Authorisation tests", () => {
     const decoded = jwt.verify(response1.body.token, process.env.SECRET_KEY!) as { email: string };
     expect(decoded.email === user_data.email);
   })
+
+  it("incorrect verified user info", async () => {
+    await request(app)
+      .post("/users/register")
+      .send(user_data)
+      .expect(200)
+    
+    await pool.query(`update users
+      set is_verified = true
+      where email = $1`, [user_data.email])
+
+    await request(app)
+      .get("/token/generate")
+      .send({
+        email: "none@jest.com",
+        password: user_data.password
+      })
+      .expect(400)
+
+    await request(app)
+      .get("/token/generate")
+      .send({
+        email: user_data.email,
+        password: "invalid"
+      })
+      .expect(400)
+  })
+
 })

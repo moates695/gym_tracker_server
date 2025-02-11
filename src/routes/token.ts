@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { generate } from "../controllers/auth";
+import { generate } from "../controllers/token";
 
 const router = Router();
 

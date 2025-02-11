@@ -16,6 +16,11 @@ export const generate = async (req: Request, res: Response) => {
       where email = $1`, [email]
     );
 
+    if (response1.rows.length === 0) {
+      res.status(400).send();
+      return;
+    }
+
     hashed_password = response1.rows[0].password;
 
   } catch (error) {

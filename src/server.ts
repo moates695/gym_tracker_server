@@ -1,6 +1,6 @@
 import express from "express";
 import usersRoutes from "./routes/users"
-import authRoutes from "./routes/auth"
+import tokenRoutes from "./routes/token"
 import nodemailer from 'nodemailer';
 
 const app = express();
@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 app.use("/users", usersRoutes);
-app.use("/token", authRoutes);
+app.use("/token", tokenRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
