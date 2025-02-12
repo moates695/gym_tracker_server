@@ -30,6 +30,24 @@ export const register = async (req: Request, res: Response) => {
     return;
   }
 
+  try {
+    const response1 = await pool.query(`select exists (
+        select 1
+        from users
+        where email ilike $1
+      );`,
+      [email, username]
+    );
+    
+    if (response1.rows[0].exists) {
+      res.status(400).send('duplicate user data')
+    }
+
+  } catch (error) {
+    res.status(400).send('error checking existing users');
+    return;
+  }
+
   const hashed_password = await bcrypt.hash(password, 10);
 
   try {
@@ -114,3 +132,26 @@ where email = $1;`, [decoded!.email]);
   return;
 
 };
+
+export const email_in_use = async (req: Request, res: Response) => {
+  const { email } = req.params;
+  try {
+    return res.send({
+      "in_use": await is_email_in_use(email)
+    })
+  } catch (error) {
+    res.status(500).send("error getting existing emails");
+  } 
+};
+
+const is_email_in_use = async (email: string): Promise<boolean> => {
+  const response1 = await pool.query(`
+    select exists (
+      select 1
+      from users
+      where email ilike $1
+    );`, [email]
+  );
+  
+  return response1.rows[0].exists;
+}
