@@ -19,9 +19,9 @@ afterEach(async () => {
 });
 
 const user_data = {
-  email: "test@jest.com", 
-  password: "password", 
-  username: "jest",
+  email: "test22@jest.com", 
+  password: "Password1!", 
+  username: "jest22",
   first_name: "first1", 
   last_name: "last1", 
   gender: "male", 
@@ -42,16 +42,17 @@ describe("Authorisation tests", () => {
       set is_verified = true
       where email = $1`, [user_data.email])
 
-    const response1 = await request(app)
+    await request(app)
       .get("/token/generate")
       .send({
         email: user_data.email,
         password: user_data.password
       })
-      .expect(200)
-    
-    const decoded = jwt.verify(response1.body.token, process.env.SECRET_KEY!) as { email: string };
-    expect(decoded.email === user_data.email);
+      .expect(res => {
+        expect(res.status).toBe(200)
+        const decoded = jwt.verify(res.body.token, process.env.SECRET_KEY!) as { email: string };
+        expect(decoded.email).toBe(user_data.email)
+      })
   })
 
   it("incorrect verified user info", async () => {
@@ -70,7 +71,10 @@ describe("Authorisation tests", () => {
         email: "none@jest.com",
         password: user_data.password
       })
-      .expect(400)
+      .expect(res => {
+        expect(res.status).toBe(400)
+        expect(res.text).toBe("email does not exist")
+      })
 
     await request(app)
       .get("/token/generate")
@@ -78,7 +82,10 @@ describe("Authorisation tests", () => {
         email: user_data.email,
         password: "invalid"
       })
-      .expect(400)
+      .expect(res => {
+        expect(res.status).toBe(400)
+        expect(res.text).toBe("password is invalid")
+      })
   })
 
 })

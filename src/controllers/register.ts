@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../db';
-import isEmail from 'validator/lib/isEmail';
+// import isEmail from 'validator/lib/isEmail';
+import validator from 'validator';
 import { transporter } from '../server';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
@@ -26,7 +27,7 @@ export const register = async (req: Request, res: Response) => {
 
   const send_email = req.body["send_email"] ? req.body["send_email"] : false;
 
-  if (!isEmail(req.body["email"])) {
+  if (!validator.isEmail(req.body["email"])) {
     res.status(400).send('invalid email');
     return;
   } else if (req.body["height"] <= 0 || req.body["height"] >= 300) {
@@ -43,12 +44,27 @@ export const register = async (req: Request, res: Response) => {
     return;
   }
 
-  const is_password_length = req.body["password"].length >= 8 && req.body["password"].length <= 36;
-  const is_password_complex = /[A-Z]/.test(req.body["password"]) && /[^a-zA-Z0-9]/.test(req.body["password"]);
-  if (!is_password_length || !is_password_complex) {
+  if (
+    !validator.isLength(req.body["password"], { min: 8, max: 36 }) ||
+    !/[A-Z]/.test(req.body["password"]) ||
+    !/[^a-zA-Z0-9]/.test(req.body["password"])
+  ) {
     res.status(400).send('password does not meet complexity requirements');
     return;
   }
+
+  // const passwordSchema = z.string()
+  //   .min(8, "Password must be at least 8 characters")
+  //   .max(37, "Password must not exceed 36 characters")
+  //   .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  //   .regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character");
+
+  // if (passwordSchema.safeParse(req.body["password"]).success) {
+  //   res.status(400).send('password does not meet complexity requirements');
+  //   return;
+  // }
+
+
 
   if (await is_email_in_use(req.body["email"])) {
     res.status(400).send('email already in use');

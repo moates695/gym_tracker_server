@@ -89,6 +89,56 @@ describe('User registration', () => {
       })
   });
 
+  it('different passwords', async () => {
+    const user_data_copy = {...user_data};
+    user_data_copy.password = "";
+
+    await request(app)
+      .post("/register/new")
+      .send(user_data_copy)
+      .expect(res => {
+        expect(res.status).toBe(400)
+        expect(res.text).toBe("password does not meet complexity requirements")
+      })
+
+    user_data_copy.password = "aaaaaaa";
+
+    await request(app)
+      .post("/register/new")
+      .send(user_data_copy)
+      .expect(res => {
+        expect(res.status).toBe(400)
+        expect(res.text).toBe("password does not meet complexity requirements")
+      })
+
+    user_data_copy.password = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+    await request(app)
+      .post("/register/new")
+      .send(user_data_copy)
+      .expect(res => {
+        expect(res.status).toBe(400)
+        expect(res.text).toBe("password does not meet complexity requirements")
+      })
+
+    user_data_copy.password = "Password1";
+
+    await request(app)
+      .post("/register/new")
+      .send(user_data_copy)
+      .expect(res => {
+        expect(res.status).toBe(400)
+        expect(res.text).toBe("password does not meet complexity requirements")
+      })
+
+    user_data_copy.password = "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1!";
+
+    await request(app)
+      .post("/register/new")
+      .send(user_data_copy)
+      .expect(200)
+  })
+
   it('register with invalid gender', async () => {
     const user_data_copy = {...user_data};
     user_data_copy.gender = "none";

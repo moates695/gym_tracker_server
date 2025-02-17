@@ -17,7 +17,7 @@ export const generate = async (req: Request, res: Response) => {
     );
 
     if (response1.rows.length === 0) {
-      res.status(400).send();
+      res.status(400).send("email does not exist");
       return;
     }
 
@@ -29,7 +29,7 @@ export const generate = async (req: Request, res: Response) => {
   }
 
   if (!await bcrypt.compare(password, hashed_password)) {
-    res.status(400).send();
+    res.status(400).send("password is invalid");
     return;
   }
 
