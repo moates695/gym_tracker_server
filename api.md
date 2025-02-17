@@ -8,7 +8,7 @@
 req.json = {
     email,
     password,
-    username, // unique, case insensitive
+    username, // unique, case insensitive (no special chars <list here>)
     first_name,
     last_name,
     gender, // male, female, other

@@ -6,9 +6,7 @@ import jwt from 'jsonwebtoken'
 // todo maybe beforeAll, afterAll instead?
 
 const clear_users = async () => {
-  await pool.query(`delete
-    from users
-    where email ilike '%@jest.com'`
+  await pool.query(`delete from users;`
   );
 };
 
@@ -36,7 +34,7 @@ const user_data = {
 describe("Authorisation tests", () => {
   it("valid token request", async () => {
     await request(app)
-      .post("/users/register")
+      .post("/register/new")
       .send(user_data)
       .expect(200) 
 
@@ -58,7 +56,7 @@ describe("Authorisation tests", () => {
 
   it("incorrect verified user info", async () => {
     await request(app)
-      .post("/users/register")
+      .post("/register/new")
       .send(user_data)
       .expect(200)
     
