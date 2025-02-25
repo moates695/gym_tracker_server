@@ -4,6 +4,11 @@ from typing import Literal
 import re
 import psycopg2 as pg
 import json
+import smtplib
+from email.message import EmailMessage
+import os
+import jwt
+from datetime import datetime, timedelta, timezone
 
 from api.middleware.database import setup_connection
 
@@ -57,6 +62,9 @@ values
         (req.email, req.password, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status))
         conn.commit()
 
+        if req.send_email:
+            await send_validation_email(req.email)
+
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -68,3 +76,36 @@ values
         if conn: conn.close()
 
     return {}
+
+class Validate(BaseModel):
+    email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+
+@router.post("/register/send_validation")
+async def _send_validation_email(req: Validate):
+    try:
+        await send_validation_email(req.email)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error sending validation email")
+
+async def send_validation_email(email):
+    payload = {
+        "email": email,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
+    }
+    token = jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")
+    link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate_user?token={token}"
+
+    msg = EmailMessage()
+    msg["Subject"] = "Gym Tracker Email Validation"
+    msg["From"] = os.getenv("EMAIL")
+    msg["To"] = email
+    msg.set_content(f"Click this <a href={link}>link</a> to validate your email.")
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        smtp.login(os.getenv("EMAIL"), os.getenv("EMAIL_PWD"))
+        smtp.send_message(msg)
+
+
+@router.post("/register/validate_user")
+async def validate_user():
+    pass

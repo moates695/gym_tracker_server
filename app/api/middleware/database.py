@@ -1,9 +1,6 @@
-from dotenv import load_dotenv
 import os
 import psycopg2 as pg
 import logging
-
-load_dotenv()
 
 database_config = {
     "dbname": os.getenv("DATABASE"),
