@@ -2,3 +2,6 @@
 .env
 node_modules
 coverage/
+venv/
+*__pycache__*
+.pytest_cache
