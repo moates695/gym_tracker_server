@@ -5,7 +5,7 @@ import re
 import psycopg2 as pg
 import json
 
-from api.middleware.database import database_config
+from api.middleware.database import setup_connection
 
 router = APIRouter()
 
@@ -36,9 +36,7 @@ async def register(req: Register):
     req_json = json.loads(req.model_dump_json())
 
     try:
-        conn = cur = None
-        conn = pg.connect(**database_config)
-        cur = conn.cursor()
+        conn, cur = setup_connection()
 
         for field in ["email", "username"]:
             cur.execute("""
