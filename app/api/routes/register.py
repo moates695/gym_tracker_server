@@ -2,6 +2,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 import re
+import psycopg2 as pg
+import json
+
+from api.middleware.database import database_config
 
 router = APIRouter()
 
@@ -29,4 +33,40 @@ class Register(BaseModel):
 
 @router.post("/register")
 async def register(req: Register):
+    req_json = json.loads(req.model_dump_json())
+
+    try:
+        conn = cur = None
+        conn = pg.connect(**database_config)
+        cur = conn.cursor()
+
+        for field in ["email", "username"]:
+            cur.execute("""
+    select exists (
+        select 1
+        from users
+        where lower(%s) = lower(%s)
+    )""", (field, req_json[field]))
+        
+            if cur.fetchone()[0]:
+                raise HTTPException(status_code=400, detail=f"{field} already exists")
+
+        cur.execute("""
+insert into users
+(email, password, username, first_name, last_name, gender, height, weight, goal_status)
+values
+(%s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+        (req.email, req.password, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status))
+        conn.commit()
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail="Uncaught exception")
+    
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+
     return {}
