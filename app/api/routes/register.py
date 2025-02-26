@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 import re
@@ -42,41 +43,39 @@ async def register(req: Register):
     req_json = json.loads(req.model_dump_json())
 
     try:
-        conn, cur = setup_connection()
+        conn = setup_connection()
 
         for field in ["email", "username"]:
-            cur.execute("""
+            exists = await conn.fetchval(f"""
 select exists (
     select 1
     from users
-    where lower(%s) = lower(%s)
-)""", (field, req_json[field]))
-        
-            if cur.fetchone()[0]:
+    where {field} ilike $1
+)""", req_json[field])
+
+            if exists:
                 raise HTTPException(status_code=400, detail=f"{field} already exists")
 
         hashed_pwd = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt())
 
-        cur.execute("""
+        conn.execute("""
 insert into users
 (email, password, username, first_name, last_name, gender, height, weight, goal_status)
 values
 (%s, %s, %s, %s, %s, %s, %s, %s, %s)
 """, (req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status))
-        conn.commit()
 
         if req.send_email:
             await send_validation_email(req.email)
 
     except HTTPException as e:
-        raise e
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
-    
+        raise HTTPException(status_code=500)
+
     finally:
-        if cur: cur.close()
-        if conn: conn.close()
+        if conn: await conn.close()
 
     return {}
 
