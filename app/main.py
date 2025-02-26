@@ -1,3 +1,9 @@
+from dotenv import load_dotenv
+import os
+
+os.environ.clear()
+load_dotenv()
+
 from fastapi import FastAPI
 
 from api.routes import register

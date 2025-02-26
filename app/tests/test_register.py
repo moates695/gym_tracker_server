@@ -13,7 +13,8 @@ valid_user = {
     "gender": "male",
     "height": 183,
     "weight": 98,
-    "goal_status": "cutting"
+    "goal_status": "cutting",
+    "send_email": False
 }
 
 def test_valid_register(delete_test_users):
