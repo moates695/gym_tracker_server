@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 import re
-import psycopg2 as pg
 import json
 import smtplib
 from email.message import EmailMessage
@@ -43,7 +42,7 @@ async def register(req: Register):
     req_json = json.loads(req.model_dump_json())
 
     try:
-        conn = setup_connection()
+        conn = await setup_connection()
 
         for field in ["email", "username"]:
             exists = await conn.fetchval(f"""
@@ -56,14 +55,14 @@ select exists (
             if exists:
                 raise HTTPException(status_code=400, detail=f"{field} already exists")
 
-        hashed_pwd = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt())
+        hashed_pwd = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-        conn.execute("""
+        await conn.execute("""
 insert into users
 (email, password, username, first_name, last_name, gender, height, weight, goal_status)
 values
-(%s, %s, %s, %s, %s, %s, %s, %s, %s)
-""", (req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status))
+($1, $2, $3, $4, $5, $6, $7, $8, $9)
+""", req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status)
 
         if req.send_email:
             await send_validation_email(req.email)
@@ -115,26 +114,25 @@ async def validate_user(token: str = None):
         if datetime.now(timezone.utc) > datetime.fromtimestamp(decoded["exp"], timezone.utc):
             raise HTTPException(status_code=400, detail=f"Token is expired")
 
-        conn, cur = setup_connection()
+        conn = await setup_connection()
 
-        cur.execute("""
+        is_valid = await conn.fetchval("""
 select exists (
     select 1
     from users
-    where lower(email) = lower(%s)
+    where lower(email) = lower($1)
     and is_verified = false
 )
-""", (decoded["email"], ))
+""", decoded["email"])
 
-        if not cur.fetchone():
+        if not is_valid:
             raise HTTPException(status_code=400, detail=f"Email '{decoded['email']}' does not exist or is already verified")
 
-        cur.execute("""
+        await conn.execute("""
 update users
 set is_verified = true
-where lower(email) = lower(%s)
-""", (decoded["email"], ))
-        conn.commit()
+where lower(email) = lower($1)
+""", decoded["email"])
 
         # todo return short/long token as per FE requirements
 
@@ -144,7 +142,6 @@ where lower(email) = lower(%s)
         print(e)
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
-        if cur: cur.close()
-        if conn: conn.close()
+        if conn: await conn.close()
 
     return {}
