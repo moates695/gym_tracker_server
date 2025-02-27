@@ -1,4 +1,7 @@
 from fastapi.testclient import TestClient
+from datetime import datetime, timezone, timedelta
+import jwt
+import os 
 
 from ..main import app
 
@@ -27,6 +30,7 @@ def test_email_taken(delete_test_users):
     response = client.post("/register", json=user)
     assert response.status_code == 200
 
+    user["username"] = "testname2"
     user["email"] = user["email"].upper()
 
     response = client.post("/register", json=user)
@@ -38,7 +42,24 @@ def test_username_taken(delete_test_users):
     response = client.post("/register", json=user)
     assert response.status_code == 200
 
+    user["email"] = "test2@pytest.com"
     user["username"] = user["username"].upper()
 
     response = client.post("/register", json=user)
     assert response.status_code == 400
+
+def test_validate(delete_test_users):
+    response = client.post("/register", json=valid_user)
+    assert response.status_code == 200
+
+    payload = {
+        "email": valid_user["email"],
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
+    }
+    token = jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")
+    params = {
+        "token": token
+    }
+
+    response = client.get("/register/validate/receive", params=params)
+    assert response.status_code == 200

@@ -3,28 +3,27 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
-import pytest
+import pytest_asyncio
 
 from api.middleware.database import setup_connection
 
-@pytest.fixture
-def delete_test_users():
-    _delete_test_users()
+@pytest_asyncio.fixture(scope="function")
+async def delete_test_users():
+    await _delete_test_users()
     yield
-    _delete_test_users()
+    await _delete_test_users()
 
-def _delete_test_users():
+async def _delete_test_users():
     try:
-        conn, cur = setup_connection()
+        conn = await setup_connection()
 
-        cur.execute("""
+        await conn.execute("""
 delete
 from users
-where lower(email) like '%@pytest.com'""")
-        conn.commit()
+where lower(email) like '%@pytest.com'
+""")
 
     except Exception as e:
         raise Exception(f"Error in fixture: {e}")
     finally:
-        if cur: cur.close()
-        if conn: conn.close()
+        if conn: await conn.close()

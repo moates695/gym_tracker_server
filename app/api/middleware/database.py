@@ -1,20 +1,17 @@
 import os
-import psycopg2 as pg
-import logging
+import asyncpg
 
 database_config = {
-    "dbname": os.getenv("DATABASE"),
+    "database": os.getenv("DATABASE"),
     "user": os.getenv("DB_USER"),
     "password": os.getenv("DB_PASSWORD"),
     "host": os.getenv("DB_HOST"),
     "port": int(os.getenv("DB_PORT"))
 }
 
-def setup_connection():
+async def setup_connection():
     try:
-        conn = cur = None
-        conn = pg.connect(**database_config)
-        cur = conn.cursor()
+        conn = await asyncpg.connect(**database_config)
     except Exception as e:
-        logging.error(f"Error in db connection setup: {e}")
-    return conn, cur
+        raise Exception(f"Error in db connection setup: {e}")
+    return conn
