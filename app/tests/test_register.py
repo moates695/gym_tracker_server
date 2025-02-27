@@ -63,3 +63,6 @@ def test_validate(delete_test_users):
 
     response = client.get("/register/validate/receive", params=params)
     assert response.status_code == 200
+
+    response = client.get("/register/validate/receive", params=params)
+    assert response.status_code == 400
