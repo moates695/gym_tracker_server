@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 
 from api.middleware.database import setup_connection
+from api.middleware.token import *
 
 router = APIRouter()
 
@@ -67,6 +68,8 @@ values
         if req.send_email:
             await send_validation_email(req.email)
 
+        long_token = generate_token(req.email, days=30)
+
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
@@ -76,7 +79,9 @@ values
     finally:
         if conn: await conn.close()
 
-    return {}
+    return {
+        "long_token": long_token
+    }
 
 class Validate(BaseModel):
     email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
@@ -89,11 +94,7 @@ async def _send_validation_email(req: Validate):
         raise HTTPException(status_code=400, detail=f"Error sending validation email")
 
 async def send_validation_email(email):
-    payload = {
-        "email": email,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
-    }
-    token = jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")
+    token = generate_token(email, minutes=15)
     link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate/receive?token={token}"
 
     msg = EmailMessage()
@@ -109,9 +110,8 @@ async def send_validation_email(email):
 @router.get("/register/validate/receive")
 async def validate_user(token: str = None):
     try:
-        decoded = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=["HS256"])
-
-        if datetime.now(timezone.utc) > datetime.fromtimestamp(decoded["exp"], timezone.utc):
+        decoded = decode_token(token)
+        if is_token_expired(decoded):
             raise HTTPException(status_code=400, detail=f"Token is expired")
 
         conn = await setup_connection()
@@ -133,8 +133,6 @@ update users
 set is_verified = true
 where lower(email) = lower($1)
 """, decoded["email"])
-
-        # todo return short/long token as per FE requirements
 
     except HTTPException as e:
         raise e
