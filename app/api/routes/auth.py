@@ -7,6 +7,8 @@ import jwt
 import os
 from datetime import datetime, timedelta, timezone
 
+from api.middleware.token import *
+
 router = APIRouter()
 
 class Authenticate(BaseModel):
@@ -17,9 +19,8 @@ async def authenticate(req: Authenticate):
     try:
         conn = await setup_connection()
 
-        decoded = jwt.decode(req.token, os.getenv("SECRET_KEY"), algorithms=["HS256"])
-
-        if datetime.now(timezone.utc) > datetime.fromtimestamp(decoded["exp"], timezone.utc):
+        decoded = decode_token(req.token)
+        if is_token_expired(decoded):
             return JSONResponse(content={"status": "expired"})
 
         is_validated = await conn.fetchval(
@@ -35,10 +36,12 @@ async def authenticate(req: Authenticate):
         elif not is_validated:
             return JSONResponse(content={"status": "not-validated"})
         else:
-            return JSONResponse(content={
-                "status": "good",
-                "token": ""
-                })
+            return JSONResponse(
+                content={
+                    "status": "good",
+                    "token": generate_token(decoded["email"], days=30)
+                }
+            )
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
