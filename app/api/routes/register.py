@@ -90,12 +90,12 @@ async def register(req: Register):
 class Validate(BaseModel):
     email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 
-@router.post("/register/validate/send")
-async def _send_validation_email(req: Validate):
-    try:
-        await send_validation_email(req.email)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error sending validation email")
+# @router.post("/register/validate/send")
+# async def _send_validation_email(req: Validate):
+#     try:
+#         await send_validation_email(req.email)
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f"Error sending validation email")
 
 async def send_validation_email(email):
     token = generate_token(email, minutes=15)
