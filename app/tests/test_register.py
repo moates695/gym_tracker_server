@@ -52,17 +52,96 @@ def test_validate(delete_test_users):
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
 
-    payload = {
-        "email": valid_user["email"],
-        "expiry": (datetime.now(timezone.utc) + timedelta(minutes=15)).timestamp()
-    }
-    token = jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")
-    params = {
-        "token": token
-    }
+    params = get_validate_params(valid_user["email"])
 
     response = client.get("/register/validate/receive", params=params)
     assert response.status_code == 200
 
     response = client.get("/register/validate/receive", params=params)
     assert response.status_code == 400
+
+def test_validate_email_not_exist(delete_test_users):
+    params = get_validate_params(valid_user["email"])
+
+    response = client.get("/register/validate/receive", params=params)
+    assert response.status_code == 400
+
+    response = client.post("/register", json=valid_user)
+    assert response.status_code == 200
+
+    response = client.get("/register/validate/receive", params=params)
+    assert response.status_code == 200
+
+def test_validate_past_expiry(delete_test_users):
+    params = get_validate_params(valid_user["email"], 0)
+
+    response = client.post("/register", json=valid_user)
+    assert response.status_code == 200
+
+    response = client.get("/register/validate/receive", params=params)
+    assert response.status_code == 400
+
+def get_validate_params(email: str, expiry_mins=15):
+    payload = {
+        "email": email,
+        "expiry": (datetime.now(timezone.utc) + timedelta(minutes=expiry_mins)).timestamp()
+    }
+    token = jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")
+    return {
+        "token": token
+    }
+
+def test_username_exists(delete_test_users):
+    response = client.get("/register/username", params={
+        "username": valid_user["username"]
+    })
+    assert response.status_code == 200
+    assert response.json()["taken"] == False
+
+    response = client.post("/register", json=valid_user)
+    assert response.status_code == 200
+
+    response = client.get("/register/username", params={
+        "username": valid_user["username"]
+    })
+    assert response.status_code == 200
+    assert response.json()["taken"] == True
+
+    response = client.get("/register/username", params={
+        "username": valid_user["username"].upper()
+    })
+    assert response.status_code == 200
+    assert response.json()["taken"] == True
+
+def test_is_validated(delete_test_users):
+    response = client.get("/register/validate/check", params={
+        "username": valid_user["username"]
+    })
+    assert response.status_code == 200
+    assert response.json()["is_verified"] == False
+
+    response = client.post("/register", json=valid_user)
+    assert response.status_code == 200
+
+    response = client.get("/register/validate/check", params={
+        "username": valid_user["username"]
+    })
+    assert response.status_code == 200
+    assert response.json()["is_verified"] == False
+
+    params = get_validate_params(valid_user["email"])
+
+    response = client.get("/register/validate/receive", params=params)
+    assert response.status_code == 200
+
+    response = client.get("/register/validate/check", params={
+        "username": valid_user["username"]
+    })
+    assert response.status_code == 200
+    assert response.json()["is_verified"] == True
+
+    response = client.get("/register/validate/check", params={
+        "username": valid_user["username"].upper()
+    })
+    assert response.status_code == 200
+    assert response.json()["is_verified"] == True
