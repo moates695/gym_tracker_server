@@ -54,7 +54,7 @@ def test_validate(delete_test_users):
 
     payload = {
         "email": valid_user["email"],
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
+        "expiry": (datetime.now(timezone.utc) + timedelta(minutes=15)).timestamp()
     }
     token = jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")
     params = {

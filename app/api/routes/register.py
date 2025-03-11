@@ -46,24 +46,28 @@ async def register(req: Register):
         conn = await setup_connection()
 
         for field in ["email", "username"]:
-            exists = await conn.fetchval(f"""
-select exists (
-    select 1
-    from users
-    where {field} ilike $1
-)""", req_json[field])
+            exists = await conn.fetchval(
+                f"""
+                select exists (
+                    select 1
+                    from users
+                    where {field} ilike $1
+                )""", req_json[field]
+            )
 
             if exists:
                 raise HTTPException(status_code=400, detail=f"{field} already exists")
 
         hashed_pwd = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-        await conn.execute("""
-insert into users
-(email, password, username, first_name, last_name, gender, height, weight, goal_status)
-values
-($1, $2, $3, $4, $5, $6, $7, $8, $9)
-""", req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status)
+        await conn.execute(
+            """
+            insert into users
+            (email, password, username, first_name, last_name, gender, height, weight, goal_status)
+            values
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status
+        )
 
         if req.send_email:
             await send_validation_email(req.email)
@@ -110,32 +114,95 @@ async def send_validation_email(email):
 @router.get("/register/validate/receive")
 async def validate_user(token: str = None):
     try:
+        conn = None
+
         decoded = decode_token(token)
         if is_token_expired(decoded):
             raise HTTPException(status_code=400, detail=f"Token is expired")
 
         conn = await setup_connection()
 
-        is_valid = await conn.fetchval("""
-select exists (
-    select 1
-    from users
-    where lower(email) = lower($1)
-    and is_verified = false
-)
-""", decoded["email"])
+        is_valid = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from users
+                where lower(email) = lower($1)
+                and is_verified = false
+            )
+            """, decoded["email"]
+        )
 
         if not is_valid:
             raise HTTPException(status_code=400, detail=f"Email '{decoded['email']}' does not exist or is already verified")
 
-        await conn.execute("""
-update users
-set is_verified = true
-where lower(email) = lower($1)
-""", decoded["email"])
+        await conn.execute(
+            """
+            update users
+            set is_verified = true
+            where lower(email) = lower($1)
+            """, decoded["email"]
+        )
 
     except HTTPException as e:
-        raise e
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
+    return {}
+
+@router.get("/register/validate/check")
+async def check_is_validated(username: str):
+    try:
+        conn = await setup_connection()
+
+        is_verified = await conn.fetchval(
+            """
+            select is_verified
+            from users
+            where lower(username) = lower($1)
+            """,  username
+        )
+
+        if is_verified is None:
+            is_verified = False
+
+        return {
+            "is_verified": is_verified
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
+@router.get("/register/username")
+async def valid_username(username: str):
+    try:
+        conn = await setup_connection()
+
+        exists = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from users
+                where lower(username) = lower($1)
+            )
+            """,  username
+        )
+
+        return {
+            "taken": exists
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Uncaught exception")
