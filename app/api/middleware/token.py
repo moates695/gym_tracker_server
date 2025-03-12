@@ -5,7 +5,9 @@ import os
 def generate_token(email, days=0, minutes=0):
     payload = {
         "email": email,
-        "expiry": (datetime.now(timezone.utc) + timedelta(days=days, minutes=minutes)).timestamp()
+        "expiry": (datetime.now(timezone.utc) + timedelta(days=days, minutes=minutes)).timestamp(),
+        "days": days,
+        "minutes": minutes
     }
     return jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")
 
