@@ -73,6 +73,12 @@ async def register(req: Register):
             await send_validation_email(req.email)
 
         long_token = generate_token(req.email, days=30)
+        short_token = generate_token(req.email, minutes=15)
+
+        return {
+            "long_token": long_token,
+            "short_token": short_token
+        }
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -83,9 +89,6 @@ async def register(req: Register):
     finally:
         if conn: await conn.close()
 
-    return {
-        "long_token": long_token
-    }
 
 class Validate(BaseModel):
     email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
@@ -208,5 +211,3 @@ async def valid_username(username: str):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
-
-    return {}

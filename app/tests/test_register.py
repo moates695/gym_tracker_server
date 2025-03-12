@@ -23,6 +23,8 @@ valid_user = {
 def test_valid_register(delete_test_users):
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
+    assert "long_token" in response.json().keys()
+    assert "short_token" in response.json().keys()
 
 def test_email_taken(delete_test_users):
     user = valid_user.copy()
