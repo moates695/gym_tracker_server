@@ -5,6 +5,7 @@ from typing import Literal
 import re
 import json
 import smtplib
+from email.mime.text import MIMEText
 from email.message import EmailMessage
 import os
 import jwt
@@ -41,7 +42,7 @@ class Register(BaseModel):
 @router.post("/register")
 async def register(req: Register):
     req_json = json.loads(req.model_dump_json())
-
+    
     try:
         conn = await setup_connection()
 
@@ -72,12 +73,8 @@ async def register(req: Register):
         if req.send_email:
             await send_validation_email(req.email)
 
-        long_token = generate_token(req.email, days=30)
-        short_token = generate_token(req.email, minutes=15)
-
         return {
-            "long_token": long_token,
-            "short_token": short_token
+            "auth_token": generate_token(req.email, days=30),
         }
 
     except HTTPException as e:
@@ -89,9 +86,8 @@ async def register(req: Register):
     finally:
         if conn: await conn.close()
 
-
-class Validate(BaseModel):
-    email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+# class Validate(BaseModel):
+#     email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 
 # @router.post("/register/validate/send")
 # async def _send_validation_email(req: Validate):
@@ -100,7 +96,7 @@ class Validate(BaseModel):
 #     except Exception as e:
 #         raise HTTPException(status_code=400, detail=f"Error sending validation email")
 
-async def send_validation_email(email):
+async def send_validation_email(email: str):
     token = generate_token(email, minutes=15)
     link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate/receive?token={token}"
 
@@ -108,7 +104,7 @@ async def send_validation_email(email):
     msg["Subject"] = "Gym Tracker Email Validation"
     msg["From"] = os.getenv("EMAIL")
     msg["To"] = email
-    msg.set_content(f"Click this <a href={link}>link</a> to validate your email.")
+    msg.set_content(f"Click this link to validate your email: {link}")
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(os.getenv("EMAIL"), os.getenv("EMAIL_PWD"))
@@ -120,7 +116,7 @@ async def validate_user(token: str = None):
         conn = None
 
         decoded = decode_token(token)
-        if is_token_expired(decoded):
+        if decoded is None or is_token_expired(decoded):
             raise HTTPException(status_code=400, detail=f"Token is expired")
 
         conn = await setup_connection()
@@ -154,6 +150,8 @@ async def validate_user(token: str = None):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+    # todo return a html message
 
     return {}
 
