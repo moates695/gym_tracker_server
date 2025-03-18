@@ -73,10 +73,6 @@ async def register(req: Register):
         if req.send_email:
             await send_validation_email(req.email)
 
-        # return {
-        #     "auth_token": generate_token(req.email, days=30),
-        # }
-
         return {}
 
     except HTTPException as e:

@@ -19,11 +19,9 @@ class TokenPayload(BaseModel):
     iat: int
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
-    print('here')
     try:
         token = credentials.credentials
         payload = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=["HS256"])
-        print('here22')
         return payload
     
     except Exception as e:
