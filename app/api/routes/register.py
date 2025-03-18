@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal
@@ -156,7 +156,7 @@ async def validate_user(token: str = None):
     return {}
 
 @router.get("/register/validate/check")
-async def check_is_validated(username: str):
+async def check_is_validated(email: str):
     try:
         conn = await setup_connection()
 
@@ -164,8 +164,8 @@ async def check_is_validated(username: str):
             """
             select is_verified
             from users
-            where lower(username) = lower($1)
-            """,  username
+            where lower(email) = lower($1)
+            """,  email
         )
 
         if is_verified is None:

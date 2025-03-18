@@ -116,7 +116,7 @@ def test_username_exists(delete_test_users):
 
 def test_is_validated(delete_test_users):
     response = client.get("/register/validate/check", params={
-        "username": valid_user["username"]
+        "email": valid_user["email"]
     })
     assert response.status_code == 200
     assert response.json()["is_verified"] == False
@@ -125,7 +125,7 @@ def test_is_validated(delete_test_users):
     assert response.status_code == 200
 
     response = client.get("/register/validate/check", params={
-        "username": valid_user["username"]
+        "email": valid_user["email"]
     })
     assert response.status_code == 200
     assert response.json()["is_verified"] == False
@@ -136,13 +136,13 @@ def test_is_validated(delete_test_users):
     assert response.status_code == 200
 
     response = client.get("/register/validate/check", params={
-        "username": valid_user["username"]
+        "email": valid_user["email"]
     })
     assert response.status_code == 200
     assert response.json()["is_verified"] == True
 
     response = client.get("/register/validate/check", params={
-        "username": valid_user["username"].upper()
+        "email": valid_user["email"].upper()
     })
     assert response.status_code == 200
     assert response.json()["is_verified"] == True
