@@ -73,9 +73,11 @@ async def register(req: Register):
         if req.send_email:
             await send_validation_email(req.email)
 
-        return {
-            "auth_token": generate_token(req.email, days=30),
-        }
+        # return {
+        #     "auth_token": generate_token(req.email, days=30),
+        # }
+
+        return {}
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -153,7 +155,9 @@ async def validate_user(token: str = None):
 
     # todo return a html message
 
-    return {}
+    return {
+        "message": "email validation successful"
+    }
 
 @router.get("/register/validate/check")
 async def check_is_validated(email: str):
@@ -172,7 +176,8 @@ async def check_is_validated(email: str):
             is_verified = False
 
         return {
-            "is_verified": is_verified
+            "is_verified": is_verified,
+            "auth_token": generate_token(email, days=30) if is_verified else None
         }
 
     except HTTPException as e:

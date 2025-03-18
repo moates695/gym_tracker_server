@@ -23,7 +23,7 @@ valid_user = {
 def test_valid_register(delete_test_users):
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
-    assert "auth_token" in response.json().keys()
+    assert "auth_token" not in response.json().keys()
 
 def test_email_taken(delete_test_users):
     user = valid_user.copy()
@@ -120,6 +120,7 @@ def test_is_validated(delete_test_users):
     })
     assert response.status_code == 200
     assert response.json()["is_verified"] == False
+    assert response.json()["auth_token"] == None
 
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
@@ -129,6 +130,7 @@ def test_is_validated(delete_test_users):
     })
     assert response.status_code == 200
     assert response.json()["is_verified"] == False
+    assert response.json()["auth_token"] == None
 
     params = get_validate_params(valid_user["email"])
 
@@ -140,6 +142,8 @@ def test_is_validated(delete_test_users):
     })
     assert response.status_code == 200
     assert response.json()["is_verified"] == True
+    assert "auth_token" in response.json().keys()
+    jwt.decode(response.json()["auth_token"], os.getenv("SECRET_KEY"), algorithms=["HS256"])
 
     response = client.get("/register/validate/check", params={
         "email": valid_user["email"].upper()
