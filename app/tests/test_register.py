@@ -119,7 +119,7 @@ def test_is_validated(delete_test_users):
         "email": valid_user["email"]
     })
     assert response.status_code == 200
-    assert response.json()["is_verified"] == False
+    assert response.json()["account_state"] == "none"
     assert response.json()["auth_token"] == None
 
     response = client.post("/register", json=valid_user)
@@ -129,7 +129,7 @@ def test_is_validated(delete_test_users):
         "email": valid_user["email"]
     })
     assert response.status_code == 200
-    assert response.json()["is_verified"] == False
+    assert response.json()["account_state"] == "unverified"
     assert response.json()["auth_token"] == None
 
     params = get_validate_params(valid_user["email"])
@@ -141,7 +141,7 @@ def test_is_validated(delete_test_users):
         "email": valid_user["email"]
     })
     assert response.status_code == 200
-    assert response.json()["is_verified"] == True
+    assert response.json()["account_state"] == "good"
     assert "auth_token" in response.json().keys()
     jwt.decode(response.json()["auth_token"], os.getenv("SECRET_KEY"), algorithms=["HS256"])
 
@@ -149,4 +149,4 @@ def test_is_validated(delete_test_users):
         "email": valid_user["email"].upper()
     })
     assert response.status_code == 200
-    assert response.json()["is_verified"] == True
+    assert response.json()["account_state"] == "good"

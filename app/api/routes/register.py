@@ -169,10 +169,14 @@ async def check_is_validated(email: str):
         )
 
         if is_verified is None:
-            is_verified = False
+            account_state = "none"
+        elif not is_verified:
+            account_state = "unverified" 
+        else:
+            account_state = "good"
 
         return {
-            "is_verified": is_verified,
+            "account_state": account_state,
             "auth_token": generate_token(email, days=30) if is_verified else None
         }
 
