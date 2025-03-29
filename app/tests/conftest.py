@@ -6,6 +6,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../'
 import pytest_asyncio
 
 from api.middleware.database import setup_connection
+from dotenv import load_dotenv
+
+load_dotenv()
 
 @pytest_asyncio.fixture(scope="function")
 async def delete_test_users():

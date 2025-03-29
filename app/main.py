@@ -7,10 +7,12 @@ load_dotenv()
 from fastapi import FastAPI
 
 from api.routes import register
+from api.routes import auth
 
 app = FastAPI(title="Gym Tracker API")
 
 app.include_router(register.router)
+app.include_router(auth.router)
 
 if __name__ == "__main__":
     import uvicorn
