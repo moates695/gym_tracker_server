@@ -214,3 +214,40 @@ async def valid_username(username: str):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+class SignIn(BaseModel):
+    email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+    password: str = Field(min_length=8, max_length=36)
+
+@router.post("/sign-in")
+async def sign_in(req: SignIn):
+    try:
+        conn = await setup_connection()
+
+        row = await conn.fetchrow(
+            """
+            select password, is_verified
+            from users
+            where lower(email) = lower($1)
+            """,  req.email
+        )
+
+        if row is None:
+            status = "none"
+        elif not row["is_verified"]:
+            status = "unverified"
+        else:
+            status = "signed-in" if bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')) else "incorrect-password"
+
+        return {
+            "status": status,
+            "auth_token": generate_token(req.email, days=30) if status == "signed-in" else None
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
