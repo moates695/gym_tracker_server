@@ -18,213 +18,226 @@ security = HTTPBearer()
 
 @router.get("/exercises/list/all")
 async def protected_route(credentials: dict = Depends(verify_token)):
-    return {
-        "exercises": [
-            {
-                "id": "000",
-                "name": "Dumbbell Bicep Curl",
-                "targets": {
-                    "bicep": 100,
-                    "forearm": 20
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "001",
-                "name": "Push-Up",
-                "targets": {
-                    "chest": 80,
-                    "tricep": 60,
-                    "shoulder": 40
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "002",
-                "name": "Pull-Up",
-                "targets": {
-                    "lats": 100,
-                    "bicep": 60,
-                    "forearm": 30
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "003",
-                "name": "Barbell Squat",
-                "targets": {
-                    "quadriceps": 100,
-                    "glutes": 80,
-                    "hamstring": 60
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "004",
-                "name": "Deadlift",
-                "targets": {
-                    "glutes": 90,
-                    "hamstring": 70,
-                    "lower_back": 80
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "005",
-                "name": "Plank",
-                "targets": {
-                    "core": 100,
-                    "shoulder": 20,
-                    "lower_back": 30
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "006",
-                "name": "Overhead Shoulder Press",
-                "targets": {
-                    "shoulder": 100,
-                    "tricep": 50
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "007",
-                "name": "Dumbbell Lateral Raise",
-                "targets": {
-                    "shoulder": 100,
-                    "trapezius": 40
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "008",
-                "name": "Leg Press",
-                "targets": {
-                    "quadriceps": 100,
-                    "glutes": 70,
-                    "hamstring": 50
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "009",
-                "name": "Tricep Dip",
-                "targets": {
-                    "tricep": 100,
-                    "chest": 40,
-                    "shoulder": 30
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "010",
-                "name": "Russian Twist",
-                "targets": {
-                    "oblique": 100,
-                    "core": 60
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "011",
-                "name": "Lunge",
-                "targets": {
-                    "quadriceps": 90,
-                    "glutes": 70,
-                    "hamstring": 60
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "012",
-                "name": "Bench Press",
-                "targets": {
-                    "chest": 100,
-                    "tricep": 60,
-                    "shoulder": 60
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "013",
-                "name": "Mountain Climber",
-                "targets": {
-                    "core": 80,
-                    "shoulder": 40,
-                    "quadriceps": 50
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "014",
-                "name": "Bent-Over Row",
-                "targets": {
-                    "lats": 90,
-                    "trapezius": 60,
-                    "bicep": 40
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "015",
-                "name": "Glute Bridge",
-                "targets": {
-                    "glutes": 100,
-                    "hamstring": 40,
-                    "core": 30
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "016",
-                "name": "Burpee",
-                "targets": {
-                    "core": 60,
-                    "quadriceps": 50,
-                    "chest": 50,
-                    "shoulder": 30
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "017",
-                "name": "Seated Calf Raise",
-                "targets": {
-                    "calves": 100
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "018",
-                "name": "Hanging Leg Raise",
-                "targets": {
-                    "core": 100,
-                    "hip_flexors": 40
-                },
-                "is_body_weight": True
-            },
-            {
-                "id": "019",
-                "name": "Face Pull",
-                "targets": {
-                    "rear_deltoid": 90,
-                    "trapezius": 60
-                },
-                "is_body_weight": False
-            },
-            {
-                "id": "020",
-                "name": "Farmer's Carry",
-                "targets": {
-                    "forearm": 80,
-                    "trapezius": 60,
-                    "core": 40
-                },
-                "is_body_weight": False
-            }
-        ]
-    }
+    try:
+        conn = await setup_connection()
+
+        # exercises
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+    
+    # return {
+    #     "exercises": [
+    #         {
+    #             "id": "000",
+    #             "name": "Dumbbell Bicep Curl",
+    #             "targets": {
+    #                 "bicep": 100,
+    #                 "forearm": 20
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "001",
+    #             "name": "Push-Up",
+    #             "targets": {
+    #                 "chest": 80,
+    #                 "tricep": 60,
+    #                 "shoulder": 40
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "002",
+    #             "name": "Pull-Up",
+    #             "targets": {
+    #                 "lats": 100,
+    #                 "bicep": 60,
+    #                 "forearm": 30
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "003",
+    #             "name": "Barbell Squat",
+    #             "targets": {
+    #                 "quadriceps": 100,
+    #                 "glutes": 80,
+    #                 "hamstring": 60
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "004",
+    #             "name": "Deadlift",
+    #             "targets": {
+    #                 "glutes": 90,
+    #                 "hamstring": 70,
+    #                 "lower_back": 80
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "005",
+    #             "name": "Plank",
+    #             "targets": {
+    #                 "core": 100,
+    #                 "shoulder": 20,
+    #                 "lower_back": 30
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "006",
+    #             "name": "Overhead Shoulder Press",
+    #             "targets": {
+    #                 "shoulder": 100,
+    #                 "tricep": 50
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "007",
+    #             "name": "Dumbbell Lateral Raise",
+    #             "targets": {
+    #                 "shoulder": 100,
+    #                 "trapezius": 40
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "008",
+    #             "name": "Leg Press",
+    #             "targets": {
+    #                 "quadriceps": 100,
+    #                 "glutes": 70,
+    #                 "hamstring": 50
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "009",
+    #             "name": "Tricep Dip",
+    #             "targets": {
+    #                 "tricep": 100,
+    #                 "chest": 40,
+    #                 "shoulder": 30
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "010",
+    #             "name": "Russian Twist",
+    #             "targets": {
+    #                 "oblique": 100,
+    #                 "core": 60
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "011",
+    #             "name": "Lunge",
+    #             "targets": {
+    #                 "quadriceps": 90,
+    #                 "glutes": 70,
+    #                 "hamstring": 60
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "012",
+    #             "name": "Bench Press",
+    #             "targets": {
+    #                 "chest": 100,
+    #                 "tricep": 60,
+    #                 "shoulder": 60
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "013",
+    #             "name": "Mountain Climber",
+    #             "targets": {
+    #                 "core": 80,
+    #                 "shoulder": 40,
+    #                 "quadriceps": 50
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "014",
+    #             "name": "Bent-Over Row",
+    #             "targets": {
+    #                 "lats": 90,
+    #                 "trapezius": 60,
+    #                 "bicep": 40
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "015",
+    #             "name": "Glute Bridge",
+    #             "targets": {
+    #                 "glutes": 100,
+    #                 "hamstring": 40,
+    #                 "core": 30
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "016",
+    #             "name": "Burpee",
+    #             "targets": {
+    #                 "core": 60,
+    #                 "quadriceps": 50,
+    #                 "chest": 50,
+    #                 "shoulder": 30
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "017",
+    #             "name": "Seated Calf Raise",
+    #             "targets": {
+    #                 "calves": 100
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "018",
+    #             "name": "Hanging Leg Raise",
+    #             "targets": {
+    #                 "core": 100,
+    #                 "hip_flexors": 40
+    #             },
+    #             "is_body_weight": True
+    #         },
+    #         {
+    #             "id": "019",
+    #             "name": "Face Pull",
+    #             "targets": {
+    #                 "rear_deltoid": 90,
+    #                 "trapezius": 60
+    #             },
+    #             "is_body_weight": False
+    #         },
+    #         {
+    #             "id": "020",
+    #             "name": "Farmer's Carry",
+    #             "targets": {
+    #                 "forearm": 80,
+    #                 "trapezius": 60,
+    #                 "core": 40
+    #             },
+    #             "is_body_weight": False
+    #         }
+    #     ]
+    # }
 
 @router.get("/exercise/history")
 async def protected_route(id: str, credentials: dict = Depends(verify_token)):
