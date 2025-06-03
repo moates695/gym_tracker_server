@@ -2,10 +2,11 @@ from datetime import datetime, timedelta, timezone
 import jwt
 import os
 
-def generate_token(email, days=0, minutes=0):
+def generate_token(email, user_id, days=0, minutes=0):
     utc_now = datetime.now(timezone.utc)
     payload = {
         "email": email,
+        "user_id": str(user_id),
         "exp": (utc_now + timedelta(days=days, minutes=minutes)).timestamp(),
         "iat": utc_now.timestamp()
     }

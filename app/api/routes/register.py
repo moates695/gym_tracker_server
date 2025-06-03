@@ -52,26 +52,28 @@ async def register(req: Register):
                 select exists (
                     select 1
                     from users
-                    where {field} ilike $1
+                    where lower({field}) = lower($1)
                 )""", req_json[field]
             )
 
-            if exists:
-                raise HTTPException(status_code=400, detail=f"{field} already exists")
+            if not exists: continue
+            raise HTTPException(status_code=400, detail=f"{field} already exists")
 
         hashed_pwd = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-        await conn.execute(
+        row = await conn.fetchrow(
             """
             insert into users
             (email, password, username, first_name, last_name, gender, height, weight, goal_status)
             values
             ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            returning id
             """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status
         )
+        user_id = row["id"]
 
         if req.send_email:
-            await send_validation_email(req.email)
+            await send_validation_email(req.email, user_id)
 
         return {}
 
@@ -94,8 +96,8 @@ async def register(req: Register):
 #     except Exception as e:
 #         raise HTTPException(status_code=400, detail=f"Error sending validation email")
 
-async def send_validation_email(email: str):
-    token = generate_token(email, minutes=15)
+async def send_validation_email(email: str, user_id: str):
+    token = generate_token(email, user_id, minutes=15)
     link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate/receive?token={token}"
 
     msg = EmailMessage()
@@ -156,7 +158,7 @@ async def validate_user(token: str = None):
     }
 
 @router.get("/register/validate/check")
-async def check_is_validated(email: str):
+async def check_is_validated(email: str, user_id: str):
     try:
         conn = await setup_connection()
 
@@ -164,8 +166,8 @@ async def check_is_validated(email: str):
             """
             select is_verified
             from users
-            where lower(email) = lower($1)
-            """,  email
+            where id = $1
+            """, user_id
         )
 
         if is_verified is None:
@@ -177,7 +179,7 @@ async def check_is_validated(email: str):
 
         return {
             "account_state": account_state,
-            "auth_token": generate_token(email, days=30) if is_verified else None
+            "auth_token": generate_token(email, user_id, days=30) if is_verified else None
         }
 
     except HTTPException as e:
@@ -226,7 +228,7 @@ async def sign_in(req: SignIn):
 
         row = await conn.fetchrow(
             """
-            select password, is_verified
+            select id, password, is_verified
             from users
             where lower(email) = lower($1)
             """,  req.email
@@ -241,7 +243,7 @@ async def sign_in(req: SignIn):
 
         return {
             "status": status,
-            "auth_token": generate_token(req.email, days=30) if status == "signed-in" else None
+            "auth_token": generate_token(req.email, row["id"], days=30) if status == "signed-in" else None
         }
 
     except HTTPException as e:
