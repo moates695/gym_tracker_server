@@ -1,0 +1,34 @@
+{
+  "arms": [
+    "bicep",
+    "tricep",
+    "forearm"
+  ],
+  "legs": [
+    "calves",
+    "quads",
+    "hamstrings",
+    "glutes"
+  ],
+  "chest": [
+    "upper",
+    "lower"
+  ],
+  "back": [
+    "lats",
+    "traps",
+    "erectors",
+    "upper middle",
+    "exterior middle"
+  ],
+  "shoulders": [
+    "front",
+    "middle",
+    "rear"
+  ],
+  "core": [
+    "lower abs",
+    "upper abs",
+    "obliques"
+  ]
+}

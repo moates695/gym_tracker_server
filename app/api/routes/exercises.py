@@ -21,7 +21,59 @@ async def protected_route(credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
 
-        # exercises
+        exercise_rows = await conn.fetch(
+            """
+            select id, name, is_body_weight
+            from exercises
+            where user_id is null
+            """
+        )
+
+        exercises = []
+        for exercise_row in exercise_rows:
+            muscle_group_rows = await conn.fetch(
+                """
+                select distinct emd.group_id, emd.group_name
+                from exercise_muscle_data emd
+                where emd.exercise_id = $1
+                """, exercise_row["id"]
+            )
+
+            muscle_data = []
+            for muscle_group_row in muscle_group_rows:
+                muscle_target_rows = await conn.fetch(
+                    """
+                    select emd.target_id, emd.target_name, emd.ratio
+                    from exercise_muscle_data emd
+                    where emd.exercise_id = $1
+                    and emd.group_id = $2
+                    """, exercise_row["id"], muscle_group_row["group_id"]
+                )
+
+                target_data = []
+                for muscle_target_row in muscle_target_rows:
+                    target_data.append({
+                        "target_id": muscle_target_row["target_id"],
+                        "target_name": muscle_target_row["target_name"],
+                        "ratio": muscle_target_row["ratio"],
+                    })
+
+                muscle_data.append({
+                    "group_id": muscle_group_row["group_id"],
+                    "group_name": muscle_group_row["group_name"],
+                    "targets": target_data
+                })
+
+            exercises.append({
+                "id": str(exercise_row["id"]),
+                "name": exercise_row["name"],
+                "is_body_weight": exercise_row["is_body_weight"],
+                "muscle_data": muscle_data,
+            })
+
+        return {
+            "exercises": exercises
+        }
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -30,214 +82,6 @@ async def protected_route(credentials: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
-    
-    # return {
-    #     "exercises": [
-    #         {
-    #             "id": "000",
-    #             "name": "Dumbbell Bicep Curl",
-    #             "targets": {
-    #                 "bicep": 100,
-    #                 "forearm": 20
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "001",
-    #             "name": "Push-Up",
-    #             "targets": {
-    #                 "chest": 80,
-    #                 "tricep": 60,
-    #                 "shoulder": 40
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "002",
-    #             "name": "Pull-Up",
-    #             "targets": {
-    #                 "lats": 100,
-    #                 "bicep": 60,
-    #                 "forearm": 30
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "003",
-    #             "name": "Barbell Squat",
-    #             "targets": {
-    #                 "quadriceps": 100,
-    #                 "glutes": 80,
-    #                 "hamstring": 60
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "004",
-    #             "name": "Deadlift",
-    #             "targets": {
-    #                 "glutes": 90,
-    #                 "hamstring": 70,
-    #                 "lower_back": 80
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "005",
-    #             "name": "Plank",
-    #             "targets": {
-    #                 "core": 100,
-    #                 "shoulder": 20,
-    #                 "lower_back": 30
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "006",
-    #             "name": "Overhead Shoulder Press",
-    #             "targets": {
-    #                 "shoulder": 100,
-    #                 "tricep": 50
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "007",
-    #             "name": "Dumbbell Lateral Raise",
-    #             "targets": {
-    #                 "shoulder": 100,
-    #                 "trapezius": 40
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "008",
-    #             "name": "Leg Press",
-    #             "targets": {
-    #                 "quadriceps": 100,
-    #                 "glutes": 70,
-    #                 "hamstring": 50
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "009",
-    #             "name": "Tricep Dip",
-    #             "targets": {
-    #                 "tricep": 100,
-    #                 "chest": 40,
-    #                 "shoulder": 30
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "010",
-    #             "name": "Russian Twist",
-    #             "targets": {
-    #                 "oblique": 100,
-    #                 "core": 60
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "011",
-    #             "name": "Lunge",
-    #             "targets": {
-    #                 "quadriceps": 90,
-    #                 "glutes": 70,
-    #                 "hamstring": 60
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "012",
-    #             "name": "Bench Press",
-    #             "targets": {
-    #                 "chest": 100,
-    #                 "tricep": 60,
-    #                 "shoulder": 60
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "013",
-    #             "name": "Mountain Climber",
-    #             "targets": {
-    #                 "core": 80,
-    #                 "shoulder": 40,
-    #                 "quadriceps": 50
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "014",
-    #             "name": "Bent-Over Row",
-    #             "targets": {
-    #                 "lats": 90,
-    #                 "trapezius": 60,
-    #                 "bicep": 40
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "015",
-    #             "name": "Glute Bridge",
-    #             "targets": {
-    #                 "glutes": 100,
-    #                 "hamstring": 40,
-    #                 "core": 30
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "016",
-    #             "name": "Burpee",
-    #             "targets": {
-    #                 "core": 60,
-    #                 "quadriceps": 50,
-    #                 "chest": 50,
-    #                 "shoulder": 30
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "017",
-    #             "name": "Seated Calf Raise",
-    #             "targets": {
-    #                 "calves": 100
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "018",
-    #             "name": "Hanging Leg Raise",
-    #             "targets": {
-    #                 "core": 100,
-    #                 "hip_flexors": 40
-    #             },
-    #             "is_body_weight": True
-    #         },
-    #         {
-    #             "id": "019",
-    #             "name": "Face Pull",
-    #             "targets": {
-    #                 "rear_deltoid": 90,
-    #                 "trapezius": 60
-    #             },
-    #             "is_body_weight": False
-    #         },
-    #         {
-    #             "id": "020",
-    #             "name": "Farmer's Carry",
-    #             "targets": {
-    #                 "forearm": 80,
-    #                 "trapezius": 60,
-    #                 "core": 40
-    #             },
-    #             "is_body_weight": False
-    #         }
-    #     ]
-    # }
 
 @router.get("/exercise/history")
 async def protected_route(id: str, credentials: dict = Depends(verify_token)):
