@@ -16,12 +16,13 @@ security = HTTPBearer()
 
 class SetData(BaseModel):
     reps: int
-    weight: float
+    weight: float | None
     num_sets: int
 
 class Exercise(BaseModel):
     id: str
     set_data: List[SetData]
+    is_body_weight: bool
 
 class WorkoutSave(BaseModel):
     exercises: List[Exercise]
@@ -46,9 +47,13 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             returning id;
             """, credentials["user_id"], start_time, req.duration / 1000
         )
-        
+
+        await update_body_weights(conn, credentials["user_id"], req.exercises)
+
         for i, exercise in enumerate(req.exercises):
-            await save_exercise(conn, workout_id, exercise, i)
+            workout_exercise_id = await save_exercise(conn, workout_id, exercise, i)
+            for j, set_data in enumerate(exercise.set_data):
+                await save_set_data(conn, workout_exercise_id, set_data, j)
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -58,6 +63,26 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
     finally:
         if conn: await conn.close()
 
+async def update_body_weights(conn, user_id, exercises: List[Exercise]):
+    if not any(e.is_body_weight for e in exercises): return
+
+    row = await conn.fetchrow(
+        """
+        select gender, weight
+        from users
+        where id = $1
+        """, user_id
+    )
+
+    upper_mass_ratio = 0.62 if row["gender"] == "male" else 0.55
+
+    for exercise in exercises:
+        if not exercise.is_body_weight: continue
+        # todo fetch classification from db table, then compute weight
+        weight = 18.25
+        for set_data in exercise.set_data:
+            set_data.weight = weight
+
 async def save_exercise(conn, workout_id, exercise: Exercise, index): 
     workout_exercise_id = await conn.fetchval(
         """
@@ -65,6 +90,21 @@ async def save_exercise(conn, workout_id, exercise: Exercise, index):
         (workout_id, exercise_id, order_index)
         values
         ($1, $2, $3)
+        returning id
         """, workout_id, exercise.id, index
     )
-    print(workout_exercise_id)
+    return workout_exercise_id
+
+async def save_set_data(conn, workout_exercise_id, set_data: SetData, index):
+    await conn.execute(
+        """
+        insert into workout_set_data
+        (workout_exercise_id, order_index, reps, weight, num_sets)
+        values
+        ($1, $2, $3, $4, $5)
+        """, workout_exercise_id, index, set_data.reps, set_data.weight, set_data.num_sets
+    )
+
+# define body weight calc types like: lower leg, full body horizontal, full body pull etc
+async def body_weight_calc(conn, user_id, exercise_id):
+    pass

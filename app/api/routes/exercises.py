@@ -17,7 +17,7 @@ security = HTTPBearer()
 # return exercises + user stats for previous set timespan
 
 @router.get("/exercises/list/all")
-async def protected_route(credentials: dict = Depends(verify_token)):
+async def exercises_list_all(credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
 
@@ -84,8 +84,8 @@ async def protected_route(credentials: dict = Depends(verify_token)):
         if conn: await conn.close()
 
 @router.get("/exercise/history")
-async def protected_route(id: str, credentials: dict = Depends(verify_token)):
-    now = datetime.now(timezone.utc).timestamp()
+async def exercise_history(id: str, credentials: dict = Depends(verify_token)):
+    now = datetime.now(timezone.utc).timestamp() * 1000
     return {
         "n_rep_max": {
             "all_time": {
