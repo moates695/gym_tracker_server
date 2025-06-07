@@ -5,7 +5,9 @@
       "arms/bicep": 100,
       "arms/forearm": 20
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Push-Up",
@@ -14,7 +16,9 @@
       "arms/tricep": 60,
       "shoulders": 40
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Pull-Up",
@@ -23,7 +27,9 @@
       "arms/bicep": 60,
       "arms/forearm": 30
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Barbell Squat",
@@ -32,7 +38,9 @@
       "legs/glutes": 80,
       "legs/hamstrings": 60
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Deadlift",
@@ -41,7 +49,9 @@
       "legs/hamstrings": 70,
       "back/erectors": 80
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Plank",
@@ -50,7 +60,9 @@
       "shoulders": 20,
       "back/erectors": 30
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Overhead Shoulder Press",
@@ -58,7 +70,9 @@
       "shoulders": 100,
       "arms/tricep": 50
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Dumbbell Lateral Raise",
@@ -66,7 +80,9 @@
       "shoulders": 100,
       "back/traps": 40
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Leg Press",
@@ -75,7 +91,9 @@
       "legs/glutes": 70,
       "legs/hamstrings": 50
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
   },
   {
     "name": "Tricep Dip",
@@ -84,7 +102,9 @@
       "chest": 40,
       "shoulders": 30
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Russian Twist",
@@ -92,7 +112,9 @@
       "core/obliques": 100,
       "core": 60
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Lunge",
@@ -101,7 +123,9 @@
       "legs/glutes": 70,
       "legs/hamstrings": 60
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Bench Press",
@@ -110,7 +134,9 @@
       "arms/tricep": 60,
       "shoulders": 60
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Mountain Climber",
@@ -119,7 +145,9 @@
       "shoulders": 40,
       "legs/quads": 50
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Bent-Over Row",
@@ -130,7 +158,9 @@
       "back/upper middle": 70,
       "arms/bicep": 40
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Back Extension",
@@ -139,7 +169,9 @@
       "core": 30,
       "back/erectors": 90
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Glute Bridge",
@@ -148,7 +180,9 @@
       "legs/hamstrings": 40,
       "core": 30
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Burpee",
@@ -158,21 +192,27 @@
       "chest": 50,
       "shoulders": 30
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Seated Calf Raise",
     "targets": {
       "legs/calves": 100
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
   },
   {
     "name": "Hanging Leg Raise",
     "targets": {
       "core": 40
     },
-    "is_body_weight": true
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "free"
   },
   {
     "name": "Face Pull",
@@ -180,7 +220,9 @@
       "shoulders/rear": 90,
       "back/traps": 60
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
   },
   {
     "name": "Farmer's Carry",
@@ -189,6 +231,8 @@
       "back/traps": 60,
       "core": 40
     },
-    "is_body_weight": false
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
   }
 ]

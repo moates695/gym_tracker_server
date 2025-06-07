@@ -81,11 +81,11 @@ async def insert_exercises():
             exercise_id = await conn.fetchval(
                 """
                 insert into exercises
-                (name, is_body_weight)
+                (name, is_body_weight, description, weight_type)
                 values
-                ($1, $2)
+                ($1, $2, $3, $4)
                 returning id
-                """, exercise["name"], exercise["is_body_weight"]
+                """, exercise["name"], exercise["is_body_weight"],exercise["description"], exercise["weight_type"]
             )
 
             for target_str, percentage in exercise["targets"].items():

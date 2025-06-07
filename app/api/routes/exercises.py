@@ -23,10 +23,11 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
 
         exercise_rows = await conn.fetch(
             """
-            select id, name, is_body_weight
+            select *, (user_id = $1) as is_custom
             from exercises
             where user_id is null
-            """
+            or user_id = $1
+            """, credentials["user_id"]
         )
 
         exercises = []
@@ -69,6 +70,8 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
                 "name": exercise_row["name"],
                 "is_body_weight": exercise_row["is_body_weight"],
                 "muscle_data": muscle_data,
+                "description": exercise_row["description"],
+                "weight_type": exercise_row["weight_type"]
             })
 
         return {
