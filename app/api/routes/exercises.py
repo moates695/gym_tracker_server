@@ -71,8 +71,11 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
                 "is_body_weight": exercise_row["is_body_weight"],
                 "muscle_data": muscle_data,
                 "description": exercise_row["description"],
-                "weight_type": exercise_row["weight_type"]
+                "weight_type": exercise_row["weight_type"],
+                "is_custom": exercise_row["is_custom"]
             })
+
+        exercises.sort(key=lambda e: e["name"].lower())
 
         return {
             "exercises": exercises
