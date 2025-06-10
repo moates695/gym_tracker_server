@@ -7,6 +7,7 @@ import jwt
 import os
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import random
 
 from api.middleware.token import *
 from api.routes.auth import verify_token
@@ -76,6 +77,10 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
             })
 
         exercises.sort(key=lambda e: e["name"].lower())
+
+        for exercise in exercises:
+            if random.random() < 0.85: continue
+            exercise["is_custom"] = True
 
         return {
             "exercises": exercises
