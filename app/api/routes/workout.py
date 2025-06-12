@@ -37,7 +37,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
 
         conn = await setup_connection()
 
-        start_time = datetime.fromtimestamp(req.start_time / 1000)
+        start_time = datetime.fromtimestamp(req.start_time / 1000, tz=timezone.utc)
         workout_id = await conn.fetchval(
             """
             insert into workouts
