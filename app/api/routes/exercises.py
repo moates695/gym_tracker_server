@@ -181,13 +181,22 @@ async def exercise_history(id: str, credentials: dict = Depends(verify_token)):
 
     history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
 
+    reps_sets_weight = []
+    for _ in range(random.randint(5,40)):
+        reps_sets_weight.append({
+            "reps": random.randint(5,15),
+            "weight": random_weight(),
+            "num_sets": random.randint(1,5)
+        })
+
     return {
         "n_rep_max": {
             "all_time": n_rep_max_all_time,
             "history": n_rep_max_history
         }, 
         "volume": volume,
-        "history": history
+        "history": history,
+        "reps_sets_weight": reps_sets_weight,
     }
 
 def random_weight():
