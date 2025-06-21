@@ -10,6 +10,7 @@ from api.routes import register
 from api.routes import auth
 from api.routes import exercises
 from api.routes import workout
+from api.routes import muscles
 
 app = FastAPI(title="Gym Tracker API")
 
@@ -17,6 +18,7 @@ app.include_router(register.router)
 app.include_router(auth.router)
 app.include_router(exercises.router)
 app.include_router(workout.router)
+app.include_router(muscles.router)
 
 if __name__ == "__main__":
     import uvicorn
