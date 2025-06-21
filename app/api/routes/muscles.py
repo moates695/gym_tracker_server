@@ -33,7 +33,7 @@ async def workout_save(credentials: dict = Depends(verify_token)):
         target_to_group = {}
         for row in rows:
             group_name = row["group_name"]
-            target_name = row["target_name"]
+            target_name = row['target_name']
             
             if group_name not in group_to_targets.keys():
                 group_to_targets[group_name] = []
