@@ -7,9 +7,12 @@ import jwt
 import os
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import random
+import json
 
 from api.middleware.token import *
 from api.routes.auth import verify_token
+from api.middleware.misc import *
 
 router = APIRouter()
 security = HTTPBearer()
@@ -108,3 +111,42 @@ async def save_set_data(conn, workout_exercise_id, set_data: SetData, index):
 # define body weight calc types like: lower leg, full body horizontal, full body pull etc
 async def body_weight_calc(conn, user_id, exercise_id):
     pass
+
+@router.get("/workout/overview/stats")
+async def workout_overview_stats(credentials: dict = Depends(verify_token)):
+# async def workout_overview_stats():
+    workouts = []
+    for _ in range(random.randint(20, 50)):
+        muscles = {}
+        with open("app/local/muscles.json", "r") as f:
+            muscles_json = json.load(f)
+
+        for group, targets in muscles_json.items():
+            if random.random() > 0.6: continue
+            muscles[group] = {}
+            for target in targets:
+                if random.random() > 0.9: continue
+                muscles[group][target] = {
+                    "volume": random.randint(100,900) + random.random(),
+                    "num_sets": random.randint(2,6),
+                    "reps": random.randint(15,45)
+                }
+
+        workouts.append({
+            "started_at": random_timestamp(),
+            "duration": random.randint(20, 120) + random.random(),
+            "totals": {
+                "volume": random_weight() * random.randint(100, 400),
+                "num_sets":  random.randint(3, 20),
+                "reps": random.randint(30, 250)
+            },
+            "muscles": muscles
+        })
+
+    return {
+        "workouts": workouts
+    }
+
+@router.post("/workout/overview/history")
+async def workout_overview_stats(credentials: dict = Depends(verify_token)):
+    return {}
