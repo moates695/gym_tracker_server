@@ -2,13 +2,16 @@
   "arms": [
     "bicep",
     "tricep",
-    "forearm"
+    "exterior forearm",
+    "interior forearm"
   ],
   "legs": [
     "calves",
     "quads",
     "hamstrings",
-    "glutes"
+    "glutes",
+    "hip flexors",
+    "abductors"
   ],
   "chest": [
     "upper",

@@ -143,6 +143,9 @@ async def workout_overview_stats(credentials: dict = Depends(verify_token)):
             "muscles": muscles
         })
 
+    workouts = sorted(workouts, key=lambda x: x["started_at"], reverse=True)
+    
+
     return {
         "workouts": workouts
     }
