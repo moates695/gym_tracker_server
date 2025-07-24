@@ -14,6 +14,7 @@ import bcrypt
 
 from api.middleware.database import setup_connection
 from api.middleware.token import *
+from app.api.routes.auth import verify_token
 
 router = APIRouter()
 
@@ -75,7 +76,13 @@ async def register(req: Register):
         if req.send_email:
             await send_validation_email(req.email, user_id)
 
-        return {}
+        return {
+            "temp_token": generate_token(
+                req_json.email,
+                user_id,
+                minutes=15
+            )
+        }
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -157,8 +164,44 @@ async def validate_user(token: str = None):
         "message": "email validation successful"
     }
 
+@router.get("/login")
+async def login(credentials: dict = Depends(verify_token)):
+    try:
+        account_state = fetch_account_state(credentials["user_id"])
+        auth_token = None
+        if account_state == "good":
+            auth_token = generate_token(
+                credentials["email"],
+                credentials["user_id"],
+                days=30
+            )
+
+        return {
+            "account_state": account_state,
+            "auth_token": auth_token
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+
 @router.get("/register/validate/check")
 async def check_is_validated(email: str, user_id: str):
+    try:
+        return {
+            "account_state": fetch_account_state(user_id),
+            # "auth_token": generate_token(email, user_id, days=30) if is_verified else None
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+
+async def fetch_account_state(user_id):
     try:
         conn = await setup_connection()
 
@@ -171,22 +214,14 @@ async def check_is_validated(email: str, user_id: str):
         )
 
         if is_verified is None:
-            account_state = "none"
+            return "none"
         elif not is_verified:
-            account_state = "unverified" 
+            return "unverified" 
         else:
-            account_state = "good"
-
-        return {
-            "account_state": account_state,
-            "auth_token": generate_token(email, user_id, days=30) if is_verified else None
-        }
-
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+            return "good"
+        
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        raise e
     finally:
         if conn: await conn.close()
 

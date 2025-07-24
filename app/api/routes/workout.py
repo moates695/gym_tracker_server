@@ -134,11 +134,12 @@ async def workout_overview_stats(credentials: dict = Depends(verify_token)):
 
         workouts.append({
             "started_at": random_timestamp(),
-            "duration": random.randint(20, 120) + random.random(),
+            "duration": random.randint(20, 120) * 60 + random.random(),
+            "num_exercises": random.randint(3,10),
             "totals": {
                 "volume": random_weight() * random.randint(100, 400),
                 "num_sets":  random.randint(3, 20),
-                "reps": random.randint(30, 250)
+                "reps": random.randint(30, 250),
             },
             "muscles": muscles
         })

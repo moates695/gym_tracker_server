@@ -1,5 +1,8 @@
 import os
 import asyncpg
+from dotenv import load_dotenv
+
+load_dotenv()
 
 database_config = {
     "database": os.getenv("DATABASE"),

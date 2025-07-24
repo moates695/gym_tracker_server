@@ -97,29 +97,35 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
         if conn: await conn.close()
 
 async def fetch_exercise_frequency(conn, exercise_id, user_id):
-    history_rows = await conn.fetch(
-        """
-        select workout_id, sum(reps * weight * num_sets) as volume, started_at
-        from exercise_history
-        where exercise_id = $1
-        and user_id = $2
-        and started_at at time zone 'utc' >= (now() at time zone 'utc' - interval '28 days')
-        group by workout_id, started_at
-        order by started_at desc
-        """, exercise_id, user_id
-    )
-
     days_past_volume = {}
-    for history_row in history_rows:
-        days_past = get_days_past(history_row["started_at"])
-        if days_past == 0 or days_past > 28: continue
-        
-        if days_past in days_past_volume.keys():
-            days_past_volume[days_past] += history_row["volume"]
-            continue
-        days_past_volume[days_past] = history_row["volume"]
-
+    for _ in range(random.randint(0, 12)):
+        days_past_volume[random.randint(1, 28)] = random_weight() * random.randint(3,15) * random.randint(1,4)
     return days_past_volume
+
+#! below is the real function
+# async def fetch_exercise_frequency(conn, exercise_id, user_id):
+#     history_rows = await conn.fetch(
+#         """
+#         select workout_id, sum(reps * weight * num_sets) as volume, started_at
+#         from exercise_history
+#         where exercise_id = $1
+#         and user_id = $2
+#         and started_at at time zone 'utc' >= (now() at time zone 'utc' - interval '28 days')
+#         group by workout_id, started_at
+#         order by started_at desc
+#         """, exercise_id, user_id
+#     )
+
+#     days_past_volume = {}
+#     for history_row in history_rows:
+#         days_past = get_days_past(history_row["started_at"])
+#         if days_past == 0 or days_past > 28: continue
+        
+#         if days_past not in days_past_volume.keys():
+#             days_past_volume[days_past] = 0
+#         days_past_volume[days_past] += history_row["volume"]
+
+#     return days_past_volume
 
 def get_days_past(started_at):
     now = datetime.now(timezone.utc)
