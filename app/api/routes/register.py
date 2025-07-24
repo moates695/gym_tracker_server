@@ -47,18 +47,18 @@ async def register(req: Register):
     try:
         conn = await setup_connection()
 
-        for field in ["email", "username"]:
+        for col in ["email", "username"]:
             exists = await conn.fetchval(
                 f"""
                 select exists (
                     select 1
                     from users
-                    where lower({field}) = lower($1)
-                )""", req_json[field]
+                    where lower({col}) = lower($1)
+                )""", req_json[col]
             )
 
             if not exists: continue
-            raise HTTPException(status_code=400, detail=f"{field} already exists")
+            raise HTTPException(status_code=400, detail=f"{col} already exists")
 
         hashed_pwd = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -93,15 +93,15 @@ async def register(req: Register):
     finally:
         if conn: await conn.close()
 
-# class Validate(BaseModel):
-#     email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-
-# @router.post("/register/validate/send")
-# async def _send_validation_email(req: Validate):
-#     try:
-#         await send_validation_email(req.email)
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f"Error sending validation email")
+@router.post("/register/validate/resend")
+async def resend_validation_email(credentials: dict = Depends(verify_token)):
+    try:
+        await send_validation_email(credentials["email"])
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500)
 
 async def send_validation_email(email: str, user_id: str):
     token = generate_token(email, user_id, minutes=15)
@@ -118,14 +118,8 @@ async def send_validation_email(email: str, user_id: str):
         smtp.send_message(msg)
 
 @router.get("/register/validate/receive")
-async def validate_user(token: str = None):
+async def validate_user(credentials: dict = Depends(verify_token)):
     try:
-        conn = None
-
-        decoded = decode_token(token)
-        if decoded is None or is_token_expired(decoded):
-            raise HTTPException(status_code=400, detail=f"Token is expired")
-
         conn = await setup_connection()
 
         is_valid = await conn.fetchval(
@@ -136,18 +130,18 @@ async def validate_user(token: str = None):
                 where lower(email) = lower($1)
                 and is_verified = false
             )
-            """, decoded["email"]
+            """, credentials["email"]
         )
 
         if not is_valid:
-            raise HTTPException(status_code=400, detail=f"Email '{decoded['email']}' does not exist or is already verified")
+            raise HTTPException(status_code=400, detail=f"Email '{credentials['email']}' does not exist or is already verified")
 
         await conn.execute(
             """
             update users
             set is_verified = true
             where lower(email) = lower($1)
-            """, decoded["email"]
+            """, credentials["email"]
         )
 
     except HTTPException as e:
@@ -158,8 +152,7 @@ async def validate_user(token: str = None):
     finally:
         if conn: await conn.close()
 
-    # todo return a html message
-
+    # todo return a html message?
     return {
         "message": "email validation successful"
     }
@@ -187,19 +180,19 @@ async def login(credentials: dict = Depends(verify_token)):
         print(e)
         raise HTTPException(status_code=500, detail="Uncaught exception")
 
-@router.get("/register/validate/check")
-async def check_is_validated(email: str, user_id: str):
-    try:
-        return {
-            "account_state": fetch_account_state(user_id),
-            # "auth_token": generate_token(email, user_id, days=30) if is_verified else None
-        }
+# @router.get("/register/validate/check")
+# async def check_is_validated(email: str, user_id: str):
+#     try:
+#         return {
+#             "account_state": fetch_account_state(user_id),
+#             # "auth_token": generate_token(email, user_id, days=30) if is_verified else None
+#         }
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+#     except HTTPException as e:
+#         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+#     except Exception as e:
+#         print(e)
+#         raise HTTPException(status_code=500, detail="Uncaught exception")
 
 async def fetch_account_state(user_id):
     try:
@@ -225,7 +218,7 @@ async def fetch_account_state(user_id):
     finally:
         if conn: await conn.close()
 
-@router.get("/register/username")
+@router.get("/register/check/username")
 async def valid_username(username: str):
     try:
         conn = await setup_connection()
@@ -271,14 +264,22 @@ async def sign_in(req: SignIn):
 
         if row is None:
             status = "none"
-        elif not row["is_verified"]:
-            status = "unverified"
+        elif bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')):
+            if row["is_verified"]:
+                status = "signed-in"
+            else:
+                status = "unverified"
         else:
-            status = "signed-in" if bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')) else "incorrect-password"
+            status = "incorrect-password"
 
         return {
             "status": status,
-            "auth_token": generate_token(req.email, row["id"], days=30) if status == "signed-in" else None
+            "token": generate_token(
+                req.email, 
+                row["id"], 
+                days=30 if status == "signed-in" else 0,
+                minutes=0 if status == "signed-in" else 15
+            ) if status in ["signed-in","unverified"] else None
         }
 
     except HTTPException as e:
