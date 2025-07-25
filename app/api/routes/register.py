@@ -28,6 +28,7 @@ class Register(BaseModel):
     height: int = Field(ge=20, le=300)
     weight: int = Field(ge=20, le=300)
     goal_status: Literal["bulking", "cutting", "maintaining"]
+    ped_status: Literal["natural", "juicing", "silent"]
     send_email: bool = True
 
     @field_validator('password')
@@ -47,6 +48,11 @@ async def register(req: Register):
     try:
         conn = await setup_connection()
 
+        error_result = {
+            "status": "error",
+            "fields": []
+        }
+
         for col in ["email", "username"]:
             exists = await conn.fetchval(
                 f"""
@@ -56,20 +62,22 @@ async def register(req: Register):
                     where lower({col}) = lower($1)
                 )""", req_json[col]
             )
-
             if not exists: continue
-            raise HTTPException(status_code=400, detail=f"{col} already exists")
+            error_result["fields"].append(col)
+
+        if error_result["fields"] != []:
+            return error_result
 
         hashed_pwd = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         row = await conn.fetchrow(
             """
             insert into users
-            (email, password, username, first_name, last_name, gender, height, weight, goal_status)
+            (email, password, username, first_name, last_name, gender, height, weight, goal_status, ped_status)
             values
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             returning id
-            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status
+            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status, req.ped_status
         )
         user_id = row["id"]
 
@@ -77,6 +85,7 @@ async def register(req: Register):
             await send_validation_email(req.email, user_id)
 
         return {
+            "status": "success",
             "temp_token": generate_token(
                 req_json.email,
                 user_id,
@@ -160,6 +169,13 @@ async def validate_user(credentials: dict = Depends(verify_temp_token)):
 
 @router.get("/login")
 async def login(credentials: dict = Depends(verify_token)):
+    return login_user(credentials)
+
+@router.get("/register/validate/check")
+async def validate_check(credentials: dict = Depends(verify_temp_token)):
+    return login_user(credentials)
+
+async def login_user(credentials):
     try:
         account_state = await fetch_account_state(credentials["user_id"])
         auth_token = None

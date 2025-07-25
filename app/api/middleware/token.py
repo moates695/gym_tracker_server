@@ -16,6 +16,7 @@ def decode_token(token, is_temp=False):
     try:
         return jwt.decode(token, get_env_value(is_temp), algorithms=["HS256"])
     except Exception as e:
+        print(e)
         return None
 
 def is_token_expired(token):
