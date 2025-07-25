@@ -7,6 +7,7 @@ import jwt
 import os
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from functools import partial
 
 from api.middleware.token import *
 
@@ -18,14 +19,22 @@ class TokenPayload(BaseModel):
     exp: int
     iat: int
 
-async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+async def verify_token(
+    credentials: HTTPAuthorizationCredentials = Security(security), 
+    is_temp: bool = False
+) -> dict:
     try:
-        token = credentials.credentials
-        payload = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=["HS256"])
-        return payload
-    
+        decoded = decode_token(credentials.credentials, is_temp=is_temp)
+        if decoded is None:
+            raise Exception("Token is invalid")
+        elif is_token_expired(decoded):
+            raise Exception("Token expired")
+        return decoded
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
+async def verify_temp_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    return await verify_token(credentials, is_temp=False)
 
 @router.get("/protected")
 async def protected_route(credentials: dict = Depends(verify_token)):

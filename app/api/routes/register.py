@@ -14,7 +14,7 @@ import bcrypt
 
 from api.middleware.database import setup_connection
 from api.middleware.token import *
-from app.api.routes.auth import verify_token
+from api.routes.auth import verify_token, verify_temp_token
 
 router = APIRouter()
 
@@ -80,7 +80,8 @@ async def register(req: Register):
             "temp_token": generate_token(
                 req_json.email,
                 user_id,
-                minutes=15
+                minutes=15,
+                is_temp=True
             )
         }
 
@@ -94,7 +95,7 @@ async def register(req: Register):
         if conn: await conn.close()
 
 @router.post("/register/validate/resend")
-async def resend_validation_email(credentials: dict = Depends(verify_token)):
+async def resend_validation_email(credentials: dict = Depends(verify_temp_token)):
     try:
         await send_validation_email(credentials["email"])
     except HTTPException as e:
@@ -104,7 +105,7 @@ async def resend_validation_email(credentials: dict = Depends(verify_token)):
         raise HTTPException(status_code=500)
 
 async def send_validation_email(email: str, user_id: str):
-    token = generate_token(email, user_id, minutes=15)
+    token = generate_token(email, user_id, minutes=15, is_temp=True)
     link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate/receive?token={token}"
 
     msg = EmailMessage()
@@ -118,7 +119,7 @@ async def send_validation_email(email: str, user_id: str):
         smtp.send_message(msg)
 
 @router.get("/register/validate/receive")
-async def validate_user(credentials: dict = Depends(verify_token)):
+async def validate_user(credentials: dict = Depends(verify_temp_token)):
     try:
         conn = await setup_connection()
 
@@ -160,7 +161,7 @@ async def validate_user(credentials: dict = Depends(verify_token)):
 @router.get("/login")
 async def login(credentials: dict = Depends(verify_token)):
     try:
-        account_state = fetch_account_state(credentials["user_id"])
+        account_state = await fetch_account_state(credentials["user_id"])
         auth_token = None
         if account_state == "good":
             auth_token = generate_token(
@@ -179,20 +180,6 @@ async def login(credentials: dict = Depends(verify_token)):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Uncaught exception")
-
-# @router.get("/register/validate/check")
-# async def check_is_validated(email: str, user_id: str):
-#     try:
-#         return {
-#             "account_state": fetch_account_state(user_id),
-#             # "auth_token": generate_token(email, user_id, days=30) if is_verified else None
-#         }
-
-#     except HTTPException as e:
-#         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
-#     except Exception as e:
-#         print(e)
-#         raise HTTPException(status_code=500, detail="Uncaught exception")
 
 async def fetch_account_state(user_id):
     try:
@@ -262,24 +249,31 @@ async def sign_in(req: SignIn):
             """,  req.email
         )
 
+        token = None
         if row is None:
             status = "none"
         elif bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')):
             if row["is_verified"]:
                 status = "signed-in"
+                token = generate_token(
+                    req.email,
+                    row["id"],
+                    days=30
+                )
             else:
                 status = "unverified"
+                token = generate_token(
+                    req.email,
+                    row["id"],
+                    minutes=15,
+                    is_temp=True
+                )
         else:
             status = "incorrect-password"
 
         return {
             "status": status,
-            "token": generate_token(
-                req.email, 
-                row["id"], 
-                days=30 if status == "signed-in" else 0,
-                minutes=0 if status == "signed-in" else 15
-            ) if status in ["signed-in","unverified"] else None
+            "token": token
         }
 
     except HTTPException as e:
