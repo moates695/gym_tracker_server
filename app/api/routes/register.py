@@ -106,12 +106,13 @@ async def register(req: Register):
 @router.post("/register/validate/resend")
 async def resend_validation_email(credentials: dict = Depends(verify_temp_token)):
     try:
-        await send_validation_email(credentials["email"])
+        await send_validation_email(credentials["email"], credentials["user_id"])
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500)
+    return {}
 
 async def send_validation_email(email: str, user_id: str):
     token = generate_token(email, user_id, minutes=15, is_temp=True)
@@ -128,9 +129,12 @@ async def send_validation_email(email: str, user_id: str):
         smtp.send_message(msg)
 
 @router.get("/register/validate/receive")
-async def validate_user(credentials: dict = Depends(verify_temp_token)):
+# async def validate_user(credentials: dict = Depends(verify_temp_token)):
+async def validate_user(token: str):
     try:
         conn = await setup_connection()
+
+        decoded = decode_token(token, is_temp=True)
 
         is_valid = await conn.fetchval(
             """
@@ -140,18 +144,18 @@ async def validate_user(credentials: dict = Depends(verify_temp_token)):
                 where lower(email) = lower($1)
                 and is_verified = false
             )
-            """, credentials["email"]
+            """, decoded["email"]
         )
 
         if not is_valid:
-            raise HTTPException(status_code=400, detail=f"Email '{credentials['email']}' does not exist or is already verified")
+            raise HTTPException(status_code=400, detail=f"Email '{decoded['email']}' does not exist or is already verified")
 
         await conn.execute(
             """
             update users
             set is_verified = true
             where lower(email) = lower($1)
-            """, credentials["email"]
+            """, decoded["email"]
         )
 
     except HTTPException as e:
@@ -162,18 +166,17 @@ async def validate_user(credentials: dict = Depends(verify_temp_token)):
     finally:
         if conn: await conn.close()
 
-    # todo return a html message?
     return {
         "message": "email validation successful"
     }
 
 @router.get("/login")
 async def login(credentials: dict = Depends(verify_token)):
-    return login_user(credentials)
+    return await login_user(credentials)
 
 @router.get("/register/validate/check")
 async def validate_check(credentials: dict = Depends(verify_temp_token)):
-    return login_user(credentials)
+    return await login_user(credentials)
 
 async def login_user(credentials):
     try:
