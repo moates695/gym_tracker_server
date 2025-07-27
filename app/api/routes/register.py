@@ -14,6 +14,7 @@ import bcrypt
 
 from api.middleware.database import setup_connection
 from api.middleware.token import *
+from api.routes.auth import verify_token, verify_temp_token
 
 router = APIRouter()
 
@@ -27,6 +28,7 @@ class Register(BaseModel):
     height: int = Field(ge=20, le=300)
     weight: int = Field(ge=20, le=300)
     goal_status: Literal["bulking", "cutting", "maintaining"]
+    ped_status: Literal["natural", "juicing", "silent"]
     send_email: bool = True
 
     @field_validator('password')
@@ -46,36 +48,51 @@ async def register(req: Register):
     try:
         conn = await setup_connection()
 
-        for field in ["email", "username"]:
+        error_result = {
+            "status": "error",
+            "fields": []
+        }
+
+        for col in ["email", "username"]:
             exists = await conn.fetchval(
                 f"""
                 select exists (
                     select 1
                     from users
-                    where lower({field}) = lower($1)
-                )""", req_json[field]
+                    where lower({col}) = lower($1)
+                )""", req_json[col]
             )
-
             if not exists: continue
-            raise HTTPException(status_code=400, detail=f"{field} already exists")
+            error_result["fields"].append(col)
+
+        if error_result["fields"] != []:
+            return error_result
 
         hashed_pwd = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         row = await conn.fetchrow(
             """
             insert into users
-            (email, password, username, first_name, last_name, gender, height, weight, goal_status)
+            (email, password, username, first_name, last_name, gender, height, weight, goal_status, ped_status)
             values
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             returning id
-            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status
+            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status, req.ped_status
         )
         user_id = row["id"]
 
         if req.send_email:
             await send_validation_email(req.email, user_id)
 
-        return {}
+        return {
+            "status": "success",
+            "temp_token": generate_token(
+                req_json.email,
+                user_id,
+                minutes=15,
+                is_temp=True
+            )
+        }
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -86,18 +103,19 @@ async def register(req: Register):
     finally:
         if conn: await conn.close()
 
-# class Validate(BaseModel):
-#     email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-
-# @router.post("/register/validate/send")
-# async def _send_validation_email(req: Validate):
-#     try:
-#         await send_validation_email(req.email)
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f"Error sending validation email")
+@router.post("/register/validate/resend")
+async def resend_validation_email(credentials: dict = Depends(verify_temp_token)):
+    try:
+        await send_validation_email(credentials["email"], credentials["user_id"])
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500)
+    return {}
 
 async def send_validation_email(email: str, user_id: str):
-    token = generate_token(email, user_id, minutes=15)
+    token = generate_token(email, user_id, minutes=15, is_temp=True)
     link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate/receive?token={token}"
 
     msg = EmailMessage()
@@ -111,16 +129,12 @@ async def send_validation_email(email: str, user_id: str):
         smtp.send_message(msg)
 
 @router.get("/register/validate/receive")
-async def validate_user(token: str = None):
+async def validate_user(token: str):
     try:
-        conn = None
-
-        decoded = decode_token(token)
-        if decoded is None or is_token_expired(decoded):
-            raise HTTPException(status_code=400, detail=f"Token is expired")
-
         conn = await setup_connection()
 
+        decoded = decode_token(token, is_temp=True)
+        
         is_valid = await conn.fetchval(
             """
             select exists (
@@ -151,14 +165,41 @@ async def validate_user(token: str = None):
     finally:
         if conn: await conn.close()
 
-    # todo return a html message
-
     return {
         "message": "email validation successful"
     }
 
+@router.get("/login")
+async def login(credentials: dict = Depends(verify_token)):
+    return await login_user(credentials)
+
 @router.get("/register/validate/check")
-async def check_is_validated(email: str, user_id: str):
+async def validate_check(credentials: dict = Depends(verify_temp_token)):
+    return await login_user(credentials)
+
+async def login_user(credentials):
+    try:
+        account_state = await fetch_account_state(credentials["user_id"])
+        auth_token = None
+        if account_state == "good":
+            auth_token = generate_token(
+                credentials["email"],
+                credentials["user_id"],
+                days=30
+            )
+
+        return {
+            "account_state": account_state,
+            "auth_token": auth_token
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+
+async def fetch_account_state(user_id):
     try:
         conn = await setup_connection()
 
@@ -171,26 +212,18 @@ async def check_is_validated(email: str, user_id: str):
         )
 
         if is_verified is None:
-            account_state = "none"
+            return "none"
         elif not is_verified:
-            account_state = "unverified" 
+            return "unverified" 
         else:
-            account_state = "good"
-
-        return {
-            "account_state": account_state,
-            "auth_token": generate_token(email, user_id, days=30) if is_verified else None
-        }
-
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+            return "good"
+        
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        raise e
     finally:
         if conn: await conn.close()
 
-@router.get("/register/username")
+@router.get("/register/check/username")
 async def valid_username(username: str):
     try:
         conn = await setup_connection()
@@ -234,16 +267,31 @@ async def sign_in(req: SignIn):
             """,  req.email
         )
 
+        token = None
         if row is None:
             status = "none"
-        elif not row["is_verified"]:
-            status = "unverified"
+        elif bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')):
+            if row["is_verified"]:
+                status = "signed-in"
+                token = generate_token(
+                    req.email,
+                    row["id"],
+                    days=30
+                )
+            else:
+                status = "unverified"
+                token = generate_token(
+                    req.email,
+                    row["id"],
+                    minutes=15,
+                    is_temp=True
+                )
         else:
-            status = "signed-in" if bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')) else "incorrect-password"
+            status = "incorrect-password"
 
         return {
             "status": status,
-            "auth_token": generate_token(req.email, row["id"], days=30) if status == "signed-in" else None
+            "token": token
         }
 
     except HTTPException as e:

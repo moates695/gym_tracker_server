@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone, timedelta
 import jwt
-import os 
+import os
+from uuid import uuid4
 
 from ..main import app
 
@@ -116,7 +117,8 @@ def test_username_exists(delete_test_users):
 
 def test_is_validated(delete_test_users):
     response = client.get("/register/validate/check", params={
-        "email": valid_user["email"]
+        "email": valid_user["email"],
+        "user_id": str(uuid4())
     })
     assert response.status_code == 200
     assert response.json()["account_state"] == "none"
@@ -126,7 +128,8 @@ def test_is_validated(delete_test_users):
     assert response.status_code == 200
 
     response = client.get("/register/validate/check", params={
-        "email": valid_user["email"]
+        "email": valid_user["email"],
+        "user_id": str(uuid4())
     })
     assert response.status_code == 200
     assert response.json()["account_state"] == "unverified"
@@ -138,7 +141,8 @@ def test_is_validated(delete_test_users):
     assert response.status_code == 200
 
     response = client.get("/register/validate/check", params={
-        "email": valid_user["email"]
+        "email": valid_user["email"],
+        "user_id": str(uuid4())
     })
     assert response.status_code == 200
     assert response.json()["account_state"] == "good"
@@ -146,7 +150,8 @@ def test_is_validated(delete_test_users):
     jwt.decode(response.json()["auth_token"], os.getenv("SECRET_KEY"), algorithms=["HS256"])
 
     response = client.get("/register/validate/check", params={
-        "email": valid_user["email"].upper()
+        "email": valid_user["email"].upper(),
+        "user_id": str(uuid4())
     })
     assert response.status_code == 200
     assert response.json()["account_state"] == "good"
