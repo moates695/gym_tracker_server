@@ -25,9 +25,7 @@ async def verify_token(
 ) -> dict:
     try:
         decoded = decode_token(credentials.credentials, is_temp=is_temp)
-        if decoded is None:
-            raise Exception("Token is invalid")
-        elif is_token_expired(decoded):
+        if is_token_expired(decoded):
             raise Exception("Token expired")
         return decoded
     except Exception as e:

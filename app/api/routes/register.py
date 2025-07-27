@@ -129,13 +129,12 @@ async def send_validation_email(email: str, user_id: str):
         smtp.send_message(msg)
 
 @router.get("/register/validate/receive")
-# async def validate_user(credentials: dict = Depends(verify_temp_token)):
 async def validate_user(token: str):
     try:
         conn = await setup_connection()
 
         decoded = decode_token(token, is_temp=True)
-
+        
         is_valid = await conn.fetchval(
             """
             select exists (

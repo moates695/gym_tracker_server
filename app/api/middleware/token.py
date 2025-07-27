@@ -13,11 +13,7 @@ def generate_token(email, user_id, days=0, minutes=0, is_temp=False):
     return jwt.encode(payload, get_env_value(is_temp), algorithm="HS256")
 
 def decode_token(token, is_temp=False):
-    try:
-        return jwt.decode(token, get_env_value(is_temp), algorithms=["HS256"])
-    except Exception as e:
-        print(e)
-        return None
+    return jwt.decode(token, get_env_value(is_temp), algorithms=["HS256"])
 
 def is_token_expired(token):
     return datetime.now(timezone.utc) > datetime.fromtimestamp(token["exp"], timezone.utc)
