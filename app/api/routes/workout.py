@@ -114,11 +114,95 @@ async def save_set_data(conn, workout_exercise_id, set_data: SetData, index):
 @router.get("/workout/overview/stats")
 async def workout_overview_stats(use_real: bool, credentials: dict = Depends(verify_token)):
     if use_real:
-        return await workout_overview_stats_real()
+        return await workout_overview_stats_real(credentials)
     return await workout_overview_stats_rand()
 
-async def workout_overview_stats_real():
+async def workout_overview_stats_real(credentials: dict):
     workouts = []
+
+    try:
+        conn = await setup_connection()
+
+        workouts_data = await conn.fetch(
+            """
+            select *
+            from workouts
+            where user_id = $1
+            """, credentials["user_id"]
+        )
+
+        for workout_data in workouts_data:
+            totals = {
+                "volume": 0,
+                "num_sets":  0,
+                "reps": 0,
+            }
+
+            set_data_list = await conn.fetch(
+                """
+                select wsd.reps, wsd.weight, wsd.num_sets
+                from workout_exercises we
+                inner join workout_set_data wsd
+                on wsd.workout_exercise_id = we.id
+                where we.workout_id = $1
+                """, workout_data["id"]
+            )
+            for set_data in set_data_list:
+                totals["volume"] += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                totals["num_sets"] += set_data["num_sets"]
+                totals["reps"] += set_data["reps"]
+
+            muscles = {}
+                            
+            muscle_data_list = await conn.fetch(
+                """
+                select emt.ratio, mt.name target_name, mg.name group_name, wsd.reps, wsd.weight, wsd.num_sets
+                from exercises e
+                inner join exercise_muscle_targets emt
+                on emt.exercise_id = e.id
+                inner join muscle_targets mt
+                on emt.muscle_target_id = mt.id
+                inner join muscle_groups mg
+                on mt.muscle_group_id = mg.id
+                inner join workout_exercises we
+                on we.exercise_id = e.id
+                inner join workout_set_data wsd
+                on wsd.workout_exercise_id = we.id
+                where we.workout_id = $1
+                """, workout_data["id"]
+            )
+
+            for muscle_data in muscle_data_list:
+                group = muscle_data["group_name"]
+                target = muscle_data["target_name"]
+                if group not in muscles.keys():
+                    muscles[group] = {}
+                if target not in muscles[group].keys():
+                    muscles[group][target] = {
+                        "volume": 0,
+                        "num_sets": 0,
+                        "reps": 0
+                    }
+
+                muscles[group][target]["volume"] += (muscle_data["ratio"] / 10) * muscle_data["reps"] * muscle_data["weight"] * muscle_data["num_sets"]
+                muscles[group][target]["num_sets"] += muscle_data["num_sets"]
+                muscles[group][target]["reps"] += muscle_data["reps"]
+
+            workouts.append({
+                "started_at": datetime_to_timestamp_ms(workout_data["started_at"]),
+                "duration": workout_data["duration_secs"],
+                "num_exercises": 0,
+                "totals": totals,
+                "muscles": muscles
+            })
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
 
     return {
         "workouts": workouts

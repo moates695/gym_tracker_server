@@ -164,7 +164,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             if n_rep_max_all_time.get(row["reps"], {"weight": 0})["weight"] >= row["weight"]: continue
             n_rep_max_all_time[row["reps"]] = {
                 "weight": row["weight"],
-                "timestamp": int(row["created_at"].timestamp() * 1000)
+                "timestamp": datetime_to_timestamp_ms(row["created_at"])
             }
 
         n_rep_max_history = {}
@@ -173,7 +173,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
                 n_rep_max_history[row["reps"]] = []
             n_rep_max_history[row["reps"]].append({
                 "weight": row["weight"],
-                "timestamp": int(row["created_at"].timestamp() * 1000)
+                "timestamp": datetime_to_timestamp_ms(row["created_at"])
             })
 
         for rep, history in n_rep_max_history.items():
