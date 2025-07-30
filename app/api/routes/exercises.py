@@ -19,7 +19,7 @@ security = HTTPBearer()
 # return exercises + user stats for previous set timespan
 
 @router.get("/exercises/list/all")
-async def exercises_list_all(credentials: dict = Depends(verify_token)):
+async def exercises_list_all(use_real: bool, credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
 
@@ -75,7 +75,7 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
                 "description": exercise_row["description"],
                 "weight_type": exercise_row["weight_type"],
                 "is_custom": exercise_row["is_custom"],
-                "frequency": await fetch_exercise_frequency(conn, exercise_row["id"], credentials["user_id"])
+                "frequency": await fetch_exercise_frequency(use_real, conn, exercise_row["id"], credentials["user_id"])
             })
 
         exercises.sort(key=lambda e: e["name"].lower())
@@ -96,43 +96,146 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
     finally:
         if conn: await conn.close()
 
-async def fetch_exercise_frequency(conn, exercise_id, user_id):
+async def fetch_exercise_frequency(use_real, conn, exercise_id, user_id):
+    if use_real:
+        return await fetch_exercise_frequency_real(conn, exercise_id, user_id)
+    return await fetch_exercise_frequency_rand()
+
+async def fetch_exercise_frequency_real(conn, exercise_id, user_id):
+    history_rows = await conn.fetch(
+        """
+        select workout_id, sum(reps * weight * num_sets) as volume, started_at
+        from exercise_history
+        where exercise_id = $1
+        and user_id = $2
+        and started_at at time zone 'utc' >= (now() at time zone 'utc' - interval '28 days')
+        group by workout_id, started_at
+        order by started_at desc
+        """, exercise_id, user_id
+    )
+
+    days_past_volume = {}
+    for history_row in history_rows:
+        days_past = get_days_past(history_row["started_at"])
+        if days_past == 0 or days_past > 28: continue
+        
+        if days_past not in days_past_volume.keys():
+            days_past_volume[days_past] = 0
+        days_past_volume[days_past] += history_row["volume"]
+
+    return days_past_volume
+
+async def fetch_exercise_frequency_rand():
     days_past_volume = {}
     for _ in range(random.randint(0, 12)):
         days_past_volume[random.randint(1, 28)] = random_weight() * random.randint(3,15) * random.randint(1,4)
     return days_past_volume
-
-#! below is the real function
-# async def fetch_exercise_frequency(conn, exercise_id, user_id):
-#     history_rows = await conn.fetch(
-#         """
-#         select workout_id, sum(reps * weight * num_sets) as volume, started_at
-#         from exercise_history
-#         where exercise_id = $1
-#         and user_id = $2
-#         and started_at at time zone 'utc' >= (now() at time zone 'utc' - interval '28 days')
-#         group by workout_id, started_at
-#         order by started_at desc
-#         """, exercise_id, user_id
-#     )
-
-#     days_past_volume = {}
-#     for history_row in history_rows:
-#         days_past = get_days_past(history_row["started_at"])
-#         if days_past == 0 or days_past > 28: continue
-        
-#         if days_past not in days_past_volume.keys():
-#             days_past_volume[days_past] = 0
-#         days_past_volume[days_past] += history_row["volume"]
-
-#     return days_past_volume
 
 def get_days_past(started_at):
     now = datetime.now(timezone.utc)
     return abs(now - started_at.astimezone(timezone.utc)).days
 
 @router.get("/exercise/history")
-async def exercise_history(id: str, credentials: dict = Depends(verify_token)):
+async def exercise_history(exercise_id: str, use_real: bool, credentials: dict = Depends(verify_token)):
+    if use_real:
+        return await exercise_history_real(exercise_id, credentials)
+    return await exercise_history_rand()
+
+async def exercise_history_real(exercise_id: str, credentials: dict):
+    try:
+        conn = await setup_connection()
+        
+        rows = await conn.fetch(
+            """
+            select wsd.reps, wsd.weight, wsd.num_sets, wsd.created_at
+            from workouts w
+            inner join workout_exercises we
+            on we.workout_id = w.id
+            inner join workout_set_data wsd
+            on wsd.workout_exercise_id = we.id
+            where w.user_id = $1
+            and we.exercise_id = $2
+            order by wsd.created_at desc
+            """, credentials["user_id"], exercise_id 
+        )
+
+        n_rep_max_all_time = {}
+        for row in rows:
+            if n_rep_max_all_time.get(row["reps"], {"weight": 0})["weight"] >= row["weight"]: continue
+            n_rep_max_all_time[row["reps"]] = {
+                "weight": row["weight"],
+                "timestamp": int(row["created_at"].timestamp() * 1000)
+            }
+
+        n_rep_max_history = {}
+        for row in rows:
+            if row["reps"] not in n_rep_max_history.keys():
+                n_rep_max_history[row["reps"]] = []
+            n_rep_max_history[row["reps"]].append({
+                "weight": row["weight"],
+                "timestamp": int(row["created_at"].timestamp() * 1000)
+            })
+
+        for rep, history in n_rep_max_history.items():
+            n_rep_max_history[rep] = sorted(history, key=lambda x: x["timestamp"])
+
+        volume_days = {}
+        for row in rows:
+            date = row["created_at"].date()
+            if date not in volume_days.keys():
+                volume_days[date] = 0
+            volume_days[date] += row["reps"] * row["weight"] * row["num_sets"]
+
+        volume = [{
+            "volume": value,
+            "timestamp": date_to_timestamp_ms(key)
+        } for key, value in volume_days.items()]
+        volume = sorted(volume, key=lambda x: x["timestamp"])
+
+        history_days = {}
+        for row in rows:
+            date = row["created_at"].date()
+            if date not in history_days.keys():
+                history_days[date] = []
+            history_days[date].append({
+                "reps": row[0],
+                "weight": row[1],
+                "num_sets": row[2],
+            })
+
+        history = [{
+            "set_data": value,
+            "timestamp": date_to_timestamp_ms(key)
+        } for key, value in history_days.items()]
+        history = sorted(history, key=lambda x: x["timestamp"])
+
+        reps_sets_weight = []
+        for row in rows:
+            reps_sets_weight.append({
+                "reps": row[0],
+                "weight": row[1],
+                "num_sets": row[2],
+            })
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
+    return {
+        "n_rep_max": {
+            "all_time": n_rep_max_all_time,
+            "history": n_rep_max_history
+        },
+        "volume": volume,
+        "history": history,
+        "reps_sets_weight": reps_sets_weight,
+    }
+
+async def exercise_history_rand():
     now = datetime.now(timezone.utc).timestamp() * 1000
     
     reps = set([random.randint(1,25) for _ in range(20)])
@@ -205,5 +308,3 @@ async def exercise_history(id: str, credentials: dict = Depends(verify_token)):
         "history": history,
         "reps_sets_weight": reps_sets_weight,
     }
-
-
