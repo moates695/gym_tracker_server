@@ -5,6 +5,7 @@ import os
 from uuid import uuid4
 
 from ..main import app
+from ..api.middleware.token import decode_token
 
 client = TestClient(app)
 
@@ -18,6 +19,7 @@ valid_user = {
     "height": 183,
     "weight": 98,
     "goal_status": "cutting",
+    "ped_status": 'natural',
     "send_email": False
 }
 
@@ -25,6 +27,8 @@ def test_valid_register(delete_test_users):
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
     assert "auth_token" not in response.json().keys()
+    temp_token = response.json()["temp_token"]
+    decode_token(temp_token, is_temp=True)
 
 def test_email_taken(delete_test_users):
     user = valid_user.copy()

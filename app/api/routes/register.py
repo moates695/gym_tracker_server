@@ -25,8 +25,8 @@ class Register(BaseModel):
     first_name: str = Field(min_length=1, max_length=255)
     last_name: str = Field(min_length=1, max_length=255)
     gender: Literal["male", "female", "other"]
-    height: int = Field(ge=20, le=300)
-    weight: int = Field(ge=20, le=300)
+    height: int = Field(ge=0, le=500)
+    weight: int = Field(ge=0, le=500)
     goal_status: Literal["bulking", "cutting", "maintaining"]
     ped_status: Literal["natural", "juicing", "silent"]
     send_email: bool = True
@@ -73,13 +73,46 @@ async def register(req: Register):
         row = await conn.fetchrow(
             """
             insert into users
-            (email, password, username, first_name, last_name, gender, height, weight, goal_status, ped_status)
+            (email, password, username, first_name, last_name, gender)
             values
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ($1, $2, $3, $4, $5, $6)
             returning id
-            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, req.height, req.weight, req.goal_status, req.ped_status
+            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender
         )
         user_id = row["id"]
+
+        data_to_tables = [
+            {
+                "key": 'height',
+                "table": 'user_heights',
+                "column": 'height',
+            },
+            {
+                "key": 'weight',
+                "table": 'user_weights',
+                "column": 'weight',
+            },
+            {
+                "key": 'goal_status',
+                "table": 'user_goals',
+                "column": 'goal_status',
+            },
+            {
+                "key": 'ped_status',
+                "table": 'user_ped_status',
+                "column": 'ped_status',
+            },
+        ]
+
+        for data_map in data_to_tables:
+            await conn.execute(
+                f"""
+                insert into {data_map["table"]}
+                (user_id, {data_map["column"]})
+                values
+                ($1, $2);
+                """, user_id, req_json[data_map["key"]]
+            )
 
         if req.send_email:
             await send_validation_email(req.email, user_id)
@@ -87,7 +120,7 @@ async def register(req: Register):
         return {
             "status": "success",
             "temp_token": generate_token(
-                req_json.email,
+                req.email,
                 user_id,
                 minutes=15,
                 is_temp=True

@@ -20,11 +20,13 @@ async def _delete_test_users():
     try:
         conn = await setup_connection()
 
-        await conn.execute("""
-delete
-from users
-where lower(email) like '%@pytest.com'
-""")
+        await conn.execute(
+            """
+            delete
+            from users
+            where lower(email) like '%@pytest.com';
+            """
+        )
 
     except Exception as e:
         raise Exception(f"Error in fixture: {e}")

@@ -33,3 +33,11 @@ async def verify_token(
 
 async def verify_temp_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     return await verify_token(credentials, is_temp=True)
+
+@router.get("/protected")
+async def workout_save(credentials: dict = Depends(verify_token)):
+    return {}
+
+@router.get("/protected_temp")
+async def workout_save(credentials: dict = Depends(verify_temp_token)):
+    return {}
