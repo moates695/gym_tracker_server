@@ -166,7 +166,10 @@ async def validate_user(token: str):
     try:
         conn = await setup_connection()
 
-        decoded = decode_token(token, is_temp=True)
+        try:
+            decoded = decode_token(token, is_temp=True)
+        except Exception as e:
+            raise HTTPException(status_code=401)
         
         is_valid = await conn.fetchval(
             """

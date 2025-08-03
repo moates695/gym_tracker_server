@@ -10,7 +10,12 @@ from ..api.middleware.token import generate_token
 
 client = TestClient(app)
 
-def test_verify_token():
+def test_verify_token(delete_test_users):
+    response = client.get("/protected")
+    assert response.status_code == 403
+    response = client.get("/protected_temp")
+    assert response.status_code == 403
+
     auth_token = generate_token(
         "test@pytest.com", 
         str(uuid4()),
@@ -23,6 +28,7 @@ def test_verify_token():
     assert response.status_code == 200
     response = client.get("/protected_temp", headers=headers)
     assert response.status_code == 401
+
 
 
     temp_token = generate_token(

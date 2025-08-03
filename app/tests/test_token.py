@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 
 from ..api.middleware.token import generate_token, decode_token
 
-def test_generate_token():
+def test_generate_token(delete_test_users):
     email = "test@pytest.com"
     user_id = str(uuid4())
     days = 2
