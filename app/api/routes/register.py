@@ -15,20 +15,31 @@ import bcrypt
 from api.middleware.database import setup_connection
 from api.middleware.token import *
 from api.routes.auth import verify_token, verify_temp_token
+from api.routes.users import fetch_user_data
+from api.middleware.misc import *
 
 router = APIRouter()
 
+# email_field = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+# password_field = Field(min_length=8, max_length=36)
+# name_field = Field(min_length=1, max_length=255)
+# gender_literal = Literal["male", "female", "other"]
+# height_field = Field(ge=0, le=500)
+# weight_field = Field(ge=0, le=500)
+# goal_status_literal = Literal["bulking", "cutting", "maintaining"]
+# ped_status_literal = Literal["natural", "juicing", "silent"]
+
 class Register(BaseModel):
-    email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-    password: str = Field(min_length=8, max_length=36)
+    email: str = email_field
+    password: str = password_field
     username: str = Field(min_length=1, max_length=20)
-    first_name: str = Field(min_length=1, max_length=255)
-    last_name: str = Field(min_length=1, max_length=255)
+    first_name: str = name_field
+    last_name: str = name_field
     gender: Literal["male", "female", "other"]
-    height: int = Field(ge=0, le=500)
-    weight: int = Field(ge=0, le=500)
-    goal_status: Literal["bulking", "cutting", "maintaining"]
-    ped_status: Literal["natural", "juicing", "silent"]
+    height: float = height_field
+    weight: float = weight_field
+    goal_status: goal_status_literal
+    ped_status: ped_status_literal
     send_email: bool = True
 
     @field_validator('password')
@@ -81,30 +92,8 @@ async def register(req: Register):
         )
         user_id = row["id"]
 
-        data_to_tables = [
-            {
-                "key": 'height',
-                "table": 'user_heights',
-                "column": 'height',
-            },
-            {
-                "key": 'weight',
-                "table": 'user_weights',
-                "column": 'weight',
-            },
-            {
-                "key": 'goal_status',
-                "table": 'user_goals',
-                "column": 'goal_status',
-            },
-            {
-                "key": 'ped_status',
-                "table": 'user_ped_status',
-                "column": 'ped_status',
-            },
-        ]
-
-        for data_map in data_to_tables:
+        for data_map in user_data_to_tables:
+            if data_map["table"] == "users": continue
             await conn.execute(
                 f"""
                 insert into {data_map["table"]}
@@ -217,16 +206,19 @@ async def login_user(credentials):
     try:
         account_state = await fetch_account_state(credentials["user_id"])
         auth_token = None
+        user_data = None
         if account_state == "good":
             auth_token = generate_token(
                 credentials["email"],
                 credentials["user_id"],
                 days=30
             )
+            user_data = await fetch_user_data(credentials["user_id"])
 
         return {
             "account_state": account_state,
-            "auth_token": auth_token
+            "auth_token": auth_token,
+            "user_data": user_data 
         }
 
     except HTTPException as e:
@@ -287,8 +279,8 @@ async def valid_username(username: str):
         if conn: await conn.close()
 
 class SignIn(BaseModel):
-    email: str = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-    password: str = Field(min_length=8, max_length=36)
+    email: str = email_field
+    password: str = password_field
 
 @router.post("/sign-in")
 async def sign_in(req: SignIn):
@@ -304,6 +296,7 @@ async def sign_in(req: SignIn):
         )
 
         token = None
+        user_data = None
         if row is None:
             status = "none"
         elif bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')):
@@ -314,6 +307,7 @@ async def sign_in(req: SignIn):
                     row["id"],
                     days=30
                 )
+                user_data = await fetch_user_data(row["id"])
             else:
                 status = "unverified"
                 token = generate_token(
@@ -327,7 +321,8 @@ async def sign_in(req: SignIn):
 
         return {
             "status": status,
-            "token": token
+            "token": token,
+            "user_data": user_data
         }
 
     except HTTPException as e:

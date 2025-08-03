@@ -14,7 +14,9 @@ database_config = {
 
 async def setup_connection():
     try:
-        conn = await asyncpg.connect(**database_config)
+        # conn = await asyncpg.connect(**database_config)
+        return await asyncpg.connect(**database_config)
     except Exception as e:
-        raise Exception(f"Error in db connection setup: {e}")
-    return conn
+        # raise Exception(f"Error in db connection setup: {e}")
+        return None
+    # return conn

@@ -126,6 +126,7 @@ def test_is_validated(delete_test_users):
     assert response.status_code == 200
     assert response.json()["account_state"] == "unverified"
     assert response.json()["auth_token"] == None
+    assert response.json()["user_data"] == None
 
     response = client.get("/register/validate/receive", params={
         "token": temp_token
@@ -148,6 +149,8 @@ def test_is_validated(delete_test_users):
     })
     assert response.status_code == 200
     assert response.json()["account_state"] == "none"
+    assert response.json()["auth_token"] == None
+    assert response.json()["user_data"] == None
 
 def test_login(delete_test_users):
     response = client.post("/register", json=valid_user)
@@ -166,6 +169,15 @@ def test_login(delete_test_users):
     assert response.json()["account_state"] == "good"
     auth_token = response.json()["auth_token"]
     decode_token(auth_token)
+    assert response.json()["user_data"] == {
+        "first_name": valid_user["first_name"],
+        "last_name": valid_user["last_name"],
+        "gender": valid_user["gender"],
+        "goal_status": valid_user["goal_status"],
+        "height": valid_user["height"],
+        "ped_status": valid_user["ped_status"],
+        "weight": valid_user["weight"],
+    }
 
     response = client.get("/login", headers={
         "Authorization": f"Bearer {auth_token}"
@@ -173,6 +185,15 @@ def test_login(delete_test_users):
     assert response.status_code == 200
     assert response.json()["account_state"] == "good"
     decode_token(response.json()["auth_token"])
+    assert response.json()["user_data"] == {
+        "first_name": valid_user["first_name"],
+        "last_name": valid_user["last_name"],
+        "gender": valid_user["gender"],
+        "goal_status": valid_user["goal_status"],
+        "height": valid_user["height"],
+        "ped_status": valid_user["ped_status"],
+        "weight": valid_user["weight"],
+    }
 
 def test_sign_in(delete_test_users):
     user = valid_user.copy()
@@ -199,6 +220,15 @@ def test_sign_in(delete_test_users):
     })
     assert response.json()["status"] == "signed-in"
     decode_token(response.json()["token"])
+    assert response.json()["user_data"] == {
+        "first_name": valid_user["first_name"],
+        "last_name": valid_user["last_name"],
+        "gender": valid_user["gender"],
+        "goal_status": valid_user["goal_status"],
+        "height": valid_user["height"],
+        "ped_status": valid_user["ped_status"],
+        "weight": valid_user["weight"],
+    }
 
     response = client.post("/sign-in", json={
         "email": user["email"],
