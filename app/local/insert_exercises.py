@@ -7,6 +7,8 @@ with open("app/local/exercises.json", "r") as file:
     exercises_json = json.load(file)
 
 async def insert_exercises():
+    return
+
     try:
         conn = await setup_connection()
 

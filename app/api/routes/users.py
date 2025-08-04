@@ -23,13 +23,13 @@ async def users_data(credentials: dict = Depends(verify_token)):
     try:
         user_data = await fetch_user_data(credentials["user_id"])
         return {
-            "status": "success",
             "user_data": user_data
         }
+    
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
-        return {
-            "status": "error"
-        }
+        return HTTPException(status_code=500)
 
 async def fetch_user_data(user_id: str) -> dict | None:
     try:
@@ -102,7 +102,44 @@ async def users_weight(req: Update, credentials: dict = Depends(verify_token)):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500)
-
     finally:
         if conn: await conn.close()
 
+@router.get("/users/data/get/history")
+async def users_data_get_history(credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+
+        history = {}
+        for data_map in user_data_to_tables:
+            if data_map["table"] == "users": continue
+
+            rows = await conn.fetch(
+                f"""
+                select {data_map["column"]}, created_at
+                from {data_map["table"]}
+                where user_id = $1
+                order by created_at desc
+                """, credentials["user_id"]
+            )
+
+            temp = []
+            for row in rows:
+                temp.append({
+                    "value": row[data_map["column"]],
+                    "created_at": row["created_at"].timestamp()
+                })
+
+            history[data_map["key"]] = temp
+
+        return {
+            "data_history": history
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500)
+    finally:
+        if conn: await conn.close()
