@@ -4,9 +4,13 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 import pytest_asyncio
+import pytest
+from dotenv import load_dotenv
+from fastapi.testclient import TestClient
 
 from api.middleware.database import setup_connection
-from dotenv import load_dotenv
+from ..main import app
+from ..tests.test_register import valid_user
 
 load_dotenv()
 
@@ -32,3 +36,19 @@ async def _delete_test_users():
         raise Exception(f"Error in fixture: {e}")
     finally:
         if conn: await conn.close()
+
+@pytest.fixture
+def create_user():
+    client = TestClient(app)
+
+    response = client.post("/register", json=valid_user)
+    temp_token = response.json()["temp_token"]
+    
+    response = client.get("/register/validate/receive", params={
+        "token": temp_token
+    })
+
+    response = client.get("/register/validate/check", headers={
+        "Authorization": f"Bearer {temp_token}"
+    })
+    return response.json()["auth_token"]

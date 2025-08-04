@@ -200,14 +200,14 @@ def test_sign_in(delete_test_users):
 
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
-    temp_token = response.json()["temp_token"]
 
     response = client.post("/sign-in", json={
         "email": user["email"],
         "password": user["password"]
     })
     assert response.json()["status"] == "unverified"
-    decode_token(response.json()["token"], is_temp=True)
+    temp_token = response.json()["token"]
+    decode_token(temp_token, is_temp=True)
 
     response = client.get("/register/validate/receive", params={
         "token": temp_token
