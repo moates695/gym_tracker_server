@@ -26,6 +26,8 @@ async def test_update_muscles():
     try:
         conn = await setup_connection()
 
+        original_rows = await get_muscles_groups_targets(conn)
+
         await update(combined)
         rows1 = await get_muscles_groups_targets(conn)
         await update(combined)
@@ -75,8 +77,9 @@ async def test_update_muscles():
     except Exception as e:
         raise e
     finally:
-        if conn: await conn.close()
         await update(muscles_json)
+        assert original_rows == await get_muscles_groups_targets(conn)
+        if conn: await conn.close()
 
 
 async def get_muscles_groups_targets(conn):
