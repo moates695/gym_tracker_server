@@ -9,6 +9,9 @@ async def main():
     with open("app/local/muscles.json", "r") as file:
         muscles_json = json.load(file)
 
+    await update(muscles_json)
+
+async def update(muscles_json: dict):
     try:
         conn = await setup_connection()
 

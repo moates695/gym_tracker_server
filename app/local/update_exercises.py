@@ -9,6 +9,9 @@ async def main():
     with open("app/local/exercises.json", "r") as file:
         exercises = json.load(file)
 
+    await update(exercises)
+
+async def update(exercises):
     try:
         conn = await setup_connection()
 
@@ -41,9 +44,10 @@ async def main():
         }
 
         valid_exercise_ids = []
-        valid_exercise_muscle_target_ids = []
-
+        
         for exercise in exercises:
+            valid_exercise_muscle_target_ids = []
+
             if exercise["name"] not in db_exercises.keys():
                 exercise_id = await conn.fetchval(
                     """
@@ -99,13 +103,6 @@ async def main():
 
             for target_id, ratio in target_data.items():
                 if target_id not in db_exercise_target_ids.keys():
-                    # await conn.execute(
-                    #     """
-                    #     delete from exercise_muscle_targets
-                    #     where exercise_id = $1
-                    #     and muscle_target_id = $2
-                    #     """, exercise_id, target_id
-                    # )
                     temp_id = await conn.execute(
                         """
                         insert into exercise_muscle_targets
@@ -124,41 +121,30 @@ async def main():
                         where id = $2
                         """, ratio, db_exercise_target_ids[target_id]["id"]
                     )
-                    valid_exercise_muscle_target_ids.append(db_exercise_target_ids[target_id]["id"])
-                else:
-                    valid_exercise_muscle_target_ids.append(db_exercise_target_ids[target_id]["id"])
 
+                if target_id in db_exercise_target_ids.keys():
+                    valid_exercise_muscle_target_ids.append(db_exercise_target_ids[target_id]["id"])
+                
                 # todo delete old emt rows for each exercise
 
-            # todo delete old rows for exercises where user is null
+            await conn.execute(
+                """
+                delete
+                from exercise_muscle_targets
+                where exercise_id = $1
+                and not (id = any($2))
+                """, exercise_id, valid_exercise_muscle_target_ids
+            )
 
-        # await conn.execute(
-        #     f"""
-        #     delete 
-        #     from exercises
-        #     where not (id = any($1))
-        #     and user_id is null;
-        #     """, valid_exercise_ids
-        # )
+        await conn.execute(
+            f"""
+            delete 
+            from exercises
+            where not (id = any($1))
+            and user_id is null;
+            """, valid_exercise_ids
+        )
 
-        # await conn.execute(
-        #     f"""
-        #     delete 
-        #     from exercises
-        #     where not (id = any($1))
-        #     and user_id is null;
-        #     """, valid_exercise_ids
-        # )
-
-        # for table, ids in delete_map.items():
-        #     await conn.execute(
-        #         f"""
-        #         delete 
-        #         from {table}
-        #         where not (id = any($1))
-        #         and user_id is null;
-        #         """, ids
-        #     )
 
     except Exception as e:
         raise e
