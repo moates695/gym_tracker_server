@@ -12,7 +12,7 @@ database_config = {
     "port": int(os.getenv("DB_PORT"))
 }
 
-async def setup_connection():
+async def setup_connection() -> asyncpg.connection.Connection:
     try:
         # conn = await asyncpg.connect(**database_config)
         return await asyncpg.connect(**database_config)

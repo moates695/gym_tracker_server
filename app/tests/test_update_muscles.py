@@ -26,12 +26,12 @@ async def test_update_muscles():
     try:
         conn = await setup_connection()
 
-        original_rows = await get_muscles_groups_targets(conn)
+        original_rows = await fetch_muscles_groups_targets(conn)
 
         await update(combined)
-        rows1 = await get_muscles_groups_targets(conn)
+        rows1 = await fetch_muscles_groups_targets(conn)
         await update(combined)
-        rows2 = await get_muscles_groups_targets(conn)
+        rows2 = await fetch_muscles_groups_targets(conn)
 
         assert rows1 == rows2
         for row in rows2:
@@ -78,11 +78,11 @@ async def test_update_muscles():
         raise e
     finally:
         await update(muscles_json)
-        assert original_rows == await get_muscles_groups_targets(conn)
+        assert original_rows == await fetch_muscles_groups_targets(conn)
         if conn: await conn.close()
 
 
-async def get_muscles_groups_targets(conn):
+async def fetch_muscles_groups_targets(conn):
     return await conn.fetch(
         """
         select *

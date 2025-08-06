@@ -103,7 +103,7 @@ async def update(exercises):
 
             for target_id, ratio in target_data.items():
                 if target_id not in db_exercise_target_ids.keys():
-                    temp_id = await conn.execute(
+                    temp_id = await conn.fetchval(
                         """
                         insert into exercise_muscle_targets
                         (muscle_target_id, exercise_id, ratio)
@@ -125,14 +125,12 @@ async def update(exercises):
                 if target_id in db_exercise_target_ids.keys():
                     valid_exercise_muscle_target_ids.append(db_exercise_target_ids[target_id]["id"])
                 
-                # todo delete old emt rows for each exercise
-
             await conn.execute(
                 """
                 delete
                 from exercise_muscle_targets
                 where exercise_id = $1
-                and not (id = any($2))
+                and not (id = any($2::uuid[]))
                 """, exercise_id, valid_exercise_muscle_target_ids
             )
 
