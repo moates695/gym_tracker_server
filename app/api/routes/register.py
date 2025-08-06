@@ -138,7 +138,8 @@ async def resend_validation_email(credentials: dict = Depends(verify_temp_token)
 
 async def send_validation_email(email: str, user_id: str):
     token = generate_token(email, user_id, minutes=15, is_temp=True)
-    link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate/receive?token={token}"
+    # link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate/receive?token={token}"
+    link = f"{os.getenv('SERVER_ADDRESS')}/register/validate/receive?token={token}"
 
     msg = EmailMessage()
     msg["Subject"] = "Gym Tracker Email Validation"
