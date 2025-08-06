@@ -27,46 +27,7 @@ async def main():
         } 
 
         for muscle_group, muscle_targets in muscles_json.items():
-            if muscle_group not in db_muscle_groups.keys():
-                temp_id = await conn.fetchval(
-                    """
-                    insert into muscle_groups
-                    (name)
-                    values
-                    ($1)
-                    returning id;
-                    """, muscle_group
-                )
-                db_muscle_groups[muscle_group] = temp_id
-
-            valid_group_ids.append(db_muscle_groups[muscle_group])
-
-            rows = await conn.fetch(
-                """
-                select id, name
-                from muscle_targets
-                where muscle_group_id = $1
-                """, db_muscle_groups[muscle_group]
-            )
-            db_muscle_targets = {
-                row["name"]: row["id"] for row in rows
-            }
-
-            for muscle_target in muscle_targets:
-                if muscle_target in db_muscle_targets.keys():
-                    valid_target_ids.append(db_muscle_targets[muscle_target])
-                    continue
-                
-                temp_id = await conn.fetchval(
-                    """
-                    insert into muscle_targets
-                    (muscle_group_id, name)
-                    values
-                    ($1, $2)
-                    returning id;
-                    """, db_muscle_groups[muscle_group], muscle_target
-                )
-                valid_target_ids.append(temp_id)
+            await update_muscle_groups(conn, muscle_group, muscle_targets, db_muscle_groups, valid_group_ids, valid_target_ids)     
         
         delete_map = {
             "muscle_groups": valid_group_ids,
@@ -86,6 +47,51 @@ async def main():
         raise e
     finally:
         if conn: await conn.close()
+
+async def update_muscle_groups(conn, muscle_group, muscle_targets, db_muscle_groups, valid_group_ids, valid_target_ids):
+    if muscle_group not in db_muscle_groups.keys():
+        temp_id = await conn.fetchval(
+            """
+            insert into muscle_groups
+            (name)
+            values
+            ($1)
+            returning id;
+            """, muscle_group
+        )
+        db_muscle_groups[muscle_group] = temp_id
+
+    valid_group_ids.append(db_muscle_groups[muscle_group])
+
+    rows = await conn.fetch(
+        """
+        select id, name
+        from muscle_targets
+        where muscle_group_id = $1
+        """, db_muscle_groups[muscle_group]
+    )
+    db_muscle_targets = {
+        row["name"]: row["id"] for row in rows
+    }
+
+    for muscle_target in muscle_targets:
+        await update_muscle_targets(conn, muscle_target, db_muscle_targets, valid_target_ids, db_muscle_groups[muscle_group])
+
+async def update_muscle_targets(conn, muscle_target, db_muscle_targets, valid_target_ids, muscle_group_id):
+    if muscle_target in db_muscle_targets.keys():
+        valid_target_ids.append(db_muscle_targets[muscle_target])
+        return
+    
+    temp_id = await conn.fetchval(
+        """
+        insert into muscle_targets
+        (muscle_group_id, name)
+        values
+        ($1, $2)
+        returning id;
+        """, muscle_group_id, muscle_target
+    )
+    valid_target_ids.append(temp_id)
 
 if __name__ == "__main__":
     asyncio.run(main())

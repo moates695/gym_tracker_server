@@ -27,7 +27,7 @@ async def workout_save(credentials: dict = Depends(verify_token)):
             inner join muscle_targets mt
             on mt.muscle_group_id = mg.id
             """
-        )
+        ) # todo: use new view instead
 
         group_to_targets = {}
         target_to_group = {}

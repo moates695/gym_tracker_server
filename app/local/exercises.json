@@ -1,31 +1,32 @@
 [
   {
-    "name": "Dumbbell Bicep Curl",
-    "targets": {
-      "arms/bicep": 100,
-      "arms/forearm": 20
-    },
-    "is_body_weight": false,
-    "description": "",
-    "weight_type": "free"
-  },
-  {
     "name": "Push-Up",
     "targets": {
-      "chest": 80,
-      "arms/tricep": 60,
-      "shoulders": 40
+      "chest": 8,
+      "arms/tricep": 6,
+      "shoulders": 4
     },
     "is_body_weight": true,
     "description": "",
     "weight_type": "free"
   },
   {
+    "name": "Dumbbell Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
     "name": "Pull-Up",
     "targets": {
-      "back/lats": 100,
-      "arms/bicep": 60,
-      "arms/forearm": 30
+      "back/lats": 10,
+      "arms/bicep": 6,
+      "arms/exterior forearm": 3
     },
     "is_body_weight": true,
     "description": "",
@@ -34,9 +35,9 @@
   {
     "name": "Barbell Squat",
     "targets": {
-      "legs/quads": 100,
-      "legs/glutes": 80,
-      "legs/hamstrings": 60
+      "legs/quads": 10,
+      "legs/glutes": 8,
+      "legs/hamstrings": 6
     },
     "is_body_weight": false,
     "description": "",
@@ -45,9 +46,9 @@
   {
     "name": "Deadlift",
     "targets": {
-      "legs/glutes": 90,
-      "legs/hamstrings": 70,
-      "back/erectors": 80
+      "legs/glutes": 9,
+      "legs/hamstrings": 7,
+      "back/erectors": 8
     },
     "is_body_weight": false,
     "description": "",
@@ -56,9 +57,9 @@
   {
     "name": "Plank",
     "targets": {
-      "core": 100,
-      "shoulders": 20,
-      "back/erectors": 30
+      "core": 10,
+      "shoulders": 2,
+      "back/erectors": 3
     },
     "is_body_weight": true,
     "description": "",
@@ -67,8 +68,8 @@
   {
     "name": "Overhead Shoulder Press",
     "targets": {
-      "shoulders": 100,
-      "arms/tricep": 50
+      "shoulders": 10,
+      "arms/tricep": 5
     },
     "is_body_weight": false,
     "description": "",
@@ -77,8 +78,8 @@
   {
     "name": "Dumbbell Lateral Raise",
     "targets": {
-      "shoulders": 100,
-      "back/traps": 40
+      "shoulders": 10,
+      "back/traps": 4
     },
     "is_body_weight": false,
     "description": "",
@@ -87,9 +88,9 @@
   {
     "name": "Leg Press",
     "targets": {
-      "legs/quads": 100,
-      "legs/glutes": 70,
-      "legs/hamstrings": 50
+      "legs/quads": 10,
+      "legs/glutes": 7,
+      "legs/hamstrings": 5
     },
     "is_body_weight": false,
     "description": "",
@@ -98,9 +99,9 @@
   {
     "name": "Tricep Dip",
     "targets": {
-      "arms/tricep": 100,
-      "chest": 40,
-      "shoulders": 30
+      "arms/tricep": 10,
+      "chest": 4,
+      "shoulders": 3
     },
     "is_body_weight": true,
     "description": "",
@@ -109,8 +110,8 @@
   {
     "name": "Russian Twist",
     "targets": {
-      "core/obliques": 100,
-      "core": 60
+      "core/obliques": 10,
+      "core": 6
     },
     "is_body_weight": true,
     "description": "",
@@ -119,9 +120,9 @@
   {
     "name": "Lunge",
     "targets": {
-      "legs/quads": 90,
-      "legs/glutes": 70,
-      "legs/hamstrings": 60
+      "legs/quads": 9,
+      "legs/glutes": 7,
+      "legs/hamstrings": 6
     },
     "is_body_weight": true,
     "description": "",
@@ -130,9 +131,9 @@
   {
     "name": "Bench Press",
     "targets": {
-      "chest": 100,
-      "arms/tricep": 60,
-      "shoulders": 60
+      "chest": 10,
+      "arms/tricep": 6,
+      "shoulders": 6
     },
     "is_body_weight": false,
     "description": "",
@@ -141,9 +142,9 @@
   {
     "name": "Mountain Climber",
     "targets": {
-      "core": 80,
-      "shoulders": 40,
-      "legs/quads": 50
+      "core": 8,
+      "shoulders": 4,
+      "legs/quads": 5
     },
     "is_body_weight": true,
     "description": "",
@@ -152,11 +153,11 @@
   {
     "name": "Bent-Over Row",
     "targets": {
-      "back/lats": 90,
-      "back/traps": 60,
-      "back/exterior middle": 80,
-      "back/upper middle": 70,
-      "arms/bicep": 40
+      "back/lats": 9,
+      "back/traps": 6,
+      "back/exterior middle": 8,
+      "back/upper middle": 7,
+      "arms/bicep": 4
     },
     "is_body_weight": false,
     "description": "",
@@ -165,9 +166,9 @@
   {
     "name": "Back Extension",
     "targets": {
-      "legs/glutes": 100,
-      "core": 30,
-      "back/erectors": 90
+      "legs/glutes": 10,
+      "core": 3,
+      "back/erectors": 9
     },
     "is_body_weight": true,
     "description": "",
@@ -176,9 +177,9 @@
   {
     "name": "Glute Bridge",
     "targets": {
-      "legs/glutes": 100,
-      "legs/hamstrings": 40,
-      "core": 30
+      "legs/glutes": 10,
+      "legs/hamstrings": 4,
+      "core": 3
     },
     "is_body_weight": true,
     "description": "",
@@ -187,10 +188,10 @@
   {
     "name": "Burpee",
     "targets": {
-      "core": 60,
-      "legs/quads": 50,
-      "chest": 50,
-      "shoulders": 30
+      "core": 6,
+      "legs/quads": 5,
+      "chest": 5,
+      "shoulders": 3
     },
     "is_body_weight": true,
     "description": "",
@@ -199,7 +200,7 @@
   {
     "name": "Seated Calf Raise",
     "targets": {
-      "legs/calves": 100
+      "legs/calves": 10
     },
     "is_body_weight": false,
     "description": "",
@@ -208,7 +209,7 @@
   {
     "name": "Hanging Leg Raise",
     "targets": {
-      "core": 40
+      "core": 4
     },
     "is_body_weight": true,
     "description": "",
@@ -217,8 +218,8 @@
   {
     "name": "Face Pull",
     "targets": {
-      "shoulders/rear": 90,
-      "back/traps": 60
+      "shoulders/rear": 9,
+      "back/traps": 6
     },
     "is_body_weight": false,
     "description": "",
@@ -227,9 +228,10 @@
   {
     "name": "Farmer's Carry",
     "targets": {
-      "arms/forearm": 80,
-      "back/traps": 60,
-      "core": 40
+      "arms/exterior forearm": 8,
+      "arms/interior forearm": 8,
+      "back/traps": 6,
+      "core": 4
     },
     "is_body_weight": false,
     "description": "",
