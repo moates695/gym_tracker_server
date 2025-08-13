@@ -33,13 +33,13 @@ async def update(exercises):
             """
         )
         
-        group_to_target_ids = {}
+        group_name_to_target_ids = {}
         for row in rows:
-            if row["group_name"] not in group_to_target_ids.keys():
-                group_to_target_ids[row["group_name"]] = []
-            group_to_target_ids[row["group_name"]].append(row["target_id"])
+            if row["group_name"] not in group_name_to_target_ids.keys():
+                group_name_to_target_ids[row["group_name"]] = []
+            group_name_to_target_ids[row["group_name"]].append(row["target_id"])
 
-        target_id_map = {
+        target_name_to_id = {
             row["target_name"]: row["target_id"] for row in rows
         }
 
@@ -62,8 +62,7 @@ async def update(exercises):
                     exercise["description"], 
                     exercise["weight_type"]
                 )
-                valid_exercise_ids.append(exercise_id)
-            elif not compare_exercises(exercise, db_exercises[exercise["name"]]):
+            elif not is_exercise_same(exercise, db_exercises[exercise["name"]]):
                 await conn.execute(
                     """
                     update exercises
@@ -78,7 +77,8 @@ async def update(exercises):
 
             if exercise["name"] in db_exercises.keys():
                 exercise_id = db_exercises[exercise["name"]]["id"]
-                valid_exercise_ids.append(exercise_id)
+
+            valid_exercise_ids.append(exercise_id)
 
             rows = await conn.fetch(
                 """
@@ -94,16 +94,16 @@ async def update(exercises):
             target_data = {}
             for target_str, ratio in exercise["targets"].items():
                 if "/" in target_str: continue
-                for target_id in group_to_target_ids[target_str]:
-                        target_data[target_id] = ratio
+                for target_id in group_name_to_target_ids[target_str]:
+                    target_data[target_id] = ratio
             
             for target_str, ratio in exercise["targets"].items():
                 if "/" not in target_str: continue
-                target_data[target_id_map[target_str.split("/")[-1]]] = ratio
+                target_data[target_name_to_id[target_str.split("/")[-1]]] = ratio
 
             for target_id, ratio in target_data.items():
                 if target_id not in db_exercise_target_ids.keys():
-                    temp_id = await conn.fetchval(
+                    exercise_muscle_target_id = await conn.fetchval(
                         """
                         insert into exercise_muscle_targets
                         (muscle_target_id, exercise_id, ratio)
@@ -112,7 +112,6 @@ async def update(exercises):
                         returning id;
                         """, target_id, exercise_id, ratio
                     )
-                    valid_exercise_muscle_target_ids.append(temp_id)
                 elif db_exercise_target_ids[target_id]["ratio"] != ratio:
                     await conn.execute(
                         """
@@ -123,7 +122,9 @@ async def update(exercises):
                     )
 
                 if target_id in db_exercise_target_ids.keys():
-                    valid_exercise_muscle_target_ids.append(db_exercise_target_ids[target_id]["id"])
+                    exercise_muscle_target_id = db_exercise_target_ids[target_id]["id"]
+                
+                valid_exercise_muscle_target_ids.append(exercise_muscle_target_id)
                 
             await conn.execute(
                 """
@@ -149,7 +150,7 @@ async def update(exercises):
     finally:
         if conn: await conn.close()
 
-def compare_exercises(exercise1, exercise2) -> bool:
+def is_exercise_same(exercise1, exercise2) -> bool:
     fields = ["is_body_weight", "description", "weight_type"]
     for field in fields:
         if exercise1[field] != exercise2[field]: return False
