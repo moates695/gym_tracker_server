@@ -1,8 +1,9 @@
 import os
 import asyncpg
-from dotenv import load_dotenv
 
-load_dotenv()
+from .misc import load_env_vars
+
+load_env_vars()
 
 database_config = {
     "database": os.getenv("DATABASE"),
@@ -14,9 +15,7 @@ database_config = {
 
 async def setup_connection() -> asyncpg.connection.Connection:
     try:
-        # conn = await asyncpg.connect(**database_config)
         return await asyncpg.connect(**database_config)
     except Exception as e:
-        # raise Exception(f"Error in db connection setup: {e}")
+        print(e)
         return None
-    # return conn

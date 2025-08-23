@@ -2,6 +2,8 @@ import random
 from datetime import datetime, timezone
 from typing import Literal
 from pydantic import Field
+from dotenv import load_dotenv
+import os
 
 def random_weight():
     return random.randint(1, 200) + random.choice([0, .25, .5, .75])
@@ -68,3 +70,8 @@ def get_user_data_map(key: str):
     for data_map in user_data_to_tables:
         if data_map["key"] != key: continue
         return data_map
+    
+def load_env_vars():
+    os.environ.clear()
+    load_dotenv(dotenv_path="app/envs/.env", override=True)
+    load_dotenv(dotenv_path=f"app/envs/{os.environ['ENVIRONMENT']}.env", override=True)

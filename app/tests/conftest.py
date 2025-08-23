@@ -5,14 +5,17 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../'
 
 import pytest_asyncio
 import pytest
-from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
-from api.middleware.database import setup_connection
+from api.middleware.database import setup_connection, load_env_vars
 from ..main import app
 from ..tests.test_register import valid_user
 
-load_dotenv()
+load_env_vars()
+
+def pytest_configure(config):
+    if os.getenv('ENVIRONMENT') != 'prod': return
+    pytest.exit("Tests cannot run in production environment", returncode=1)
 
 @pytest_asyncio.fixture(scope="function")
 async def delete_test_users():

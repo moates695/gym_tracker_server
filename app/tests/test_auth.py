@@ -28,9 +28,7 @@ def test_verify_token(delete_test_users):
     assert response.status_code == 200
     response = client.get("/protected_temp", headers=headers)
     assert response.status_code == 401
-
-
-
+    
     temp_token = generate_token(
         "test@pytest.com", 
         str(uuid4()),

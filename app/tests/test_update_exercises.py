@@ -63,12 +63,13 @@ async def test_update_exercises():
         dummy1_target_id_1 = await fetch_target_id(conn, dummy1_exercise_id, 'arms', 'exterior forearm')
         dummy1_target_id_2 = await fetch_target_id(conn, dummy1_exercise_id, 'back', 'traps')
 
+        back_traps_ratio = 2
         dummy2 = [
             {
                 "name": "Pytest 1",
                 "targets": {
                     "arms/exterior forearm": 8,
-                    "back/traps": 2,
+                    "back/traps": back_traps_ratio,
                     "core": 4
                 },
                 "is_body_weight": True,
@@ -111,7 +112,7 @@ async def test_update_exercises():
         assert dummy1_target_id_1 == dummy2_target_id_1
         assert dummy1_target_id_2 == dummy2_target_id_2
 
-        assert 2 == await conn.fetchval(
+        assert back_traps_ratio == await conn.fetchval(
             """
             select ratio
             from exercise_muscle_targets

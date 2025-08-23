@@ -1,8 +1,7 @@
-from dotenv import load_dotenv
 import os
+from api.middleware.misc import load_env_vars
 
-os.environ.clear()
-load_dotenv()
+load_env_vars()
 
 from fastapi import FastAPI
 
