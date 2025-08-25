@@ -236,5 +236,80 @@
     "is_body_weight": false,
     "description": "",
     "weight_type": "cable"
+  },
+  {
+    "name": "Single Arm Cable Tricep Extension",
+    "targets": {
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "varations": [
+      {
+        "name": "hammer grip",
+        "description": ""
+      },
+      {
+        "name": "flat grip",
+        "description": ""
+      },
+      {
+        "name": "underhand flat grip",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "name": "Flared Cable Tricep Extension",
+    "targets": {
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Cable Tricep Extension",
+    "targets": {
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "varations": [
+      {
+        "name": "flat bar | wide grip",
+        "targets": {
+
+        },
+        "description": ""
+      },
+      {
+        "name": "flat bar | medium grip",
+        "targets": {
+
+        },
+        "description": ""
+      },
+      {
+        "name": "flat bar | close grip",
+        "targets": {
+
+        },
+        "description": ""
+      },
+      {
+        "name": "angled bar | close grip",
+        "targets": {
+
+        },
+        "description": ""
+      },
+      {
+        "name": "angled bar | medium grip",
+        "targets": {
+
+        },
+        "description": ""
+      }
+    ]
   }
 ]
