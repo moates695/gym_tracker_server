@@ -1,10 +1,11 @@
 import json
 import asyncio
+import os
 
 from ..api.middleware.database import setup_connection
 
 async def main():
-    if input("Run update exercises? [y/n] ").lower() != 'y': return
+    if input(f"Update exercises in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
 
     with open("app/local/exercises.json", "r") as file:
         exercises = json.load(file)

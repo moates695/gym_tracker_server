@@ -1,10 +1,11 @@
 import json
 import asyncio
+import os
 
 from ..api.middleware.database import setup_connection
 
 async def main():
-    if input("Run update muscles? [y/n] ").lower() != 'y': return
+    if input(f"Update muscles in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
 
     with open("app/local/muscles.json", "r") as file:
         muscles_json = json.load(file)

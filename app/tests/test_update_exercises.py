@@ -112,14 +112,7 @@ async def test_update_exercises():
         assert dummy1_target_id_1 == dummy2_target_id_1
         assert dummy1_target_id_2 == dummy2_target_id_2
 
-        assert back_traps_ratio == await conn.fetchval(
-            """
-            select ratio
-            from exercise_muscle_targets
-            where exercise_id = $1
-            and muscle_target_id = $2
-            """, dummy1_exercise_id, dummy2_target_id_2
-        )
+        assert back_traps_ratio == await fetch_target_ratio(conn, dummy1_exercise_id, dummy2_target_id_2)
 
     except Exception as e:
         raise e
@@ -128,6 +121,59 @@ async def test_update_exercises():
         assert original_rows == await fetch_exercises(conn)
         if conn: await conn.close()
 
+@pytest.mark.asyncio
+async def test_update_exercises_override():
+    with open("app/local/exercises.json", "r") as file:
+        exercises = json.load(file)
+
+    dummy1 = [
+        {
+            "name": "Pytest 1",
+            "targets": {
+                "arms/exterior forearm": 8,
+                "arms/interior forearm": 8,
+                "core/lower abs": 6,
+                "core": 4,
+                "core/upper abs": 5,
+            },
+            "is_body_weight": False,
+            "description": "description1",
+            "weight_type": "machine"
+        }
+    ]
+
+    combined = exercises + dummy1
+
+    try:
+        conn = await setup_connection()
+
+        original_rows = await fetch_exercises(conn)
+
+        await update(combined)
+
+        exercise_id = await conn.fetchval(
+            """
+            select id
+            from exercises
+            where name = $1
+            and user_id is null;
+            """, "Pytest 1"
+        )
+
+        target_id_1 = await fetch_target_id(conn, exercise_id, 'core', 'lower abs')
+        target_id_2 = await fetch_target_id(conn, exercise_id, 'core', 'upper abs')
+        target_id_3 = await fetch_target_id(conn, exercise_id, 'core', 'obliques')
+
+        assert 6 == await fetch_target_ratio(conn, exercise_id, target_id_1)
+        assert 5 == await fetch_target_ratio(conn, exercise_id, target_id_2)
+        assert 4 == await fetch_target_ratio(conn, exercise_id, target_id_3)
+
+    except Exception as e:
+        raise e
+    finally:
+        await update(exercises)
+        assert original_rows == await fetch_exercises(conn)
+        if conn: await conn.close()
 
 async def fetch_exercises(conn, include_custom=False):
     return await conn.fetch(
@@ -149,4 +195,14 @@ async def fetch_target_id(conn, exercise_id, group_name, target_name):
         and group_name = $2
         and target_name = $3
         """, exercise_id, group_name, target_name
+    )
+
+async def fetch_target_ratio(conn, exercise_id, target_id):
+    return await conn.fetchval(
+        """
+        select ratio
+        from exercise_muscle_targets
+        where exercise_id = $1
+        and muscle_target_id = $2
+        """, exercise_id, target_id
     )
