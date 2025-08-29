@@ -131,11 +131,26 @@ async def update_exercise(conn, exercise, db_exercises, group_name_to_target_ids
         row["name"]: row for row in rows
     }
         
+    valid_variation_ids = []
     for variation in exercise.get("variations", []):
         if "targets" not in variation.keys():
             variation["targets"] = exercise["targets"].copy()
         
-        
+        if variation["name"] not in db_variations.keys():
+            variation_id = await conn.fetcahval(
+                """
+                insert into exercises
+                (name, is_body_weight, description, weight_type, parent_id)
+                values
+                ($1, $2, $3, $4, $5)
+                returning id;
+                """, 
+                variation["name"],
+                exercise["is_body_weight"],
+                variation["description"]
+            )
+        else:
+            pass
 
     return exercise_id
 
