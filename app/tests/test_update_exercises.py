@@ -290,6 +290,69 @@ async def test_update_exercises_variations():
         assert len(var_targets) == len(dummy[0]["variations"][2]["targets"].keys())
         assert var_targets[0]["ratio"] == 3
 
+        dummy = [
+            {
+                "name": "Pytest 1",
+                "targets": {
+                    "arms/exterior forearm": 8,
+                    "arms/interior forearm": 8,
+                    "core/lower abs": 6,
+                    "core": 4,
+                    "core/upper abs": 5,
+                },
+                "is_body_weight": False,
+                "description": "description1",
+                "weight_type": "machine",
+                "variations": [
+                    {
+                        "name": "narrow grip",
+                        "targets": {
+                            "arms/exterior forearm": 4,
+                        }
+                    }
+                ]
+            }
+        ]
+
+        combined = exercises + dummy
+
+        await update(combined)
+
+        assert parent_id == await conn.fetchval(
+            """
+            select id
+            from exercises
+            where name = $1
+            """, dummy[0]["name"]
+        )
+
+        print(parent_id)
+
+        length = await conn.fetchval(
+            """
+            select count(*)
+            from exercises
+            where parent_id = $1
+            """, parent_id
+        )
+        assert length == len(dummy[0]["variations"])
+
+        var_targets = await conn.fetch(
+            """
+            select *
+            from exercise_muscle_data
+            where exercise_id = (
+                select id
+                from exercises
+                where name = $1
+                and parent_id = $2
+            )
+            """, dummy[0]["variations"][0]["name"], parent_id
+        )
+        
+        assert len(var_targets) == len(dummy[0]["variations"][0]["targets"].keys())
+        assert var_targets[0]["ratio"] == 4
+
     except Exception as e:
         raise e
     finally:
