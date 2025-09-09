@@ -20,22 +20,13 @@ from api.middleware.misc import *
 
 router = APIRouter()
 
-# email_field = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-# password_field = Field(min_length=8, max_length=36)
-# name_field = Field(min_length=1, max_length=255)
-# gender_literal = Literal["male", "female", "other"]
-# height_field = Field(ge=0, le=500)
-# weight_field = Field(ge=0, le=500)
-# goal_status_literal = Literal["bulking", "cutting", "maintaining"]
-# ped_status_literal = Literal["natural", "juicing", "silent"]
-
 class Register(BaseModel):
     email: str = email_field
     password: str = password_field
     username: str = Field(min_length=1, max_length=20)
     first_name: str = name_field
     last_name: str = name_field
-    gender: Literal["male", "female", "other"]
+    gender: gender_literal
     height: float = height_field
     weight: float = weight_field
     goal_status: goal_status_literal

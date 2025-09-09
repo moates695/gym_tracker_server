@@ -20,7 +20,8 @@ async def update(exercises):
             """
             select *
             from exercises
-            where user_id is null;
+            where user_id is null
+            and parent_id is null;
             """
         )
         db_exercises = {
@@ -53,7 +54,8 @@ async def update(exercises):
             delete 
             from exercises
             where not (id = any($1))
-            and user_id is null;
+            and user_id is null
+            and parent_id is null;
             """, valid_exercise_ids
         )
 
@@ -63,6 +65,11 @@ async def update(exercises):
         if conn: await conn.close()
 
 async def update_exercise(conn, exercise, db_exercises, group_name_to_target_ids, target_name_to_id) -> str:    
+    exercise_id = await update_exercise_base(conn, exercise, db_exercises, group_name_to_target_ids, target_name_to_id)
+    await update_exercise_variations(conn, exercise_id, exercise, db_exercises, group_name_to_target_ids, target_name_to_id)
+    return exercise_id
+
+async def update_exercise_base(conn, exercise, db_exercises, group_name_to_target_ids, target_name_to_id) -> str:    
     if exercise["name"] not in db_exercises.keys():
         exercise_id = await conn.fetchval(
             """
@@ -120,39 +127,92 @@ async def update_exercise(conn, exercise, db_exercises, group_name_to_target_ids
         """, exercise_id, valid_exercise_muscle_target_ids
     )
 
+    return exercise_id
+
+async def update_exercise_variations(conn, parent_id, parent_exercise, db_exercises, group_name_to_target_ids, target_name_to_id):    
     rows = await conn.fetch(
         """
         select *
         from exercises
         where parent_id = $1
-        """, exercise_id
+        """, parent_id
     )
     db_variations = {
         row["name"]: row for row in rows
     }
-        
+    
     valid_variation_ids = []
-    for variation in exercise.get("variations", []):
-        if "targets" not in variation.keys():
-            variation["targets"] = exercise["targets"].copy()
-        
-        if variation["name"] not in db_variations.keys():
-            variation_id = await conn.fetcahval(
-                """
-                insert into exercises
-                (name, is_body_weight, description, weight_type, parent_id)
-                values
-                ($1, $2, $3, $4, $5)
-                returning id;
-                """, 
-                variation["name"],
-                exercise["is_body_weight"],
-                variation["description"]
-            )
-        else:
-            pass
+    for variation_config in parent_exercise.get("variations", []):
+        variation = variation_config.copy()
+        valid_id = await update_exercise_variation(conn, parent_id, parent_exercise, variation, db_variations, group_name_to_target_ids, target_name_to_id)
+        valid_variation_ids.append(valid_id)
 
-    return exercise_id
+async def update_exercise_variation(conn, parent_id, parent_exercise, variation, db_variations, group_name_to_target_ids, target_name_to_id) -> str:
+    if "targets" not in variation.keys() or variation["targets"] == {}:
+        variation["targets"] = parent_exercise["targets"].copy()
+
+    if "description" not in variation.keys():
+        variation["description"] = ""
+
+    if variation["name"] not in db_variations.keys():
+        variation_id = await conn.fetchval(
+            """
+            insert into exercises
+            (name, is_body_weight, description, weight_type, parent_id)
+            values
+            ($1, $2, $3, $4, $5)
+            returning id;
+            """, 
+            variation["name"],
+            parent_exercise["is_body_weight"],
+            variation["description"],
+            parent_exercise["weight_type"],
+            parent_id
+        )
+    elif variation["description"] != parent_exercise["description"]:
+        await conn.execute(
+            """
+            update exercises
+            set is_body_weight = $1, description = $2, weight_type = $3
+            where name = $4
+            """,
+            parent_exercise["is_body_weight"],
+            variation["description"],
+            parent_exercise["weight_type"],
+            variation["name"],
+        )
+
+    if variation["name"] in db_variations.keys():
+        variation_id = db_variations[variation["name"]]["id"]
+
+    rows = await conn.fetch(
+        """
+        select *
+        from exercise_muscle_targets
+        where exercise_id = $1
+        """, variation_id
+    )
+    db_exercise_target_ids = {
+        row["muscle_target_id"]: row for row in rows
+    }
+
+    target_data = get_target_data(variation, group_name_to_target_ids, target_name_to_id)
+
+    valid_exercise_muscle_target_ids = []
+    for target_id, ratio in target_data.items():
+        muscle_target_id = await update_exercise_muscle_target(conn, target_id, ratio, variation_id, db_exercise_target_ids)
+        valid_exercise_muscle_target_ids.append(muscle_target_id)
+
+    await conn.execute(
+        """
+        delete
+        from exercise_muscle_targets
+        where exercise_id = $1
+        and not (id = any($2::uuid[]))
+        """, variation_id, valid_exercise_muscle_target_ids
+    )
+
+    return variation_id
 
 async def update_exercise_muscle_target(conn, target_id, ratio, exercise_id, db_exercise_target_ids):
     if target_id not in db_exercise_target_ids.keys():
@@ -179,10 +239,6 @@ async def update_exercise_muscle_target(conn, target_id, ratio, exercise_id, db_
     
     return exercise_muscle_target_id
 
-async def update_exercise_variations(conn, variation, exercise_id):
-    
-    
-    return -1
 
 def is_exercise_same(exercise1, exercise2) -> bool:
     fields = ["is_body_weight", "description", "weight_type"]

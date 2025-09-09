@@ -244,7 +244,7 @@
     "is_body_weight": false,
     "description": "",
     "weight_type": "cable",
-    "varations": [
+    "variations": [
       {
         "name": "hammer grip",
         "description": ""
@@ -274,37 +274,37 @@
     "is_body_weight": false,
     "description": "",
     "weight_type": "cable",
-    "varations": [
+    "variations": [
       {
-        "name": "flat bar | wide grip",
+        "name": "flat bar, wide grip",
         "targets": {
 
         },
         "description": ""
       },
       {
-        "name": "flat bar | medium grip",
+        "name": "flat bar, medium grip",
         "targets": {
 
         },
         "description": ""
       },
       {
-        "name": "flat bar | close grip",
+        "name": "flat bar, close grip",
         "targets": {
 
         },
         "description": ""
       },
       {
-        "name": "angled bar | close grip",
+        "name": "angled bar, close grip",
         "targets": {
 
         },
         "description": ""
       },
       {
-        "name": "angled bar | medium grip",
+        "name": "angled bar, medium grip",
         "targets": {
 
         },
