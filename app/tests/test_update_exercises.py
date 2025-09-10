@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from ..api.middleware.database import setup_connection
 from ..local.update_exercises import update
+from ..tests.test_register import valid_user
 
 @pytest.mark.asyncio
 async def test_update_exercises():
@@ -163,6 +164,8 @@ async def test_update_exercises_override():
 
         await update(combined)
 
+        await compare_target_ratios(conn, dummy1[0]["name"], dummy1[0]["targets"])
+
         exercise_id = await conn.fetchval(
             """
             select id
@@ -225,15 +228,14 @@ async def test_update_exercises_variations():
 
     try:
         conn = await setup_connection()
-
         original_rows = await fetch_exercise_data(conn)
-        original_exercises = await fetch_exercises(conn)
+        # original_exercises = await fetch_exercises(conn)
 
         combined = exercises + dummy
 
         await update(combined)
 
-        # new_exercises = await f
+        await compare_target_ratios(conn, dummy[0]["name"], dummy[0]["targets"])
 
         parent_id = await conn.fetchval(
             """
@@ -242,6 +244,9 @@ async def test_update_exercises_variations():
             where name = $1
             """, dummy[0]["name"]
         )
+
+        await compare_target_ratios(conn, dummy[0]["variations"][0]["name"], dummy[0]["targets"], parent_id)
+        await compare_target_ratios(conn, dummy[0]["variations"][2]["name"], dummy[0]["variations"][2]["targets"], parent_id)
 
         length = await conn.fetchval(
             """
@@ -340,7 +345,7 @@ async def test_update_exercises_variations():
             """, dummy[0]["name"]
         )
 
-        print(parent_id)
+        await compare_target_ratios(conn, dummy[0]["variations"][0]["name"], dummy[0]["variations"][0]["targets"], parent_id)
 
         length = await conn.fetchval(
             """
@@ -408,6 +413,7 @@ async def test_update_exercises_invalid_variations():
 
     try:
         conn = await setup_connection()
+        original_rows = await fetch_exercise_data(conn)
 
         with pytest.raises(Exception):
             await update(combined)
@@ -435,10 +441,252 @@ async def test_update_exercises_invalid_variations():
         raise e
     finally:
         await update(exercises)
-        # assert original_rows == await fetch_exercises(conn)
+        assert original_rows == await fetch_exercise_data(conn)
         if conn: await conn.close()
 
-# todo check directly inserted bad data into db is rejected
+@pytest.mark.asyncio
+async def test_invalid_inserts_exercises(delete_test_users, create_user):
+    with open("app/local/exercises.json", "r") as file:
+        exercises = json.load(file)
+
+    try:
+        conn = await setup_connection()
+        original_rows = await fetch_exercise_data(conn)
+
+        name = "Pytest 1"
+
+        await conn.execute(
+            """
+            insert into exercises
+            (name, is_body_weight, weight_type)
+            values
+            ($1, false, 'free');
+            """, name
+        )
+
+        with pytest.raises(Exception):
+            await conn.execute(
+                """
+                insert into exercises
+                (name, is_body_weight, weight_type)
+                values
+                ($1, false, 'free');
+                """, name.upper()
+            )
+
+        user_id = await conn.fetchval(
+            """
+            select id
+            from users
+            where email = $1
+            """, valid_user["email"]
+        )
+
+        await conn.execute(
+            """
+            insert into exercises
+            (name, is_body_weight, weight_type, user_id)
+            values
+            ($1, false, 'free', $2);
+            """, name.upper(), user_id
+        )
+
+        with pytest.raises(Exception):
+            await conn.execute(
+                """
+                insert into exercises
+                (name, is_body_weight, weight_type, user_id)
+                values
+                ($1, false, 'free', $2);
+                """, name.upper(), user_id
+            )
+
+        parent_id = await conn.fetchval(
+            """
+            select id
+            from exercises
+            where name = $1
+            and user_id is null
+            and parent_id is null;
+            """, name
+        )
+
+        await conn.execute(
+            """
+            insert into exercises
+            (name, is_body_weight, weight_type, parent_id)
+            values
+            ($1, false, 'free', $2);
+            """, name.upper(), parent_id
+        )
+
+        with pytest.raises(Exception):
+            await conn.execute(
+                """
+                insert into exercises
+                (name, is_body_weight, weight_type, parent_id)
+                values
+                ($1, false, 'free', $2);
+                """, name, parent_id
+            )
+
+        await conn.execute(
+            """
+            insert into exercises
+            (name, is_body_weight, weight_type, user_id, parent_id)
+            values
+            ($1, false, 'free', $2, $3);
+            """, name.upper(), user_id, parent_id
+        )
+
+        with pytest.raises(Exception):
+            await conn.execute(
+                """
+                insert into exercises
+                (name, is_body_weight, weight_type, user_id, parent_id)
+                values
+                ($1, false, 'free', $2, $3);
+                """, name, user_id, parent_id
+            )
+
+        await conn.execute(
+            """
+            delete
+            from exercises
+            where name = $1
+            and user_id is null
+            and parent_id is null;
+            """, name
+        )
+
+        await conn.execute(
+            """
+            delete
+            from exercises
+            where name = $1
+            and user_id = $2
+            and parent_id is null;
+            """, name, user_id
+        )
+
+        await conn.execute(
+            """
+            delete
+            from exercises
+            where name = $1
+            and user_id is null
+            and parent_id = $2;
+            """, name, parent_id
+        )
+
+        await conn.execute(
+            """
+            delete
+            from exercises
+            where name = $1
+            and user_id = $2
+            and parent_id = $3;
+            """, name, user_id, parent_id
+        )
+
+
+    except Exception as e:
+        raise e
+    finally:
+        await update(exercises)
+        assert original_rows == await fetch_exercise_data(conn)
+        if conn: await conn.close()
+
+@pytest.mark.asyncio
+async def test_invalid_inserts_exercises():
+    with open("app/local/exercises.json", "r") as file:
+        exercises = json.load(file)
+
+    try:
+        conn = await setup_connection()
+        original_rows = await fetch_exercise_data(conn)
+
+        muscle_group_id = await conn.fetchval(
+            """
+            select id
+            from muscle_groups
+            where name = 'arms';
+            """
+        )
+
+        muscle_target_id = await conn.fetchval(
+            """
+            select id
+            from muscle_targets
+            where name = 'bicep'
+            and muscle_group_id = $1
+            """, muscle_group_id
+        )
+
+        exercise_id = await conn.fetchval(
+            """
+            select id
+            from exercises
+            where name = 'Push-Up'
+            and user_id is null
+            and parent_id is null;
+            """
+        )
+        
+        with pytest.raises(Exception):
+            await conn.execute(
+                """
+                insert into exercise_muscle_targets
+                (muscle_target_id, exercise_id, ratio)
+                values
+                ($1, $2, 0);
+                """, muscle_target_id, exercise_id
+            )
+
+            await conn.execute(
+                """
+                insert into exercise_muscle_targets
+                (muscle_target_id, exercise_id, ratio)
+                values
+                ($1, $2, 11);
+                """, muscle_target_id, exercise_id, ratio
+            )
+
+        for ratio in [1, 5, 10]:
+            temp_id = await conn.fetchval(
+                """
+                insert into exercise_muscle_targets
+                (muscle_target_id, exercise_id, ratio)
+                values
+                ($1, $2, $3)
+                returning id;
+                """, muscle_target_id, exercise_id, ratio
+            )
+
+            with pytest.raises(Exception):
+                await conn.execute(
+                    """
+                    insert into exercise_muscle_targets
+                    (muscle_target_id, exercise_id, ratio)
+                    values
+                    ($1, $2, $3);
+                    """, muscle_target_id, exercise_id, ratio
+                )
+
+            await conn.execute(
+                """
+                delete
+                from exercise_muscle_targets
+                where id = $1;
+                """, temp_id
+            )
+
+    except Exception as e:
+        raise e
+    finally:
+        await update(exercises)
+        assert original_rows == await fetch_exercise_data(conn)
+        if conn: await conn.close()
 
 async def fetch_exercises(conn):
     return await conn.fetch(
@@ -478,17 +726,32 @@ def get_target_ratios(targets):
 
     return ratios
 
-async def compare_target_ratios(conn, exercise_name, targets):
-    db_target_data = await conn.fetch(
-        """
-        select emd.*
-        from exercise_muscle_data emd
-        inner join exercises e
-        on emd.exercise_id = e.id
-        where e.name = $1
-        and user_id is null;
-        """, exercise_name
-    )
+async def compare_target_ratios(conn, exercise_name, targets, parent_id=None):
+    if parent_id is None:
+        db_target_data = await conn.fetch(
+            """
+            select emd.*
+            from exercise_muscle_data emd
+            inner join exercises e
+            on emd.exercise_id = e.id
+            where e.name = $1
+            and e.user_id is null
+            and e.parent_id is null;
+            """, exercise_name
+        )
+    else:
+        db_target_data = await conn.fetch(
+            """
+            select emd.*
+            from exercise_muscle_data emd
+            inner join exercises e
+            on emd.exercise_id = e.id
+            where e.name = $1
+            and e.user_id is null
+            and e.parent_id = $2;
+            """, exercise_name, parent_id
+        )
+
     target_ratios = get_target_ratios(targets)
 
     assert len(db_target_data) == len(target_ratios.keys())

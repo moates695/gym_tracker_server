@@ -113,7 +113,7 @@ async def test_invalid_inserts_group():
                 (name)
                 values
                 ($1);
-                """, name
+                """, name.upper()
             )
 
         await conn.execute(
@@ -168,7 +168,7 @@ async def test_invalid_inserts_targets():
                 (muscle_group_id, name)
                 values
                 ($1, $2)
-                """, group_id, target_name
+                """, group_id, target_name.upper()
             )
 
         group_name2 = "Pytest 2"
