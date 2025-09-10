@@ -95,5 +95,7 @@ On FE, show variations with the parent exercise, most likely an expand option ne
 - workout planner (whole new shite)
 - exercise comparisons (volume, sets, reps, number of workouts with them)
 - muscle group octagon thing for different measures
+- verified users
+    - just use other apps that have them verified (insta etc)
 
 ## Assumptions

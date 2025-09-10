@@ -10,7 +10,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import random
 import json
 
-from api.middleware.token import *
+from api.middleware.auth_token import *
 from api.routes.auth import verify_token
 from api.middleware.misc import *
 

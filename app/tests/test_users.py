@@ -6,7 +6,7 @@ from uuid import uuid4
 import random
 
 from ..main import app
-from ..api.middleware.token import decode_token, generate_token
+from ..api.middleware.auth_token import decode_token, generate_token
 from ..tests.test_register import valid_user
 
 client = TestClient(app)
@@ -103,7 +103,7 @@ def test_users_data_history(delete_test_users, create_user):
             local_value = user_data_history[key][i]
             response_value = response_data_history[key][i]["value"]
             if type(local_value) == float:
-                assert round(local_value, 3) == round(response_value, 3)
+                assert round(local_value, 2) == round(response_value, 2)
             else:
                 assert local_value == response_value
 

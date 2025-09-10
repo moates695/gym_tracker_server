@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 from uuid import uuid4
 
 from ..main import app
-from ..api.middleware.token import generate_token
+from ..api.middleware.auth_token import generate_token
 
 client = TestClient(app)
 

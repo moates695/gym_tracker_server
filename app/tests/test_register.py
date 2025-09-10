@@ -5,7 +5,7 @@ import os
 from uuid import uuid4
 
 from ..main import app
-from ..api.middleware.token import decode_token, generate_token
+from ..api.middleware.auth_token import decode_token, generate_token
 
 client = TestClient(app)
 

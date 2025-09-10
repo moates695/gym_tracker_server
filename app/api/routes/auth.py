@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from functools import partial
 
-from api.middleware.token import *
+from api.middleware.auth_token import *
 
 router = APIRouter()
 security = HTTPBearer()
