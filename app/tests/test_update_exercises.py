@@ -42,17 +42,20 @@ async def test_update_exercises():
     try:
         conn = await setup_connection()
 
-        original_rows = await fetch_exercises(conn)
+        original_rows = await fetch_exercise_data(conn)
+        original_exercises = await fetch_exercises(conn)
 
         await update(combined)
-        rows1 = await fetch_exercises(conn)
+        rows1 = await fetch_exercise_data(conn)
         await update(combined)
-        rows2 = await fetch_exercises(conn)
+        rows2 = await fetch_exercise_data(conn)
+
+        new_exercises = await fetch_exercises(conn)
+        assert len(new_exercises) == len(original_exercises) + len(dummy1)
 
         assert rows1 == rows2
-        assert len(rows2) > len(original_rows)
 
-        dummy1_exercise_id = await conn.fetchval(
+        dummy1_exercise1_id = await conn.fetchval(
             """
             select id
             from exercises
@@ -61,8 +64,11 @@ async def test_update_exercises():
             """, "Pytest 1"
         )
 
-        dummy1_target_id_1 = await fetch_target_id(conn, dummy1_exercise_id, 'arms', 'exterior forearm')
-        dummy1_target_id_2 = await fetch_target_id(conn, dummy1_exercise_id, 'back', 'traps')
+        await compare_target_ratios(conn, dummy1[0]["name"], dummy1[0]["targets"])
+        await compare_target_ratios(conn, dummy1[1]["name"], dummy1[1]["targets"])
+
+        dummy1_target_id_1 = await fetch_target_id(conn, dummy1_exercise1_id, 'arms', 'exterior forearm')
+        dummy1_target_id_2 = await fetch_target_id(conn, dummy1_exercise1_id, 'back', 'traps')
 
         back_traps_ratio = 2
         dummy2 = [
@@ -82,6 +88,11 @@ async def test_update_exercises():
         combined = exercises + dummy2
 
         await update(combined)
+
+        new_exercises = await fetch_exercises(conn)
+        assert len(new_exercises) == len(original_exercises) + len(dummy2)
+
+        await compare_target_ratios(conn, dummy2[0]["name"], dummy2[0]["targets"])
 
         assert not await conn.fetchval(
             """
@@ -107,19 +118,19 @@ async def test_update_exercises():
         for field in fields:
             assert dummy2[0][field] == rows[field]
 
-        dummy2_target_id_1 = await fetch_target_id(conn, dummy1_exercise_id, 'arms', 'exterior forearm')
-        dummy2_target_id_2 = await fetch_target_id(conn, dummy1_exercise_id, 'back', 'traps')
+        dummy2_target_id_1 = await fetch_target_id(conn, dummy1_exercise1_id, 'arms', 'exterior forearm')
+        dummy2_target_id_2 = await fetch_target_id(conn, dummy1_exercise1_id, 'back', 'traps')
 
         assert dummy1_target_id_1 == dummy2_target_id_1
         assert dummy1_target_id_2 == dummy2_target_id_2
 
-        assert back_traps_ratio == await fetch_target_ratio(conn, dummy1_exercise_id, dummy2_target_id_2)
+        assert back_traps_ratio == await fetch_target_ratio(conn, dummy1_exercise1_id, dummy2_target_id_2)
 
     except Exception as e:
         raise e
     finally:
         await update(exercises)
-        assert original_rows == await fetch_exercises(conn)
+        assert original_rows == await fetch_exercise_data(conn)
         if conn: await conn.close()
 
 @pytest.mark.asyncio
@@ -148,7 +159,7 @@ async def test_update_exercises_override():
     try:
         conn = await setup_connection()
 
-        original_rows = await fetch_exercises(conn)
+        original_rows = await fetch_exercise_data(conn)
 
         await update(combined)
 
@@ -173,7 +184,7 @@ async def test_update_exercises_override():
         raise e
     finally:
         await update(exercises)
-        assert original_rows == await fetch_exercises(conn)
+        assert original_rows == await fetch_exercise_data(conn)
         if conn: await conn.close()
 
 @pytest.mark.asyncio
@@ -215,11 +226,14 @@ async def test_update_exercises_variations():
     try:
         conn = await setup_connection()
 
-        original_rows = await fetch_exercises(conn)
+        original_rows = await fetch_exercise_data(conn)
+        original_exercises = await fetch_exercises(conn)
 
         combined = exercises + dummy
 
         await update(combined)
+
+        # new_exercises = await f
 
         parent_id = await conn.fetchval(
             """
@@ -357,7 +371,7 @@ async def test_update_exercises_variations():
         raise e
     finally:
         await update(exercises)
-        assert original_rows == await fetch_exercises(conn)
+        assert original_rows == await fetch_exercise_data(conn)
         if conn: await conn.close()
 
 @pytest.mark.asyncio
@@ -424,7 +438,18 @@ async def test_update_exercises_invalid_variations():
         # assert original_rows == await fetch_exercises(conn)
         if conn: await conn.close()
 
-async def fetch_exercises(conn, include_custom=False):
+# todo check directly inserted bad data into db is rejected
+
+async def fetch_exercises(conn):
+    return await conn.fetch(
+        """
+        select *
+        from exercises
+        where user_id is null;
+        """
+    )
+
+async def fetch_exercise_data(conn, include_custom=False):
     return await conn.fetch(
         f"""
         select e.*, emt.*
@@ -434,6 +459,65 @@ async def fetch_exercises(conn, include_custom=False):
         {"" if include_custom else "where e.user_id is null"}
         """
     )
+
+###################################
+
+def get_target_ratios(targets):
+    with open("app/local/muscles.json", "r") as file:
+        muscles = json.load(file)
+
+    ratios = {}
+    for target_str, ratio in targets.items():
+        if "/" in target_str: continue
+        for target in muscles[target_str]:
+            ratios[f"{target_str}/{target}"] = ratio
+
+    for target_str, ratio in targets.items():
+        if "/" not in target_str: continue
+        ratios[target_str] = ratio
+
+    return ratios
+
+async def compare_target_ratios(conn, exercise_name, targets):
+    db_target_data = await conn.fetch(
+        """
+        select emd.*
+        from exercise_muscle_data emd
+        inner join exercises e
+        on emd.exercise_id = e.id
+        where e.name = $1
+        and user_id is null;
+        """, exercise_name
+    )
+    target_ratios = get_target_ratios(targets)
+
+    assert len(db_target_data) == len(target_ratios.keys())
+    for row in db_target_data:
+        assert target_ratios[f"{row['group_name']}/{row['target_name']}"] == row["ratio"]
+
+def test_get_target_ratios():
+    assert get_target_ratios({}) == {}
+    
+    targets = {
+        "arms/bicep": 5,
+        "chest/upper": 10,
+        "arms": 3,
+        "arms/interior forearm": 6,
+        "shoulders": 7
+    }
+
+    assert get_target_ratios(targets) == {
+        "arms/bicep": 5,
+        "arms/tricep": 3,
+        "arms/exterior forearm": 3,
+        "arms/interior forearm": 6,
+        "shoulders/front": 7,
+        "shoulders/middle": 7,
+        "shoulders/rear": 7,
+        "chest/upper": 10,
+    }
+
+###################################
 
 async def fetch_target_id(conn, exercise_id, group_name, target_name):
     return await conn.fetchval(
