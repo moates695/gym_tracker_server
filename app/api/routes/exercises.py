@@ -27,62 +27,63 @@ async def exercises_list_all(use_real: bool, credentials: dict = Depends(verify_
             """
             select *, (user_id = $1) as is_custom
             from exercises
-            where user_id is null
-            or user_id = $1
+            where (
+                user_id is null
+                or user_id = $1
+            )
+            and parent_id is null;
             """, credentials["user_id"]
         )
 
         exercises = []
         for exercise_row in exercise_rows:
-            muscle_group_rows = await conn.fetch(
+
+            variation_rows = await conn.fetch(
                 """
-                select distinct emd.group_id, emd.group_name
-                from exercise_muscle_data emd
-                where emd.exercise_id = $1
-                """, exercise_row["id"]
+                select *, (user_id = $1) as is_custom
+                from exercises
+                where (
+                    user_id is null
+                    or user_id = $1
+                )
+                and parent_id = $2;
+                """, credentials["user_id"], exercise_row["id"]
             )
 
-            muscle_data = []
-            for muscle_group_row in muscle_group_rows:
-                muscle_target_rows = await conn.fetch(
-                    """
-                    select emd.target_id, emd.target_name, emd.ratio
-                    from exercise_muscle_data emd
-                    where emd.exercise_id = $1
-                    and emd.group_id = $2
-                    """, exercise_row["id"], muscle_group_row["group_id"]
-                )
-
-                target_data = []
-                for muscle_target_row in muscle_target_rows:
-                    target_data.append({
-                        "target_id": muscle_target_row["target_id"],
-                        "target_name": muscle_target_row["target_name"],
-                        "ratio": muscle_target_row["ratio"],
-                    })
-
-                muscle_data.append({
-                    "group_id": muscle_group_row["group_id"],
-                    "group_name": muscle_group_row["group_name"],
-                    "targets": target_data
+            variations = []
+            for variation_row in variation_rows:
+                variations.append({
+                    "id": str(variation_row["id"]),
+                    "name": variation_row["name"],
+                    "is_body_weight": variation_row["is_body_weight"],
+                    "muscle_data": await fetch_exercise_muscle_data(conn, variation_row),
+                    "description": variation_row["description"],
+                    "weight_type": variation_row["weight_type"],
+                    "is_custom": variation_row["is_custom"],
+                    "frequency": await fetch_exercise_frequency(use_real, conn, variation_row["id"], credentials["user_id"]),
                 })
 
             exercises.append({
                 "id": str(exercise_row["id"]),
                 "name": exercise_row["name"],
                 "is_body_weight": exercise_row["is_body_weight"],
-                "muscle_data": muscle_data,
+                "muscle_data": await fetch_exercise_muscle_data(conn, exercise_row),
                 "description": exercise_row["description"],
                 "weight_type": exercise_row["weight_type"],
                 "is_custom": exercise_row["is_custom"],
-                "frequency": await fetch_exercise_frequency(use_real, conn, exercise_row["id"], credentials["user_id"])
+                "frequency": await fetch_exercise_frequency(use_real, conn, exercise_row["id"], credentials["user_id"]),
+                "variations": variations
             })
 
         exercises.sort(key=lambda e: e["name"].lower())
 
-        for exercise in exercises:
-            if random.random() < 0.85: continue
-            exercise["is_custom"] = True
+        if not use_real:
+            for exercise in exercises:
+                if random.random() < 0.85: continue
+                exercise["is_custom"] = True
+                for variation in exercise["variations"]:
+                    if random.random() < 0.5: continue
+                    variation["is_custom"] = True
 
         return {
             "exercises": exercises
@@ -95,6 +96,42 @@ async def exercises_list_all(use_real: bool, credentials: dict = Depends(verify_
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+async def fetch_exercise_muscle_data(conn, exercise_row):
+    muscle_group_rows = await conn.fetch(
+        """
+        select distinct emd.group_id, emd.group_name
+        from exercise_muscle_data emd
+        where emd.exercise_id = $1
+        """, exercise_row["id"]
+    )
+
+    muscle_data = []
+    for muscle_group_row in muscle_group_rows:
+        muscle_target_rows = await conn.fetch(
+            """
+            select emd.target_id, emd.target_name, emd.ratio
+            from exercise_muscle_data emd
+            where emd.exercise_id = $1
+            and emd.group_id = $2
+            """, exercise_row["id"], muscle_group_row["group_id"]
+        )
+
+        target_data = []
+        for muscle_target_row in muscle_target_rows:
+            target_data.append({
+                "target_id": muscle_target_row["target_id"],
+                "target_name": muscle_target_row["target_name"],
+                "ratio": muscle_target_row["ratio"],
+            })
+
+        muscle_data.append({
+            "group_id": muscle_group_row["group_id"],
+            "group_name": muscle_group_row["group_name"],
+            "targets": target_data
+        })
+
+    return muscle_data
 
 async def fetch_exercise_frequency(use_real, conn, exercise_id, user_id):
     if use_real:
@@ -161,7 +198,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
 
         n_rep_max_all_time = {}
         for row in rows:
-            if n_rep_max_all_time.get(row["reps"], {"weight": 0})["weight"] >= row["weight"]: continue
+            if n_rep_max_all_time.get(row["reps"], {"weight": 0})["weight"] < row["weight"]: continue
             n_rep_max_all_time[row["reps"]] = {
                 "weight": row["weight"],
                 "timestamp": datetime_to_timestamp_ms(row["created_at"])
@@ -176,8 +213,8 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
                 "timestamp": datetime_to_timestamp_ms(row["created_at"])
             })
 
-        for rep, history in n_rep_max_history.items():
-            n_rep_max_history[rep] = sorted(history, key=lambda x: x["timestamp"])
+        # for rep, history in n_rep_max_history.items():
+        #     n_rep_max_history[rep] = sorted(history, key=lambda x: x["timestamp"])
 
         volume_days = {}
         for row in rows:
@@ -190,7 +227,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             "volume": value,
             "timestamp": date_to_timestamp_ms(key)
         } for key, value in volume_days.items()]
-        volume = sorted(volume, key=lambda x: x["timestamp"])
+        volume = sorted(volume, key=lambda x: x["timestamp"], reverse=True)
 
         history_days = {}
         for row in rows:
@@ -207,7 +244,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             "set_data": value,
             "timestamp": date_to_timestamp_ms(key)
         } for key, value in history_days.items()]
-        history = sorted(history, key=lambda x: x["timestamp"])
+        history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
 
         reps_sets_weight = []
         for row in rows:
@@ -262,7 +299,7 @@ async def exercise_history_rand():
                 "timestamp": random_timestamp()
             })
 
-        history = sorted(history, key=lambda x: x["timestamp"])
+        history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
         n_rep_max_history[rep] = history
 
     volume = []
@@ -272,7 +309,7 @@ async def exercise_history_rand():
             "timestamp": random_timestamp()
         })
 
-    volume = sorted(volume, key=lambda x: x["timestamp"])
+    volume = sorted(volume, key=lambda x: x["timestamp"], reverse=True)
 
     history = []
     for _ in range(random.randint(15,20)):

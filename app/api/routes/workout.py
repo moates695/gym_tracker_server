@@ -32,6 +32,7 @@ class WorkoutSave(BaseModel):
     start_time: int #? timestamp ms
     duration: int #? ms
 
+#? ratio is applied to volume on the client
 @router.post("/workout/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
     try:
@@ -128,6 +129,7 @@ async def workout_overview_stats_real(credentials: dict):
             select *
             from workouts
             where user_id = $1
+            order by started_at desc
             """, credentials["user_id"]
         )
 
@@ -183,7 +185,6 @@ async def workout_overview_stats_real(credentials: dict):
                         "num_sets": 0,
                         "reps": 0
                     }
-
                 muscles[group][target]["volume"] += (muscle_data["ratio"] / 10) * muscle_data["reps"] * muscle_data["weight"] * muscle_data["num_sets"]
                 muscles[group][target]["num_sets"] += muscle_data["num_sets"]
                 muscles[group][target]["reps"] += muscle_data["reps"]

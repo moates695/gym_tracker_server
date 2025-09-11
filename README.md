@@ -97,5 +97,9 @@ On FE, show variations with the parent exercise, most likely an expand option ne
 - muscle group octagon thing for different measures
 - verified users
     - just use other apps that have them verified (insta etc)
-
+- determine ordering for events from frontend to backend
+- determine where volume ratio is applied for incoming / outgoing
+- determine how to calculate body weight exercises
+    - on save should reflect the body weight lifted by user at that time
+    
 ## Assumptions
