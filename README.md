@@ -101,5 +101,11 @@ On FE, show variations with the parent exercise, most likely an expand option ne
 - determine where volume ratio is applied for incoming / outgoing
 - determine how to calculate body weight exercises
     - on save should reflect the body weight lifted by user at that time
+- add legend to graphs
+- add current bar or points to graph
+- allow 1 point on graph?
+- determine what happens if more than 1 workout on a given day (or similar for graph)
+- calculater history points on server (just sort on browser?)
+- for body weight, if offset weight makes < 0, just count as zero weight total?
     
 ## Assumptions
