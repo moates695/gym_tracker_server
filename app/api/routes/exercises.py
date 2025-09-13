@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import random
+from copy import deepcopy
 
 from api.middleware.auth_token import *
 from api.routes.auth import verify_token
@@ -273,75 +274,261 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
     }
 
 async def exercise_history_rand():
-    now = datetime.now(timezone.utc).timestamp() * 1000
-    
-    reps = set([random.randint(1,25) for _ in range(20)])
-    
-    n_rep_max_all_time = {}
-    n_rep_max_history = {}
-    for rep in reps:
-        n_rep_max_all_time[rep] = {
-            "weight": random_weight(),
-            "timestamp": random_timestamp()
+    # now = datetime.now(timezone.utc).timestamp() * 1000
+
+    emptyBaseData = {
+        "graph": [],
+        "table": {
+            "header": [],
+            "rows": []
         }
-
-        history = []
-        used_days = []
-        for _ in range(random.randint(5,20)):
-            while _:
-                day = random.randint(1,400)
-                if day in used_days: continue
-                used_days.append(day)
-                break
-            
-            history.append({
-                "weight": random_weight(),
-                "timestamp": random_timestamp()
-            })
-
-        history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
-        n_rep_max_history[rep] = history
-
-    volume = []
-    for _ in range(0, random.randint(20,30)):
-        volume.append({
-            "value": random_weight() * random.randint(2, 4),
-            "timestamp": random_timestamp()
-        })
-
-    volume = sorted(volume, key=lambda x: x["timestamp"], reverse=True)
-
-    history = []
-    for _ in range(random.randint(15,20)):
-        set_data = []
-        for _ in range(random.randint(3,15)):
-            set_data.append({
-                "reps": random.randint(5,15),
-                "weight": random_weight(),
-                "num_sets": random.randint(1,4)
-            })
-
-        history.append({
-            "set_data": set_data,
-            "timestamp": random_timestamp()
-        })
-
-    history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
-
-    reps_sets_weight = []
-    for _ in range(random.randint(5,40)):
-        reps_sets_weight.append({
-            "reps": random.randint(5,15),
-            "weight": random_weight(),
-            "num_sets": random.randint(1,5)
-        })
-
-    return {
-        "n_rep_max": {
-            "all_time": n_rep_max_all_time,
-            "history": n_rep_max_history
-        }, 
-        "volume": volume,
-        "history": history,
-        "reps_sets_weight": reps_sets_weight,
     }
+
+    history_data = {
+        "n_rep_max": {
+            "all_time": deepcopy(emptyBaseData),
+            "history": {}
+        },
+        "volume":  {
+            "workout": deepcopy(emptyBaseData),
+            "timespan": {
+                "week": deepcopy(emptyBaseData),
+                "month": deepcopy(emptyBaseData),
+                "3_months": deepcopy(emptyBaseData),
+                "6_months": deepcopy(emptyBaseData),
+                "year": deepcopy(emptyBaseData),
+            }
+        },
+        "history": {
+            "weight_per_set": deepcopy(emptyBaseData),
+            "volume_per_set": deepcopy(emptyBaseData),+
+            "weight_per_rep": deepcopy(emptyBaseData),
+        },
+        "reps_sets_weight": []
+    }
+
+    if random.random() < 0.05: return history_data
+    
+    reps = set([random.randint(1,25) for _ in range(random.randint(1,15))])
+    num_workouts = random.randint(1,50)
+
+    n_rep_max_all_time = history_data["n_rep_max"]["all_time"]
+    n_rep_max_all_time["table"]["header"] = ["rep", "weight", "date"]
+
+    for rep in reps:
+        n_rep_max_all_time["graph"].append({
+            "x": rep,
+            "y": random_weight()
+        })
+        n_rep_max_all_time["table"]["rows"].append({
+            "rep": rep,
+            "weight": random_weight(),
+            "date": random_timestamp_ms()
+        })
+
+        tempRepHistory = deepcopy(emptyBaseData)
+        tempRepHistory["table"]["headers"] = ["weight", "date"]
+        for _ in range(num_workouts):
+            weight = random_weight()
+            timestamp = random_timestamp_ms()
+            tempRepHistory["graph"].append({
+                "x": timestamp,
+                "y": weight
+            })
+            tempRepHistory["table"]["rows"].append({
+                "weight": weight,
+                "date": timestamp
+            })
+
+        sort_timeseries(tempRepHistory["graph"], "x")
+        sort_timeseries(tempRepHistory["table"]["rows"], "date")
+
+        # tempRepHistory["graph"] = sorted(
+        #     tempRepHistory["graph"],
+        #     key=lambda x: x["x"],
+        #     reverse=True
+        # )
+
+        # tempRepHistory["table"]["rows"] = sorted(
+        #     tempRepHistory["table"]["rows"],
+        #     key=lambda x: x["date"],
+        #     reverse=True
+        # )
+        
+        history_data["n_rep_max"]["history"][rep] = tempRepHistory
+
+    volume_workout = history_data["volume"]["workout"]
+    volume_workout["table"]["headers"] = ["volume", "date"]
+
+    for _ in range(num_workouts):
+        volume = random_volume()
+        timestamp = random_timestamp_ms()
+        volume_workout["graph"].append({
+            "x": timestamp,
+            "y": volume
+        })
+        volume_workout["table"]["rows"].append({
+            "volume": volume,
+            "date": timestamp
+        })
+
+    # volume_workout["graph"] = sorted(
+    #     volume_workout["graph"],
+    #     key=lambda x: x["x"],
+    #     reverse=True
+    # )
+    sort_timeseries(volume_workout["graph"], "x")
+
+
+    # volume_workout["table"]["rows"] = sorted(
+    #     volume_workout["table"]["rows"],
+    #     key=lambda x: x["date"],
+    #     reverse=True
+    # )
+    sort_timeseries(volume_workout["table"]["rows"], "date")
+
+
+    bucket_nums = set()
+    while len(bucket_nums) <= len(history_data["volume"]["timespan"].values()):
+        bucket_nums.add(random.randint(1, 50))
+    bucket_nums = list(bucket_nums)
+    bucket_nums.reverse()
+
+    for i, timespan_value in enumerate(history_data["volume"]["timespan"].values()):
+        timespan_value["table"]["headers"] = ["volume", "date"]
+        for _ in range(bucket_nums[i]):
+            volume = random_volume()
+            timestamp = random_timestamp_ms()
+            timespan_value["graph"].append({
+                "x": timestamp,
+                "y": volume
+            })
+            timespan_value["table"]["rows"].append({
+                "volume": volume,
+                "date": timestamp
+            })
+
+        sort_timeseries(timespan_value["graph"], "x")
+        sort_timeseries(timespan_value["table"]["rows"], "date")
+
+        # timespan_value["graph"] = sorted(
+        #     timespan_value["graph"],
+        #     key=lambda x: x["x"],
+        #     reverse=True
+        # )
+
+        # timespan_value["table"]["rows"] = sorted(
+        #     timespan_value["table"]["rows"],
+        #     key=lambda x: x["date"],
+        #     reverse=True
+        # )
+
+    for _ in range(num_workouts):
+        num_sets = random.randint(3, 16)
+        num_reps = num_sets * random.randint(3, 15)
+
+
+
+    history_data["reps_sets_weight"] = generate_rand_3D_points()
+
+    # todo: order timestamp series (if order required)
+
+    return history_data
+
+def sort_timeseries(data, key):
+    data = sorted(data, key=lambda e: e[key], reverse=True)
+
+def generate_rand_3D_points():
+    length = random.randint(3, 50)
+
+    # start with higher weight, lower reps/sets
+    weight = random.randint(60, 100)
+    reps = random.randint(4, 6)
+    sets = random.randint(2, 3)
+
+    data = []
+    for _ in range(length):
+        data.append({"x": reps, "y": weight, "z": sets})
+
+        # enforce trend:
+        # as reps × sets increases → weight decreases
+        reps += random.choice([1, 2])       # slowly increase reps
+        sets += random.choice([0, 1])       # sometimes add a set
+        weight -= random.randint(2, 5)      # gradually drop weight
+
+        # clamp values
+        if weight < 20:
+            weight = 20
+        if sets > 6:
+            sets = 6
+
+    return data
+
+    # n_rep_max_all_time = {}
+    # n_rep_max_history = {}
+    # for rep in reps:
+    #     n_rep_max_all_time[rep] = {
+    #         "weight": random_weight(),
+    #         "timestamp": random_timestamp()
+    #     }
+
+    #     history = []
+    #     used_days = []
+    #     for _ in range(random.randint(5,20)):
+    #         while _:
+    #             day = random.randint(1,400)
+    #             if day in used_days: continue
+    #             used_days.append(day)
+    #             break
+            
+    #         history.append({
+    #             "weight": random_weight(),
+    #             "timestamp": random_timestamp()
+    #         })
+
+    #     history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
+    #     n_rep_max_history[rep] = history
+
+    # volume = []
+    # for _ in range(0, random.randint(20,30)):
+    #     volume.append({
+    #         "value": random_weight() * random.randint(2, 4),
+    #         "timestamp": random_timestamp()
+    #     })
+
+    # volume = sorted(volume, key=lambda x: x["timestamp"], reverse=True)
+
+    # history = []
+    # for _ in range(random.randint(15,20)):
+    #     set_data = []
+    #     for _ in range(random.randint(3,15)):
+    #         set_data.append({
+    #             "reps": random.randint(5,15),
+    #             "weight": random_weight(),
+    #             "num_sets": random.randint(1,4)
+    #         })
+
+    #     history.append({
+    #         "set_data": set_data,
+    #         "timestamp": random_timestamp()
+    #     })
+
+    # history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
+
+    # reps_sets_weight = []
+    # for _ in range(random.randint(5,40)):
+    #     reps_sets_weight.append({
+    #         "reps": random.randint(5,15),
+    #         "weight": random_weight(),
+    #         "num_sets": random.randint(1,5)
+    #     })
+
+    # return {
+    #     "n_rep_max": {
+    #         "all_time": n_rep_max_all_time,
+    #         "history": n_rep_max_history
+    #     }, 
+    #     "volume": volume,
+    #     "history": history,
+    #     "reps_sets_weight": reps_sets_weight,
+    # }

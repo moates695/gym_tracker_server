@@ -228,7 +228,7 @@ async def workout_overview_stats_rand():
                 }
 
         workouts.append({
-            "started_at": random_timestamp(),
+            "started_at": random_timestamp_ms(),
             "duration": random.randint(20, 120) * 60 + random.random(),
             "num_exercises": random.randint(3,10),
             "totals": {
