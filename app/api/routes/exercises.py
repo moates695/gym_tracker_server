@@ -279,7 +279,7 @@ async def exercise_history_rand():
     emptyBaseData = {
         "graph": [],
         "table": {
-            "header": [],
+            "headers": [],
             "rows": []
         }
     }
@@ -299,11 +299,7 @@ async def exercise_history_rand():
                 "year": deepcopy(emptyBaseData),
             }
         },
-        "history": {
-            "weight_per_set": deepcopy(emptyBaseData),
-            "volume_per_set": deepcopy(emptyBaseData),+
-            "weight_per_rep": deepcopy(emptyBaseData),
-        },
+        "history": [],
         "reps_sets_weight": []
     }
 
@@ -342,18 +338,6 @@ async def exercise_history_rand():
 
         sort_timeseries(tempRepHistory["graph"], "x")
         sort_timeseries(tempRepHistory["table"]["rows"], "date")
-
-        # tempRepHistory["graph"] = sorted(
-        #     tempRepHistory["graph"],
-        #     key=lambda x: x["x"],
-        #     reverse=True
-        # )
-
-        # tempRepHistory["table"]["rows"] = sorted(
-        #     tempRepHistory["table"]["rows"],
-        #     key=lambda x: x["date"],
-        #     reverse=True
-        # )
         
         history_data["n_rep_max"]["history"][rep] = tempRepHistory
 
@@ -372,19 +356,7 @@ async def exercise_history_rand():
             "date": timestamp
         })
 
-    # volume_workout["graph"] = sorted(
-    #     volume_workout["graph"],
-    #     key=lambda x: x["x"],
-    #     reverse=True
-    # )
     sort_timeseries(volume_workout["graph"], "x")
-
-
-    # volume_workout["table"]["rows"] = sorted(
-    #     volume_workout["table"]["rows"],
-    #     key=lambda x: x["date"],
-    #     reverse=True
-    # )
     sort_timeseries(volume_workout["table"]["rows"], "date")
 
 
@@ -411,27 +383,54 @@ async def exercise_history_rand():
         sort_timeseries(timespan_value["graph"], "x")
         sort_timeseries(timespan_value["table"]["rows"], "date")
 
-        # timespan_value["graph"] = sorted(
-        #     timespan_value["graph"],
-        #     key=lambda x: x["x"],
-        #     reverse=True
-        # )
-
-        # timespan_value["table"]["rows"] = sorted(
-        #     timespan_value["table"]["rows"],
-        #     key=lambda x: x["date"],
-        #     reverse=True
-        # )
+    # timestamps = [random_timestamp_ms() for _ in range(num_workouts)]
+    # sort_timeseries(timestamps)
 
     for _ in range(num_workouts):
-        num_sets = random.randint(3, 16)
-        num_reps = num_sets * random.randint(3, 15)
+        temp_history = {
+            "graph": {
+                "weight_per_set": [],
+                "volume_per_set": [],
+                "weight_per_rep": [],
+            },
+            "table": {
+                "headers": ["reps", "sets", "weight"],
+                "rows": []
+            },
+            "started_at": random_timestamp_ms()
+        }
 
+        num_sets = random.randint(2,4)
+        num_reps = random.randint(3,15)
+        set_idx = 0
+        rep_idx = 0
+        for _ in range(num_sets):
+            weight = random_weight()
+            volume = weight * num_reps
+            for _ in range(num_reps):
+                temp_history["graph"]["weight_per_rep"].append({
+                    "x": rep_idx,
+                    "y": weight
+                })
 
+                rep_idx += 1
+
+            temp_history["graph"]["weight_per_set"].append({
+                "x": set_idx,
+                "y": weight
+            })
+            temp_history["graph"]["volume_per_set"].append({
+                    "x": set_idx,
+                    "y": volume
+                })
+
+            set_idx += 1
+
+        history_data["history"].append(temp_history)
+
+    sort_timeseries(history_data["history"], "started_at")
 
     history_data["reps_sets_weight"] = generate_rand_3D_points()
-
-    # todo: order timestamp series (if order required)
 
     return history_data
 
