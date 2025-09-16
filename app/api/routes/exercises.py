@@ -183,6 +183,99 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
     try:
         conn = await setup_connection()
         
+        # rows = await conn.fetch(
+        #     """
+        #     select wsd.reps, wsd.weight, wsd.num_sets, wsd.created_at
+        #     from workouts w
+        #     inner join workout_exercises we
+        #     on we.workout_id = w.id
+        #     inner join workout_set_data wsd
+        #     on wsd.workout_exercise_id = we.id
+        #     where w.user_id = $1
+        #     and we.exercise_id = $2
+        #     order by wsd.created_at desc
+        #     """, credentials["user_id"], exercise_id 
+        # )
+
+        # n_rep_max_all_time = {}
+        # for row in rows:
+        #     if n_rep_max_all_time.get(row["reps"], {"weight": 0})["weight"] < row["weight"]: continue
+        #     n_rep_max_all_time[row["reps"]] = {
+        #         "weight": row["weight"],
+        #         "timestamp": datetime_to_timestamp_ms(row["created_at"])
+        #     }
+
+        # n_rep_max_history = {}
+        # for row in rows:
+        #     if row["reps"] not in n_rep_max_history.keys():
+        #         n_rep_max_history[row["reps"]] = []
+        #     n_rep_max_history[row["reps"]].append({
+        #         "weight": row["weight"],
+        #         "timestamp": datetime_to_timestamp_ms(row["created_at"])
+        #     })
+
+        # # for rep, history in n_rep_max_history.items():
+        # #     n_rep_max_history[rep] = sorted(history, key=lambda x: x["timestamp"])
+
+        # volume_days = {}
+        # for row in rows:
+        #     date = row["created_at"].date()
+        #     if date not in volume_days.keys():
+        #         volume_days[date] = 0
+        #     volume_days[date] += row["reps"] * row["weight"] * row["num_sets"]
+
+        # volume = [{
+        #     "volume": value,
+        #     "timestamp": date_to_timestamp_ms(key)
+        # } for key, value in volume_days.items()]
+        # volume = sorted(volume, key=lambda x: x["timestamp"], reverse=True)
+
+        # history_days = {}
+        # for row in rows:
+        #     date = row["created_at"].date()
+        #     if date not in history_days.keys():
+        #         history_days[date] = []
+        #     history_days[date].append({
+        #         "reps": row[0],
+        #         "weight": row[1],
+        #         "num_sets": row[2],
+        #     })
+
+        # history = [{
+        #     "set_data": value,
+        #     "timestamp": date_to_timestamp_ms(key)
+        # } for key, value in history_days.items()]
+        # history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
+
+        # reps_sets_weight = []
+        # for row in rows:
+        #     reps_sets_weight.append({
+        #         "reps": row[0],
+        #         "weight": row[1],
+        #         "num_sets": row[2],
+        #     })
+
+        emptyBaseData = {
+            "graph": [],
+            "table": {
+                "headers": [],
+                "rows": []
+            }
+        }
+
+        # n_rep_max_all_time = deepcopy(emptyBaseData)
+        # n_rep_max_history = {}
+        # volume_workout = deepcopy(emptyBaseData)
+        # volume_timespan = {
+        #     "week": deepcopy(emptyBaseData),
+        #     "month": deepcopy(emptyBaseData),
+        #     "3_months": deepcopy(emptyBaseData),
+        #     "6_months": deepcopy(emptyBaseData),
+        #     "year": deepcopy(emptyBaseData),
+        # }
+        # history = []
+        # reps_sets_weight = []
+
         rows = await conn.fetch(
             """
             select wsd.reps, wsd.weight, wsd.num_sets, wsd.created_at
@@ -197,10 +290,11 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             """, credentials["user_id"], exercise_id 
         )
 
-        n_rep_max_all_time = {}
+        n_rep_max_all_time_data = {}
         for row in rows:
-            if n_rep_max_all_time.get(row["reps"], {"weight": 0})["weight"] < row["weight"]: continue
-            n_rep_max_all_time[row["reps"]] = {
+            curr_max = n_rep_max_all_time_data.get(row["reps"], {"weight": 0})["weight"]
+            if curr_max <= row["weight"]: continue
+            n_rep_max_all_time_data[row["reps"]] = {
                 "weight": row["weight"],
                 "timestamp": datetime_to_timestamp_ms(row["created_at"])
             }
@@ -213,46 +307,18 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
                 "weight": row["weight"],
                 "timestamp": datetime_to_timestamp_ms(row["created_at"])
             })
-
-        # for rep, history in n_rep_max_history.items():
-        #     n_rep_max_history[rep] = sorted(history, key=lambda x: x["timestamp"])
-
-        volume_days = {}
-        for row in rows:
-            date = row["created_at"].date()
-            if date not in volume_days.keys():
-                volume_days[date] = 0
-            volume_days[date] += row["reps"] * row["weight"] * row["num_sets"]
-
-        volume = [{
-            "volume": value,
-            "timestamp": date_to_timestamp_ms(key)
-        } for key, value in volume_days.items()]
-        volume = sorted(volume, key=lambda x: x["timestamp"], reverse=True)
-
-        history_days = {}
-        for row in rows:
-            date = row["created_at"].date()
-            if date not in history_days.keys():
-                history_days[date] = []
-            history_days[date].append({
-                "reps": row[0],
-                "weight": row[1],
-                "num_sets": row[2],
+        
+        n_rep_max_all_time = deepcopy(emptyBaseData)
+        n_rep_max_all_time["table"]["headers"] = ["rep", "weight", "date"]
+        for rep, data in n_rep_max_all_time_data.items():
+            n_rep_max_all_time["graph"].append({
+                "x": rep,
+                "y": data["weight"]
             })
-
-        history = [{
-            "set_data": value,
-            "timestamp": date_to_timestamp_ms(key)
-        } for key, value in history_days.items()]
-        history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
-
-        reps_sets_weight = []
-        for row in rows:
-            reps_sets_weight.append({
-                "reps": row[0],
-                "weight": row[1],
-                "num_sets": row[2],
+            n_rep_max_all_time["table"]["rows"].append({
+                "rep": rep,
+                "weight": data["weight"],
+                "date": data["timestamp"]
             })
 
     except HTTPException as e:
@@ -263,14 +329,23 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
     finally:
         if conn: await conn.close()
 
+    # return {
+    #     "n_rep_max": {
+    #         "all_time": n_rep_max_all_time,
+    #         "history": n_rep_max_history
+    #     },
+    #     "volume":  {
+    #         "workout": volume_workout,
+    #         "timespan": volume_timespan
+    #     },
+    #     "history": history,
+    #     "reps_sets_weight": reps_sets_weight
+    # }
+
     return {
         "n_rep_max": {
-            "all_time": n_rep_max_all_time,
-            "history": n_rep_max_history
-        },
-        "volume": volume,
-        "history": history,
-        "reps_sets_weight": reps_sets_weight,
+            "all_time": n_rep_max_all_time
+        }
     }
 
 async def exercise_history_rand():
@@ -304,8 +379,6 @@ async def exercise_history_rand():
     }
 
     if random.random() < 0.05: return history_data
-
-    # todo convert timestamps to strings in tables?
 
     reps = set([random.randint(1,25) for _ in range(random.randint(1,15))])
     num_workouts = random.randint(1,50)
