@@ -33,6 +33,7 @@ class WorkoutSave(BaseModel):
     duration: int #? ms
 
 #? ratio is applied to volume on the client
+#? bodyweight determined on the client
 @router.post("/workout/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
     try:

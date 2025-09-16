@@ -107,5 +107,6 @@ On FE, show variations with the parent exercise, most likely an expand option ne
 - determine what happens if more than 1 workout on a given day (or similar for graph)
 - calculater history points on server (just sort on browser?)
 - for body weight, if offset weight makes < 0, just count as zero weight total?
+- how to handle >1 of things on the same day, like exercises returned in history (data and graph options).
     
 ## Assumptions

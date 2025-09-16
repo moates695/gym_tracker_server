@@ -43,9 +43,7 @@ async def test_workout_save(delete_test_users, create_user):
         assert len(workouts) >= lower_lim
         assert len(workouts) <= upper_lim
 
-        for workout in workouts:
-            response = client.post("/workout/save", json=workout, headers=headers)
-            assert response.status_code == 200
+        await save_workouts(workouts, headers)
 
         assert len(workouts) == await get_num_workouts(conn, decoded_auth_token)
 
@@ -99,6 +97,9 @@ async def test_workout_save(delete_test_users, create_user):
     finally:
         if conn: await conn.close()
 
+# todo: test empty save
+# todo: test invalid saves
+
 async def get_num_workouts(conn, decoded):
     return await conn.fetchval(
         """
@@ -146,3 +147,8 @@ async def build_workouts(conn, lower_lim=5, upper_lim=10):
         })
 
     return workouts
+
+async def save_workouts(workouts, headers):
+    for workout in workouts:
+        response = client.post("/workout/save", json=workout, headers=headers)
+        assert response.status_code == 200
