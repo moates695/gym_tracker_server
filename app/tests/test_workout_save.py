@@ -1,10 +1,12 @@
 import pytest
 from fastapi.testclient import TestClient
 import random
+import json
 
 from ..main import app
 from ..api.middleware.auth_token import decode_token
 from ..api.middleware.database import setup_connection
+from ..api.middleware.misc import *
  
 client = TestClient(app)
 
@@ -30,73 +32,67 @@ async def test_workout_save(delete_test_users, create_user):
     response = client.post("/workout/save", json=req_body, headers=headers)
     assert response.status_code == 200
 
+    set_classes = ['working', 'dropset', 'warmup', 'cooldown']
+
     try:
         conn = await setup_connection()
 
-        assert 0 == await conn.fetchval(
-            """
-            select count(*)
-            from workouts w
-            where user_id = $1
-            """, decoded_auth_token["user_id"]
-        )
+        assert 0 == await get_num_workouts(conn, decoded_auth_token)
 
         workouts = []
-        for _ in range(random.randint(5, 10)):
-            base_exercise_ids = await conn.fetch
+        workout_num_lower_lim = 5
+        for _ in range(random.randint(workout_num_lower_lim, 10)):
+            start_time = int(random_timestamp_ms())
+            duration = random.randint(5*60, 120*60)
+            rows = await conn.fetch(
+                """
+                select id
+                from exercises
+                """
+            )
+            all_exercise_ids = [str(row["id"]) for row in rows]
+            exercise_ids = random.sample(all_exercise_ids, random.randint(2,8))
 
+            exercises = []
+            for exercise_id in exercise_ids:
+                set_data = []
+                for _ in range(random.randint(1,5)):
+                    set_data.append({
+                        "reps": random.randint(3,15),
+                        "weight": random_weight(),
+                        "num_sets": random.randint(1,5),
+                        "set_class": random.sample(set_classes, 1)[0]
+                    })
+                
+                exercises.append({
+                    "id": exercise_id,
+                    "set_data": set_data
+                })
 
+            workouts.append({
+                "exercises": exercises,
+                "start_time": start_time,
+                "duration": duration
+            })
 
-        # exercises = [
-        #     {
-        #         'name': 'Bench Press',
-        #         'parent_name': None
-        #     },
-        #     {
-        #         'name': 'Push-Up',
-        #         'parent_name': None
-        #     },
-        #     {
-        #         'name': 'flat bar, close grip',
-        #         'parent_name': 'Cable Tricep Extension'
-        #     }
-        # ]
+            response = client.post("/workout/save", json=workouts[-1], headers=headers)
+            assert response.status_code == 200
 
-        # for exercise_data in exercises:
-        #     if exercise_data["parent_name"] is None:
-        #         exercise_id = await conn.fetchval(
-        #             """
-        #             select id
-        #             from exercises
-        #             where name = $1
-        #             """, exercise_data["name"]
-        #         )
-        #     else:
-        #         exercise_id = await conn.fetchval(
-        #             """
-        #             select e2.id
-        #             from exercises e1
-        #             left join exercises e2
-        #             on e2.parent_id = e1.id
-        #             where e1.name = $1
-        #             and e2.name = $2
-        #             """, exercise_data["parent_name"], exercise_data["name"]
-        #         )
+        assert len(workouts) >= workout_num_lower_lim
+        assert len(workouts) == await get_num_workouts(conn, decoded_auth_token)
 
-        # timestamp_ms = 1743561228000
-        # duration = 50 * 60 * 1000
-        # # Wed Apr 02 2025
-        # req_body = {
-        #     "exercises": [],
-        #     "start_time": timestamp_ms,
-        #     "duration": duration
-        # }
-
-        # response = client.post("/workout/save", json=req_body, headers=headers)
-        # assert response.status_code == 200
 
     except Exception as e:
         print(str(e))
         assert False
     finally:
         if conn: await conn.close()
+
+async def get_num_workouts(conn, decoded):
+    return await conn.fetchval(
+        """
+        select count(*)
+        from workouts w
+        where user_id = $1
+        """, decoded["user_id"]
+    )
