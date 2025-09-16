@@ -21,8 +21,7 @@ async def test_workout_save(delete_test_users, create_user):
     }
 
     timestamp_ms = 1743561228000
-    duration = 50 * 60 * 1000
-    # Wed Apr 02 2025
+    duration = 50 * 60 * 1000 # Wed Apr 02 2025
     req_body = {
         "exercises": [],
         "start_time": timestamp_ms,
@@ -32,55 +31,67 @@ async def test_workout_save(delete_test_users, create_user):
     response = client.post("/workout/save", json=req_body, headers=headers)
     assert response.status_code == 200
 
-    set_classes = ['working', 'dropset', 'warmup', 'cooldown']
 
     try:
         conn = await setup_connection()
 
         assert 0 == await get_num_workouts(conn, decoded_auth_token)
 
-        workouts = []
-        workout_num_lower_lim = 5
-        for _ in range(random.randint(workout_num_lower_lim, 10)):
-            start_time = int(random_timestamp_ms())
-            duration = random.randint(5*60, 120*60)
-            rows = await conn.fetch(
-                """
-                select id
-                from exercises
-                """
-            )
-            all_exercise_ids = [str(row["id"]) for row in rows]
-            exercise_ids = random.sample(all_exercise_ids, random.randint(2,8))
+        lower_lim = 5
+        upper_lim = 10
+        workouts = await build_workouts(conn, lower_lim, upper_lim)
+        assert len(workouts) >= lower_lim
+        assert len(workouts) <= upper_lim
 
-            exercises = []
-            for exercise_id in exercise_ids:
-                set_data = []
-                for _ in range(random.randint(1,5)):
-                    set_data.append({
-                        "reps": random.randint(3,15),
-                        "weight": random_weight(),
-                        "num_sets": random.randint(1,5),
-                        "set_class": random.sample(set_classes, 1)[0]
-                    })
-                
-                exercises.append({
-                    "id": exercise_id,
-                    "set_data": set_data
-                })
-
-            workouts.append({
-                "exercises": exercises,
-                "start_time": start_time,
-                "duration": duration
-            })
-
-            response = client.post("/workout/save", json=workouts[-1], headers=headers)
+        for workout in workouts:
+            response = client.post("/workout/save", json=workout, headers=headers)
             assert response.status_code == 200
 
-        assert len(workouts) >= workout_num_lower_lim
         assert len(workouts) == await get_num_workouts(conn, decoded_auth_token)
 
+        workout_rows = await conn.fetch(
+            """
+            select w.id, w.started_at, w.duration_secs
+            from workouts w
+            where w.user_id = $1
+            """, user_id
+        )
+
+        assert len(workouts) == len(workout_rows)
+        for workout, workout_row in zip(workouts, workout_rows):
+            assert workout["start_time"] == workout_row["started_at"].timestamp() * 1000
+            assert workout["duration"] / 1000 == workout_row["duration_secs"]
+
+            workout_exercises_rows = await conn.fetch(
+                """
+                select id, exercise_id, order_index
+                from workout_exercises 
+                where workout_id = $1
+                """, workout_row["id"]
+            )
+
+            assert len(workout_exercises_rows) == len(workout["exercises"])
+
+            for i, exercise in enumerate(workout["exercises"]):
+                workout_exercises_row = workout_exercises_rows[i]
+                assert workout_exercises_row["order_index"] == i
+                assert str(workout_exercises_row["exercise_id"]) == exercise["id"]
+
+                workout_set_data_rows = await conn.fetch(
+                    """
+                    select reps, weight, num_sets, set_class, order_index
+                    from workout_set_data
+                    where workout_exercise_id = $1
+                    """, workout_exercises_row["id"]
+                )
+
+                assert len(exercise["set_data"]) == len(workout_set_data_rows)
+
+                for j, set_data in enumerate(exercise["set_data"]):
+                    workout_set_data_row = workout_set_data_rows[j]
+                    assert workout_set_data_row["order_index"] == j
+                    for key in ['reps','weight','num_sets','set_class']:
+                        assert set_data[key] == workout_set_data_row[key]
 
     except Exception as e:
         print(str(e))
@@ -96,3 +107,42 @@ async def get_num_workouts(conn, decoded):
         where user_id = $1
         """, decoded["user_id"]
     )
+
+async def build_workouts(conn, lower_lim=5, upper_lim=10):
+    workouts = []
+    set_classes = ['working', 'dropset', 'warmup', 'cooldown']
+    for _ in range(random.randint(lower_lim, upper_lim)):
+        start_time = int(random_timestamp_ms())
+        duration = random.randint(5*60, 120*60) * 1000
+        rows = await conn.fetch(
+            """
+            select id
+            from exercises
+            """
+        )
+        all_exercise_ids = [str(row["id"]) for row in rows]
+        exercise_ids = random.sample(all_exercise_ids, random.randint(2,8))
+
+        exercises = []
+        for exercise_id in exercise_ids:
+            set_data = []
+            for _ in range(random.randint(1,5)):
+                set_data.append({
+                    "reps": random.randint(3,15),
+                    "weight": random_weight(),
+                    "num_sets": random.randint(1,5),
+                    "set_class": random.sample(set_classes, 1)[0]
+                })
+            
+            exercises.append({
+                "id": exercise_id,
+                "set_data": set_data
+            })
+
+        workouts.append({
+            "exercises": exercises,
+            "start_time": start_time,
+            "duration": duration
+        })
+
+    return workouts
