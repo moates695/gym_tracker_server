@@ -93,7 +93,7 @@ async def test_workout_save(delete_test_users, create_user):
 
     except Exception as e:
         print(str(e))
-        assert False
+        raise e
     finally:
         if conn: await conn.close()
 
@@ -117,7 +117,7 @@ async def test_build_workouts(delete_test_users, create_user):
 
     except Exception as e:
         print(str(e))
-        assert False
+        raise e
     finally:
         if conn: await conn.close()
 
