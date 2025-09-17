@@ -108,5 +108,6 @@ On FE, show variations with the parent exercise, most likely an expand option ne
 - calculater history points on server (just sort on browser?)
 - for body weight, if offset weight makes < 0, just count as zero weight total?
 - how to handle >1 of things on the same day, like exercises returned in history (data and graph options).
+- check useEffects for bad object comparisons (objects, lists always false comparison)
     
 ## Assumptions

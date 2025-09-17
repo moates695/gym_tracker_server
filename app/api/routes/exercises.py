@@ -279,35 +279,28 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
         rows = await conn.fetch(
             """
             select wsd.reps, wsd.weight, wsd.num_sets, wsd.created_at
-            from workouts w
+            from workout_set_data wsd
             inner join workout_exercises we
-            on we.workout_id = w.id
-            inner join workout_set_data wsd
             on wsd.workout_exercise_id = we.id
+            inner join workouts w
+            on we.workout_id = w.id
             where w.user_id = $1
             and we.exercise_id = $2
-            order by wsd.created_at desc
+            order by wsd.reps, wsd.created_at desc
             """, credentials["user_id"], exercise_id 
         )
 
         n_rep_max_all_time_data = {}
         for row in rows:
             curr_max = n_rep_max_all_time_data.get(row["reps"], {"weight": 0})["weight"]
-            if curr_max <= row["weight"]: continue
+            if row["weight"] <= curr_max: continue
             n_rep_max_all_time_data[row["reps"]] = {
                 "weight": row["weight"],
                 "timestamp": datetime_to_timestamp_ms(row["created_at"])
             }
 
-        n_rep_max_history = {}
-        for row in rows:
-            if row["reps"] not in n_rep_max_history.keys():
-                n_rep_max_history[row["reps"]] = []
-            n_rep_max_history[row["reps"]].append({
-                "weight": row["weight"],
-                "timestamp": datetime_to_timestamp_ms(row["created_at"])
-            })
-        
+        n_rep_max_all_time_data = dict(sorted(n_rep_max_all_time_data.items()))
+
         n_rep_max_all_time = deepcopy(emptyBaseData)
         n_rep_max_all_time["table"]["headers"] = ["rep", "weight", "date"]
         for rep, data in n_rep_max_all_time_data.items():
@@ -318,8 +311,19 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             n_rep_max_all_time["table"]["rows"].append({
                 "rep": rep,
                 "weight": data["weight"],
-                "date": data["timestamp"]
+                "date": timestamp_ms_to_date(data["timestamp"])
             })
+
+        n_rep_max_history = {}
+        for row in rows:
+            if row["reps"] not in n_rep_max_history.keys():
+                n_rep_max_history[row["reps"]] = []
+            n_rep_max_history[row["reps"]].append({
+                "weight": row["weight"],
+                "timestamp": datetime_to_timestamp_ms(row["created_at"])
+            })
+        
+        
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})

@@ -100,6 +100,27 @@ async def test_workout_save(delete_test_users, create_user):
 # todo: test empty save
 # todo: test invalid saves
 
+@pytest.mark.asyncio
+async def test_build_workouts(delete_test_users, create_user):
+    try:
+        conn = await setup_connection()
+        
+        lower_lim = 6
+        upper_lim = 12
+        for _ in range(10):
+            workouts = await build_workouts(conn, lower_lim, upper_lim)
+            assert len(workouts) >= lower_lim
+            assert len(workouts) <= upper_lim
+            for workout in workouts:
+                for exercise in workout["exercises"]:
+                    assert len(exercise["set_data"]) > 0
+
+    except Exception as e:
+        print(str(e))
+        assert False
+    finally:
+        if conn: await conn.close()
+
 async def get_num_workouts(conn, decoded):
     return await conn.fetchval(
         """
@@ -147,6 +168,8 @@ async def build_workouts(conn, lower_lim=5, upper_lim=10):
         })
 
     return workouts
+
+
 
 async def save_workouts(workouts, headers):
     for workout in workouts:
