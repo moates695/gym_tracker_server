@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import random
 from copy import deepcopy
+import math
 
 from api.middleware.auth_token import *
 from api.routes.auth import verify_token
@@ -194,7 +195,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
 
         rows = await conn.fetch(
             """
-            select wsd.reps, wsd.weight, wsd.num_sets, w.started_at
+            select w.id workout_id, wsd.reps, wsd.weight, wsd.num_sets, w.started_at
             from workout_set_data wsd
             inner join workout_exercises we
             on wsd.workout_exercise_id = we.id
@@ -208,7 +209,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
 
         n_rep_max_all_time = build_n_rep_max_all_time(rows)
         n_rep_max_history = build_n_rep_max_history(rows)
-        
+        volume_workout = build_volume_workout(rows)
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -222,13 +223,16 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
         "n_rep_max": {
             "all_time": n_rep_max_all_time,
             "history": n_rep_max_history
+        },
+        "volume": {
+            "workout": volume_workout
         }
     }
 
 def build_n_rep_max_all_time(rows):
     n_rep_max_all_time_data = {}
     for row in rows:
-        curr_max = n_rep_max_all_time_data.get(row["reps"], {"weight": 0})["weight"]
+        curr_max = n_rep_max_all_time_data.get(row["reps"], {"weight": -math.inf})["weight"]
         if row["weight"] <= curr_max: continue
         n_rep_max_all_time_data[row["reps"]] = {
             "weight": row["weight"],
@@ -256,11 +260,11 @@ def build_n_rep_max_history(rows):
     n_rep_max_history_data = {}
     for row in rows:
         if row["reps"] not in n_rep_max_history_data.keys():
-            n_rep_max_history_data[row["reps"]] = []
-        n_rep_max_history_data[row["reps"]].append({
-            "weight": row["weight"],
-            "timestamp": datetime_to_timestamp_ms(row["started_at"])
-        })
+            n_rep_max_history_data[row["reps"]] = {}
+        timestamp = datetime_to_timestamp_ms(row["started_at"])
+        curr_weight = n_rep_max_history_data[row["reps"]].get(timestamp, -math.inf)
+        if curr_weight >= row["weight"]: continue
+        n_rep_max_history_data[row["reps"]][timestamp] = row["weight"]
 
     n_rep_max_history_data = dict(sorted(n_rep_max_history_data.items()))
 
@@ -268,14 +272,15 @@ def build_n_rep_max_history(rows):
     for rep, data in n_rep_max_history_data.items():
         temp_history = deepcopy(emptyBaseData)
         temp_history["table"]["headers"] = ["weight", "date"]
-        for elem in data:
+
+        for timestamp, weight in data.items():
             temp_history["graph"].append({
-                "x": elem["timestamp"],
-                "y": elem["weight"]
+                "x": timestamp,
+                "y": weight
             })
             temp_history["table"]["rows"].append({
-                "weight": elem["weight"],
-                "date": elem["timestamp"]
+                "weight": weight,
+                "date": timestamp
             })
 
         temp_history["graph"] = sort_timeseries(temp_history["graph"], "x")
@@ -284,6 +289,33 @@ def build_n_rep_max_history(rows):
         n_rep_max_history[rep] = temp_history
 
     return n_rep_max_history
+
+def build_volume_workout(rows):
+    volume_data = {}
+    for row in rows:
+        if row["workout_id"] not in volume_data:
+            volume_data[row["workout_id"]] = {
+                "volume": 0,
+                "timestamp": datetime_to_timestamp_ms(row["started_at"])
+            }
+        volume_data[row["workout_id"]]["volume"] += row["reps"] * row["weight"] * row["num_sets"]
+        
+    volume = deepcopy(emptyBaseData)
+    volume["table"]["headers"] = ["volume", "date"]
+    for data in volume_data.values():
+        volume["graph"].append({
+            "x": data["timestamp"],
+            "y": data["volume"]
+        })
+        volume["table"]["rows"].append({
+            "volume": data["volume"],
+            "date": data["timestamp"]
+        })
+
+    volume["graph"] = sort_timeseries(volume["graph"], "x")
+    volume["table"]["rows"] = sort_timeseries(volume["table"]["rows"], "date", True)
+
+    return volume
 
 async def exercise_history_rand():
     # now = datetime.now(timezone.utc).timestamp() * 1000
