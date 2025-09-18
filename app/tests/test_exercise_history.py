@@ -18,8 +18,8 @@ client = TestClient(app)
 @pytest.mark.asyncio
 async def test_exercise_history_match(delete_test_users, create_user):
     auth_token = create_user
-    decoded_auth_token = decode_token(auth_token)
-    user_id = decoded_auth_token["user_id"]
+    # decoded_auth_token = decode_token(auth_token)
+    # user_id = decoded_auth_token["user_id"]
 
     headers = {
         "Authorization": f"Bearer {auth_token}"
@@ -47,69 +47,94 @@ async def test_exercise_history_match(delete_test_users, create_user):
             })
             resp_json = response.json()
 
-            n_rep_max_all_time = resp_json["n_rep_max"]["all_time"]
-            assert len(n_rep_max_all_time["graph"]) > 0
-            assert len(n_rep_max_all_time["graph"]) == len(n_rep_max_all_time["table"]["rows"])
-            assert n_rep_max_all_time["table"]["headers"] == ["rep", "weight", "date"]
-            for table_row in n_rep_max_all_time["table"]["rows"]:
-                for header in n_rep_max_all_time["table"]["headers"]:
-                    assert header in table_row.keys()
-
-            last_rep = -1
-            for i in range(len(n_rep_max_all_time["graph"])):
-                graph = n_rep_max_all_time["graph"][i]
-                table = n_rep_max_all_time["table"]["rows"][i]
-                
-                assert graph["x"] == table["rep"]
-                assert graph["y"] == table["weight"]
-
-                assert isinstance(graph["x"], (int, float))
-                assert isinstance(graph["y"], (int, float))
-
-                assert isinstance(table["rep"], (int, float))
-                assert isinstance(table["weight"], (int, float))
-                assert isinstance(table["date"], str)
-
-                assert last_rep < graph['x']
-                last_rep = graph['x']
-
-            last_rep = -1
-            n_rep_max_history = resp_json["n_rep_max"]["history"]
-            assert n_rep_max_history != {}
-            for rep, history in n_rep_max_history.items():
-                assert len(history["graph"]) > 0
-                assert len(history["graph"]) == len(history["table"]["rows"]) 
-                assert history["table"]["headers"] == ["weight", "date"]
-                for table_row in history["table"]["rows"]:
-                    for header in history["table"]["headers"]:
-                        assert header in table_row.keys()
-
-                last_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
-                for i in range(len(history["graph"])):
-                    graph = history["graph"][i]
-                    table = history["table"]["rows"][i]
-                    
-                    graph_date = datetime.fromtimestamp(graph["x"] / 1000).strftime("%d/%m/%Y")
-                    assert graph_date == table["date"]
-                    assert graph["y"] == table["weight"]
-
-                    assert isinstance(graph["x"], (int, float))
-                    assert isinstance(graph["y"], (int, float))
-
-                    assert isinstance(table["weight"], (int, float))
-                    assert isinstance(table["date"], str)
-
-                    assert last_timestamp >= graph["x"] / 1000
-                    last_timestamp = graph["x"] / 1000
-
-                assert last_rep < int(rep)
-                last_rep = int(rep)
+            check_n_rep_max_all_time_match(resp_json["n_rep_max"]["all_time"])
+            check_n_rep_max_history_match(resp_json["n_rep_max"]["history"])
+            check_volume_workout_match(resp_json["volume"]["workout"])
 
     except Exception as e:
         print(str(e))
         raise e
     finally:
         if conn: await conn.close()
+
+def check_n_rep_max_all_time_match(n_rep_max_all_time):
+    prelim_shape_check(n_rep_max_all_time, ["rep", "weight", "date"])
+    last_rep = -1
+    for i in range(len(n_rep_max_all_time["graph"])):
+        graph = n_rep_max_all_time["graph"][i]
+        table = n_rep_max_all_time["table"]["rows"][i]
+        
+        assert graph["x"] == table["rep"]
+        assert graph["y"] == table["weight"]
+
+        assert isinstance(graph["x"], (int, float))
+        assert isinstance(graph["y"], (int, float))
+
+        assert isinstance(table["rep"], (int, float))
+        assert isinstance(table["weight"], (int, float))
+        assert isinstance(table["date"], str)
+
+        assert last_rep < graph['x']
+        last_rep = graph['x']
+
+def check_n_rep_max_history_match(n_rep_max_history):
+    assert n_rep_max_history != {}
+    last_rep = -1
+    for rep, history in n_rep_max_history.items():
+        prelim_shape_check(history, ["weight", "date"])
+
+        used_timestamps = []
+        last_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
+        for i in range(len(history["graph"])):
+            graph = history["graph"][i]
+            table = history["table"]["rows"][i]
+            
+            graph_date = datetime.fromtimestamp(graph["x"] / 1000).strftime("%d/%m/%Y")
+            assert graph_date == table["date"]
+            assert graph["y"] == table["weight"]
+
+            assert isinstance(graph["x"], (int, float))
+            assert isinstance(graph["y"], (int, float))
+
+            assert isinstance(table["weight"], (int, float))
+            assert isinstance(table["date"], str)
+
+            assert last_timestamp >= graph["x"] / 1000
+            last_timestamp = graph["x"] / 1000
+
+            assert graph["x"] not in used_timestamps
+            used_timestamps.append(graph["x"])
+
+        assert last_rep < int(rep)
+        last_rep = int(rep)
+
+def check_volume_workout_match(volume_workout):
+    prelim_shape_check(volume_workout, ["volume", "date"])
+    last_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
+    for i in range(len(volume_workout["graph"])):
+        graph = volume_workout["graph"][i]
+        table = volume_workout["table"]["rows"][i]
+
+        graph_date = datetime.fromtimestamp(graph["x"] / 1000).strftime("%d/%m/%Y")
+        assert graph_date == table["date"]
+        assert graph["y"] == table["volume"]
+
+        assert isinstance(graph["x"], (int, float))
+        assert isinstance(graph["y"], (int, float))
+
+        assert isinstance(table["volume"], (int, float))
+        assert isinstance(table["date"], str)
+
+        assert last_timestamp >= graph["x"] / 1000
+        last_timestamp = graph["x"] / 1000
+
+def prelim_shape_check(data, table_headers):
+    assert len(data["graph"]) > 0
+    assert len(data["graph"]) == len(data["table"]["rows"])
+    assert data["table"]["headers"] == table_headers
+    for table_row in data["table"]["rows"]:
+        for header in data["table"]["headers"]:
+            assert header in table_row.keys()
 
 @pytest.mark.asyncio
 async def test_exercise_history_data(delete_test_users, create_user):
@@ -146,9 +171,9 @@ async def test_exercise_history_data(delete_test_users, create_user):
             })
             resp_json = response.json()
             
-            n_rep_max_all_time_func(set_data_list, resp_json["n_rep_max"]["all_time"])
-            n_rep_max_history_func(set_data_list, resp_json["n_rep_max"]["history"])
-            # volume_workout_func(set_data_list, resp_json["volume"]["workout"])
+            check_n_rep_max_all_time_data(set_data_list, resp_json["n_rep_max"]["all_time"])
+            check_n_rep_max_history_data(set_data_list, resp_json["n_rep_max"]["history"])
+            check_volume_workout_data(exercise_id, workouts, resp_json["volume"]["workout"])
 
     except Exception as e:
         print(str(e))
@@ -156,7 +181,7 @@ async def test_exercise_history_data(delete_test_users, create_user):
     finally:
         if conn: await conn.close()
 
-def n_rep_max_all_time_func(set_data_list, resp_all_time):
+def check_n_rep_max_all_time_data(set_data_list, resp_all_time):
     n_rep_max_all_time = {}
     for set_data in set_data_list:
         curr_max = n_rep_max_all_time.get(set_data["reps"], {'weight': -math.inf})["weight"]
@@ -174,7 +199,7 @@ def n_rep_max_all_time_func(set_data_list, resp_all_time):
         assert resp_all_time["graph"][i]["x"] == rep
         assert resp_all_time["graph"][i]["y"] == data["weight"]
 
-def n_rep_max_history_func(set_data_list, resp_history):
+def check_n_rep_max_history_data(set_data_list, resp_history):
     n_rep_max_history_data = {}
     for set_data in set_data_list:
         if set_data["reps"] not in n_rep_max_history_data.keys():
@@ -207,16 +232,32 @@ def n_rep_max_history_func(set_data_list, resp_history):
         assert len(data) > 0
         assert len(data) == len(graph)
 
-        used_timestamps = []
         for i in range(len(data)):
             assert data[i]["weight"] == graph[i]["y"]
             assert data[i]["timestamp"] == graph[i]["x"]
-
-            if graph[i]["x"] in used_timestamps: assert False
-            used_timestamps.append(graph[i]["x"])
     
-def volume_workout_func(set_data_list, resp_workout):
-    pass
+def check_volume_workout_data(exercise_id, workouts, resp_workout):
+    volume_workout = []
+    for workout in workouts:
+        workout_volume = 0
+        for exercise in workout["exercises"]:
+            if exercise_id != exercise["id"]: continue
+            for set_data in exercise["set_data"]:
+                workout_volume += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+        if workout_volume == 0: continue
+        volume_workout.append({
+            "volume": workout_volume,
+            "timestamp": workout["start_time"]
+        })
+
+    volume_workout = sorted(volume_workout, key=lambda e: e["timestamp"], reverse=True)
+
+    assert len(volume_workout) > 0
+    assert len(volume_workout) == len(resp_workout["graph"])
+    for i in range(len(volume_workout)):
+        assert volume_workout[i]["volume"] == resp_workout["graph"][i]["y"]
+        assert volume_workout[i]["timestamp"] == resp_workout["graph"][i]["x"]
+
 
 # todo: create workouts and then test the exercise history function
 
