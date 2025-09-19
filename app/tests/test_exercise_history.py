@@ -50,6 +50,7 @@ async def test_exercise_history_match(delete_test_users, create_user):
             check_n_rep_max_all_time_match(resp_json["n_rep_max"]["all_time"])
             check_n_rep_max_history_match(resp_json["n_rep_max"]["history"])
             check_volume_workout_match(resp_json["volume"]["workout"])
+            check_volume_timespan_match(resp_json["volume"]["timespan"])
 
     except Exception as e:
         print(str(e))
@@ -128,6 +129,28 @@ def check_volume_workout_match(volume_workout):
         assert last_timestamp >= graph["x"] / 1000
         last_timestamp = graph["x"] / 1000
 
+# todo check date strings are correct (in desc order and first-last approx gap)
+def check_volume_timespan_match(volume_timespan):
+    for timespan in ["week","month","3_months","6_months","year"]:
+        data = volume_timespan[timespan]
+        prelim_shape_check(data, ["volume", "dates"])
+
+        last_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
+        for i in range(len(data["graph"])):
+            graph = data["graph"][i]
+            table = data["table"]["rows"][i]
+
+            assert graph["y"] == table["volume"]
+
+            assert isinstance(graph["x"], (int, float))
+            assert isinstance(graph["y"], (int, float))
+
+            assert isinstance(table["volume"], (int, float))
+            assert isinstance(table["dates"], str)
+
+            assert last_timestamp >= int(graph["x"] / 1000)
+            last_timestamp = int(graph["x"] / 1000)
+
 def prelim_shape_check(data, table_headers):
     assert len(data["graph"]) > 0
     assert len(data["graph"]) == len(data["table"]["rows"])
@@ -174,6 +197,7 @@ async def test_exercise_history_data(delete_test_users, create_user):
             check_n_rep_max_all_time_data(set_data_list, resp_json["n_rep_max"]["all_time"])
             check_n_rep_max_history_data(set_data_list, resp_json["n_rep_max"]["history"])
             check_volume_workout_data(exercise_id, workouts, resp_json["volume"]["workout"])
+            check_volume_timespan_data(exercise_id, workouts, resp_json["volume"]["timespan"])
 
     except Exception as e:
         print(str(e))
@@ -258,6 +282,8 @@ def check_volume_workout_data(exercise_id, workouts, resp_workout):
         assert volume_workout[i]["volume"] == resp_workout["graph"][i]["y"]
         assert volume_workout[i]["timestamp"] == resp_workout["graph"][i]["x"]
 
+def check_volume_timespan_data(exercise_id, workouts, resp_workout):
+    return
 
 # todo: create workouts and then test the exercise history function
 

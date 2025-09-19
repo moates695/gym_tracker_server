@@ -10,6 +10,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import random
 from copy import deepcopy
 import math
+import json
 
 from api.middleware.auth_token import *
 from api.routes.auth import verify_token
@@ -210,6 +211,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
         n_rep_max_all_time = build_n_rep_max_all_time(rows)
         n_rep_max_history = build_n_rep_max_history(rows)
         volume_workout = build_volume_workout(rows)
+        volume_timespan = build_volume_timespan(rows)
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -225,7 +227,8 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             "history": n_rep_max_history
         },
         "volume": {
-            "workout": volume_workout
+            "workout": volume_workout,
+            "timespan": volume_timespan
         }
     }
 
@@ -251,7 +254,7 @@ def build_n_rep_max_all_time(rows):
         n_rep_max_all_time["table"]["rows"].append({
             "rep": rep,
             "weight": data["weight"],
-            "date": timestamp_ms_to_date(data["timestamp"])
+            "date": timestamp_ms_to_date_str(data["timestamp"])
         })
 
     return n_rep_max_all_time 
@@ -291,15 +294,8 @@ def build_n_rep_max_history(rows):
     return n_rep_max_history
 
 def build_volume_workout(rows):
-    volume_data = {}
-    for row in rows:
-        if row["workout_id"] not in volume_data:
-            volume_data[row["workout_id"]] = {
-                "volume": 0,
-                "timestamp": datetime_to_timestamp_ms(row["started_at"])
-            }
-        volume_data[row["workout_id"]]["volume"] += row["reps"] * row["weight"] * row["num_sets"]
-        
+    volume_data = volume_per_workout(rows)
+
     volume = deepcopy(emptyBaseData)
     volume["table"]["headers"] = ["volume", "date"]
     for data in volume_data.values():
@@ -316,6 +312,79 @@ def build_volume_workout(rows):
     volume["table"]["rows"] = sort_timeseries(volume["table"]["rows"], "date", True)
 
     return volume
+
+def build_volume_timespan(rows):
+    volume_data = volume_per_workout(rows)
+
+    timespan_data = {}    
+    now_ms = datetime.now(tz=timezone.utc).timestamp() * 1000
+    for timespan in ["week","month","3_months","6_months","year"]:  
+        timespan_ms = timespan_to_ms(timespan)
+        bucket_data = {}
+        for workout_data in volume_data.values():
+            bucket = int((now_ms - workout_data["timestamp"]) / timespan_ms)
+            if bucket not in bucket_data:
+                bucket_data[bucket] = 0
+            bucket_data[bucket] += workout_data["volume"]
+
+        bucket_data = dict(sorted(bucket_data.items()))
+
+        timespan_data[timespan] = bucket_data
+
+    volume_timespan = {}
+    for timespan, bucket_data in timespan_data.items():
+        timespan_ms = timespan_to_ms(timespan)
+        temp_data = deepcopy(emptyBaseData)
+        temp_data["table"]["headers"] = ["volume", "dates"]
+        for bucket, volume in bucket_data.items():
+            upper_timestamp = now_ms - bucket * timespan_ms
+            lower_timestamp = now_ms - (bucket + 1) * timespan_ms
+
+            temp_data["graph"].append({
+                "x": upper_timestamp,
+                "y": volume
+            })
+            temp_data["table"]["rows"].append({
+                "volume": volume,
+                "dates": f"{timestamp_ms_to_date_str(lower_timestamp)}-{timestamp_ms_to_date_str(upper_timestamp)}"
+            })
+
+        volume_timespan[timespan] = temp_data
+
+    return volume_timespan
+
+def volume_per_workout(rows):
+    volume_data = {}
+    for row in rows:
+        if row["workout_id"] not in volume_data:
+            volume_data[row["workout_id"]] = {
+                "volume": 0,
+                "timestamp": datetime_to_timestamp_ms(row["started_at"])
+            }
+        volume_data[row["workout_id"]]["volume"] += row["reps"] * row["weight"] * row["num_sets"]
+    return volume_data
+
+def timespan_to_ms(timespan):
+    day_ms = 24 * 60 * 60 * 1000
+    week_ms = 7 * day_ms
+    month_ms = 30.43 * day_ms
+    month_3_ms = 3 * month_ms
+    month_6_ms = 2 * month_3_ms
+    year_ms = 365.25 * day_ms
+
+    match timespan:
+        case 'week':
+            return week_ms
+        case 'month':
+            return month_ms
+        case '3_months':
+            return month_3_ms
+        case '6_months':
+            return month_6_ms
+        case 'year':
+            return year_ms
+        case _:
+            raise Exception(f"unknown timespan '{timespan}'")
 
 async def exercise_history_rand():
     # now = datetime.now(timezone.utc).timestamp() * 1000
@@ -363,7 +432,7 @@ async def exercise_history_rand():
         n_rep_max_all_time["table"]["rows"].append({
             "rep": rep,
             "weight": random_weight(),
-            "date": timestamp_ms_to_date(random_timestamp_ms())
+            "date": timestamp_ms_to_date_str(random_timestamp_ms())
         })
 
         tempRepHistory = deepcopy(emptyBaseData)
@@ -484,10 +553,10 @@ def sort_timeseries(data, key, convert_timestamp=False):
     series = sorted(data, key=lambda e: e[key], reverse=True)
     if not convert_timestamp: return series
     for elem in series:
-        elem[key] = timestamp_ms_to_date(elem[key])
+        elem[key] = timestamp_ms_to_date_str(elem[key])
     return series
 
-def timestamp_ms_to_date(timestamp_ms):
+def timestamp_ms_to_date_str(timestamp_ms):
     return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%d/%m/%Y")
 
 def generate_rand_3D_points():

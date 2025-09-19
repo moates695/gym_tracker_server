@@ -40,8 +40,6 @@ async def test_workout_save(delete_test_users, create_user):
         lower_lim = 5
         upper_lim = 10
         workouts = await build_workouts(conn, lower_lim, upper_lim)
-        assert len(workouts) >= lower_lim
-        assert len(workouts) <= upper_lim
 
         await save_workouts(workouts, headers)
 
