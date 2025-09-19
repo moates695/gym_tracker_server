@@ -326,10 +326,7 @@ def build_volume_timespan(rows):
             if bucket not in bucket_data:
                 bucket_data[bucket] = 0
             bucket_data[bucket] += workout_data["volume"]
-
-        bucket_data = dict(sorted(bucket_data.items()))
-
-        timespan_data[timespan] = bucket_data
+        timespan_data[timespan] = dict(sorted(bucket_data.items()))
 
     volume_timespan = {}
     for timespan, bucket_data in timespan_data.items():

@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from copy import deepcopy
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import math
 
 from ..main import app
@@ -129,7 +129,6 @@ def check_volume_workout_match(volume_workout):
         assert last_timestamp >= graph["x"] / 1000
         last_timestamp = graph["x"] / 1000
 
-# todo check date strings are correct (in desc order and first-last approx gap)
 def check_volume_timespan_match(volume_timespan):
     for timespan in ["week","month","3_months","6_months","year"]:
         data = volume_timespan[timespan]
@@ -140,6 +139,8 @@ def check_volume_timespan_match(volume_timespan):
             graph = data["graph"][i]
             table = data["table"]["rows"][i]
 
+            graph_date = datetime.fromtimestamp(graph["x"] / 1000).strftime("%d/%m/%Y")
+            assert graph_date == table["dates"].split("-")[1]
             assert graph["y"] == table["volume"]
 
             assert isinstance(graph["x"], (int, float))
@@ -150,6 +151,23 @@ def check_volume_timespan_match(volume_timespan):
 
             assert last_timestamp >= int(graph["x"] / 1000)
             last_timestamp = int(graph["x"] / 1000)
+
+            lower_dt = datetime.strptime(table["dates"].split("-")[0], "%d/%m/%Y")
+            upper_dt = datetime.strptime(table["dates"].split("-")[1], "%d/%m/%Y")
+            assert lower_dt < upper_dt
+            
+            delta = upper_dt - lower_dt
+            match timespan:
+                case 'week':
+                    assert delta.days == 7
+                case 'month':
+                    assert 28 <= delta.days <= 31
+                case '3_months':
+                    assert 88 <= delta.days <= 93
+                case '6_months':
+                    assert 178 <= delta.days <= 186
+                case 'year':
+                    assert 365 <= delta.days <= 366
 
 def prelim_shape_check(data, table_headers):
     assert len(data["graph"]) > 0
@@ -261,6 +279,39 @@ def check_n_rep_max_history_data(set_data_list, resp_history):
             assert data[i]["timestamp"] == graph[i]["x"]
     
 def check_volume_workout_data(exercise_id, workouts, resp_workout):
+    volume_workout = volume_per_workout(exercise_id, workouts)
+
+    assert len(volume_workout) == len(resp_workout["graph"])
+    for i in range(len(volume_workout)):
+        assert volume_workout[i]["volume"] == resp_workout["graph"][i]["y"]
+        assert volume_workout[i]["timestamp"] == resp_workout["graph"][i]["x"]
+
+# todo: fix this, probably need to rework how bucket data computed in this test case
+def check_volume_timespan_data(exercise_id, workouts, resp_timespan):
+    volume_workout = volume_per_workout(exercise_id, workouts)
+
+    now_ms = datetime.now(tz=timezone.utc).timestamp() * 1000
+    volume_timespan_data = {}
+    for timespan in ["week","month","3_months","6_months","year"]:
+        timespan_ms = timespan_to_ms(timespan)
+        bucket_data = {}
+        for workout in volume_workout:
+            bucket = int((now_ms - workout["timestamp"]) / timespan_ms)
+            if bucket not in bucket_data:
+                bucket_data[bucket] = 0
+            bucket_data[bucket] += workout["volume"]
+        volume_timespan_data[timespan] = dict(sorted(bucket_data.items()))
+
+    for timespan in volume_timespan_data.keys():
+        bucket_data = volume_timespan_data[timespan]
+        resp_bucket_data = resp_timespan[timespan]
+
+        assert len(bucket_data.keys()) == len(resp_bucket_data["graph"])
+        for i, bucket in bucket_data.keys():
+            assert bucket_data[bucket] == resp_bucket_data["graph"][i]["y"]
+            # assert bucket_data[bucket] == resp_bucket_data["graph"][i]["x"]
+
+def volume_per_workout(exercise_id, workouts) -> list[dict]:
     volume_workout = []
     for workout in workouts:
         workout_volume = 0
@@ -273,17 +324,32 @@ def check_volume_workout_data(exercise_id, workouts, resp_workout):
             "volume": workout_volume,
             "timestamp": workout["start_time"]
         })
-
-    volume_workout = sorted(volume_workout, key=lambda e: e["timestamp"], reverse=True)
-
     assert len(volume_workout) > 0
-    assert len(volume_workout) == len(resp_workout["graph"])
-    for i in range(len(volume_workout)):
-        assert volume_workout[i]["volume"] == resp_workout["graph"][i]["y"]
-        assert volume_workout[i]["timestamp"] == resp_workout["graph"][i]["x"]
+    return sorted(volume_workout, key=lambda e: e["timestamp"], reverse=True)
 
-def check_volume_timespan_data(exercise_id, workouts, resp_workout):
-    return
+
+def timespan_to_ms(timespan):
+    day_ms = 24 * 60 * 60 * 1000
+    week_ms = 7 * day_ms
+    month_ms = 30.43 * day_ms
+    month_3_ms = 3 * month_ms
+    month_6_ms = 2 * month_3_ms
+    year_ms = 365.25 * day_ms
+
+    match timespan:
+        case 'week':
+            return week_ms
+        case 'month':
+            return month_ms
+        case '3_months':
+            return month_3_ms
+        case '6_months':
+            return month_6_ms
+        case 'year':
+            return year_ms
+        case _:
+            raise Exception(f"unknown timespan '{timespan}'")
+
 
 # todo: create workouts and then test the exercise history function
 
