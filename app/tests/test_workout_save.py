@@ -112,6 +112,12 @@ async def test_build_workouts(delete_test_users, create_user):
             for workout in workouts:
                 for exercise in workout["exercises"]:
                     assert len(exercise["set_data"]) > 0
+                    for data in exercise["set_data"]:
+                        for key, value in data.items():
+                            if key == 'set_class':
+                                assert value in set_classes
+                                continue
+                            assert value > 0
 
     except Exception as e:
         print(str(e))
@@ -128,9 +134,10 @@ async def get_num_workouts(conn, decoded):
         """, decoded["user_id"]
     )
 
+set_classes = ['working', 'dropset', 'warmup', 'cooldown']
+
 async def build_workouts(conn, lower_lim=5, upper_lim=10):
     workouts = []
-    set_classes = ['working', 'dropset', 'warmup', 'cooldown']
     for _ in range(random.randint(lower_lim, upper_lim)):
         start_time = int(random_timestamp_ms())
         duration = random.randint(5*60, 120*60) * 1000

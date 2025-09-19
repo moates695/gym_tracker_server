@@ -9,7 +9,8 @@ from ..main import app
 from ..api.middleware.auth_token import decode_token
 from ..tests.test_workout_save import build_workouts, save_workouts
 from ..api.middleware.database import setup_connection
-from..api.middleware.misc import datetime_to_timestamp_ms
+from ..api.middleware.misc import datetime_to_timestamp_ms
+from ..api.routes.exercises import timespan_to_ms
 
 client = TestClient(app)
 
@@ -305,11 +306,13 @@ def check_volume_timespan_data(exercise_id, workouts, resp_timespan):
     for timespan in volume_timespan_data.keys():
         bucket_data = volume_timespan_data[timespan]
         resp_bucket_data = resp_timespan[timespan]
+        timespan_ms = timespan_to_ms(timespan)
 
+        assert len(bucket_data.keys()) > 0
         assert len(bucket_data.keys()) == len(resp_bucket_data["graph"])
-        for i, bucket in bucket_data.keys():
-            assert bucket_data[bucket] == resp_bucket_data["graph"][i]["y"]
-            # assert bucket_data[bucket] == resp_bucket_data["graph"][i]["x"]
+        for i, (bucket, volume) in enumerate(bucket_data.items()):
+            assert volume == resp_bucket_data["graph"][i]["y"]
+            assert math.isclose(now_ms - timespan_ms * bucket, resp_bucket_data["graph"][i]["x"], abs_tol=30000)
 
 def volume_per_workout(exercise_id, workouts) -> list[dict]:
     volume_workout = []
