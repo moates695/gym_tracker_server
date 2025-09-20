@@ -396,31 +396,36 @@ def build_history(rows):
                     "weight_per_rep": [],
                 },
                 "table": {
-                    "headers": ["reps", "weight", "num_sets"],
+                    "headers": ["reps", "weight", "sets"],
                     "rows": []
                 },
                 "started_at": date_to_timestamp_ms(row["started_at"]),
             }
+
         graph = history_data[row["workout_id"]]["graph"]
-        graph["weight_per_set"].append({
-            "x":  row["set_order_index"],
-            "y": row["weight"]
-        })
-        graph["volume_per_set"].append({
-            "x":  row["set_order_index"],
-            "y": row["reps"] * row["weight"] * row["num_sets"]
-        })
-        rep_index = 0 if len(graph["weight_per_rep"]) == 0 else graph["weight_per_rep"][-1]["x"]
-        for i in range(row["reps"]):
-            graph["weight_per_rep"].append({
-                "x": rep_index + i,
+        prev_set_idx = 0 if len(graph["weight_per_set"]) == 0 else graph["weight_per_set"][-1]["x"] + 1
+        for i in range(row["num_sets"]):
+            graph["weight_per_set"].append({
+                "x":  prev_set_idx + i,
                 "y": row["weight"]
             })
+
+            graph["volume_per_set"].append({
+                "x":  prev_set_idx + i,
+                "y": row["reps"] * row["weight"] * row["num_sets"]
+            })
+
+            prev_rep_idx = 0 if len(graph["weight_per_rep"]) == 0 else graph["weight_per_rep"][-1]["x"] + 1
+            for j in range(row["reps"]):
+                graph["weight_per_rep"].append({
+                    "x": prev_rep_idx + j,
+                    "y": row["weight"]
+                })
         
         history_data[row["workout_id"]]["table"]["rows"].append({
             "reps": row["reps"],
             "weight": row["weight"],
-            "num_sets": row["num_sets"]
+            "sets": row["num_sets"]
         })
     
     return sorted(history_data.values(), key=lambda e: e["started_at"], reverse=True)

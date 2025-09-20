@@ -52,6 +52,7 @@ async def test_exercise_history_match(delete_test_users, create_user):
             check_n_rep_max_history_match(resp_json["n_rep_max"]["history"])
             check_volume_workout_match(resp_json["volume"]["workout"])
             check_volume_timespan_match(resp_json["volume"]["timespan"])
+            check_history_match(resp_json["history"])
 
     except Exception as e:
         print(str(e))
@@ -169,6 +170,37 @@ def check_volume_timespan_match(volume_timespan):
                     assert 178 <= delta.days <= 186
                 case 'year':
                     assert 365 <= delta.days <= 366
+
+def check_history_match(history):
+    assert len(history) > 0
+    for workout in history:
+        assert workout["table"]["headers"] == ["reps", "weight", "sets"]
+        set_idx = 0
+        rep_idx = 0
+        assert len(workout["table"]["rows"]) > 0
+        for table_row in workout["table"]["rows"]:
+            for header in workout["table"]["headers"]:
+                assert header in table_row
+        
+            for _ in range(table_row["sets"]):
+                weight_data = workout["graph"]["weight_per_set"][set_idx]
+                assert weight_data["x"] == set_idx
+                assert weight_data["y"] == table_row["weight"]
+
+                volume_data = workout["graph"]["volume_per_set"][set_idx]
+                assert volume_data["x"] == set_idx
+                assert volume_data["y"] == table_row["reps"] * table_row["weight"] * table_row["sets"]
+
+                for _ in range(table_row["reps"]):
+                    rep_data = workout["graph"]["weight_per_rep"][rep_idx]
+                    assert rep_data["x"] == rep_idx
+                    assert rep_data["y"] == table_row["weight"]
+
+                    rep_idx += 1
+
+                set_idx += 1
+
+
 
 def prelim_shape_check(data, table_headers):
     assert len(data["graph"]) > 0
