@@ -196,7 +196,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
 
         rows = await conn.fetch(
             """
-            select w.id workout_id, wsd.reps, wsd.weight, wsd.num_sets, w.started_at
+            select w.id workout_id, wsd.reps, wsd.weight, wsd.num_sets, wsd.order_index set_order_index, w.started_at
             from workout_set_data wsd
             inner join workout_exercises we
             on wsd.workout_exercise_id = we.id
@@ -204,7 +204,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             on we.workout_id = w.id
             where w.user_id = $1
             and we.exercise_id = $2
-            order by wsd.reps, wsd.created_at desc
+            order by w.started_at, we.order_index, wsd.order_index desc
             """, credentials["user_id"], exercise_id 
         )
 
@@ -212,6 +212,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
         n_rep_max_history = build_n_rep_max_history(rows)
         volume_workout = build_volume_workout(rows)
         volume_timespan = build_volume_timespan(rows)
+        history = build_history(rows)
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -229,7 +230,8 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
         "volume": {
             "workout": volume_workout,
             "timespan": volume_timespan
-        }
+        },
+        "history": history
     }
 
 def build_n_rep_max_all_time(rows):
@@ -382,6 +384,46 @@ def timespan_to_ms(timespan):
             return year_ms
         case _:
             raise Exception(f"unknown timespan '{timespan}'")
+
+def build_history(rows):
+    history_data = {}
+    for row in rows:
+        if row["workout_id"] not in history_data:
+            history_data[row["workout_id"]] = {
+                "graph": {
+                    "weight_per_set": [],
+                    "volume_per_set": [],
+                    "weight_per_rep": [],
+                },
+                "table": {
+                    "headers": ["reps", "weight", "num_sets"],
+                    "rows": []
+                },
+                "started_at": date_to_timestamp_ms(row["started_at"]),
+            }
+        graph = history_data[row["workout_id"]]["graph"]
+        graph["weight_per_set"].append({
+            "x":  row["set_order_index"],
+            "y": row["weight"]
+        })
+        graph["volume_per_set"].append({
+            "x":  row["set_order_index"],
+            "y": row["reps"] * row["weight"] * row["num_sets"]
+        })
+        rep_index = 0 if len(graph["weight_per_rep"]) == 0 else graph["weight_per_rep"][-1]["x"]
+        for i in range(row["reps"]):
+            graph["weight_per_rep"].append({
+                "x": rep_index + i,
+                "y": row["weight"]
+            })
+        
+        history_data[row["workout_id"]]["table"]["rows"].append({
+            "reps": row["reps"],
+            "weight": row["weight"],
+            "num_sets": row["num_sets"]
+        })
+    
+    return sorted(history_data.values(), key=lambda e: e["started_at"], reverse=True)
 
 async def exercise_history_rand():
     # now = datetime.now(timezone.utc).timestamp() * 1000
