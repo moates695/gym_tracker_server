@@ -189,7 +189,6 @@ emptyBaseData = {
     }
 }
 
-# todo: if w.started_at repeated then choose highest weight
 async def exercise_history_real(exercise_id: str, credentials: dict):
     try:
         conn = await setup_connection()
@@ -213,6 +212,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
         volume_workout = build_volume_workout(rows)
         volume_timespan = build_volume_timespan(rows)
         history = build_history(rows)
+        reps_sets_weight = build_reps_sets_weight(rows)
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -231,7 +231,8 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             "workout": volume_workout,
             "timespan": volume_timespan
         },
-        "history": history
+        "history": history,
+        "reps_sets_weight": reps_sets_weight
     }
 
 def build_n_rep_max_all_time(rows):
@@ -429,6 +430,16 @@ def build_history(rows):
         })
     
     return sorted(history_data.values(), key=lambda e: e["started_at"], reverse=True)
+
+def build_reps_sets_weight(rows):
+    points = []
+    for row in rows:
+        points.append({
+            "x": row["reps"],
+            "y": row["weight"],
+            "z": row["num_sets"]
+        })
+    return points
 
 async def exercise_history_rand():
     # now = datetime.now(timezone.utc).timestamp() * 1000

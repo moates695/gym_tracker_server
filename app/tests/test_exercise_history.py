@@ -53,6 +53,7 @@ async def test_exercise_history_match(delete_test_users, create_user):
             check_volume_workout_match(resp_json["volume"]["workout"])
             check_volume_timespan_match(resp_json["volume"]["timespan"])
             check_history_match(resp_json["history"])
+            check_points_match(resp_json["reps_sets_weight"])
 
     except Exception as e:
         print(str(e))
@@ -200,7 +201,11 @@ def check_history_match(history):
 
                 set_idx += 1
 
-
+def check_points_match(points):
+    assert len(points) > 0
+    for point in points:
+        for key in ["x", "y", "z"]:
+            assert key in point
 
 def prelim_shape_check(data, table_headers):
     assert len(data["graph"]) > 0
@@ -249,6 +254,7 @@ async def test_exercise_history_data(delete_test_users, create_user):
             check_n_rep_max_history_data(set_data_list, resp_json["n_rep_max"]["history"])
             check_volume_workout_data(exercise_id, workouts, resp_json["volume"]["workout"])
             check_volume_timespan_data(exercise_id, workouts, resp_json["volume"]["timespan"])
+            check_history_data(exercise_id, set_data_list, resp_json["history"])
 
     except Exception as e:
         print(str(e))
@@ -351,7 +357,7 @@ def volume_per_workout(exercise_id, workouts) -> list[dict]:
     for workout in workouts:
         workout_volume = 0
         for exercise in workout["exercises"]:
-            if exercise_id != exercise["id"]: continue
+            if exercise["id"] != exercise_id: continue
             for set_data in exercise["set_data"]:
                 workout_volume += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
         if workout_volume == 0: continue
@@ -362,29 +368,51 @@ def volume_per_workout(exercise_id, workouts) -> list[dict]:
     assert len(volume_workout) > 0
     return sorted(volume_workout, key=lambda e: e["timestamp"], reverse=True)
 
+def check_history_data(exercise_id, set_data_list, resp_history):
+    # history = []
+    # for workout in workouts:
+    #     set_data = workout[]
+    #     history.append({
+    #         "reps": workout["reps"],
+    #         "weight": workout["weight"],
+    #         "num_sets": workout["num_sets"],
+    #     })
 
-def timespan_to_ms(timespan):
-    day_ms = 24 * 60 * 60 * 1000
-    week_ms = 7 * day_ms
-    month_ms = 30.43 * day_ms
-    month_3_ms = 3 * month_ms
-    month_6_ms = 2 * month_3_ms
-    year_ms = 365.25 * day_ms
+    history_data = {}
+    # for workout in sorted(workouts, key=lambda e: e["start_time"], reverse=True):
+    #     temp = []
+    #     for exercise in workout["exercises"]:
+    #         if exercise["id"] != exercise_id: continue
+    #         for set_data in exercise["set_data"]:
+    #             temp.append({
+    #                 "reps": set_data["reps"],
+    #                 "weight": set_data["weight"],
+    #                 "num_sets": set_data["num_sets"],
+    #             })
+    #     history.append(temp)
+                
 
-    match timespan:
-        case 'week':
-            return week_ms
-        case 'month':
-            return month_ms
-        case '3_months':
-            return month_3_ms
-        case '6_months':
-            return month_6_ms
-        case 'year':
-            return year_ms
-        case _:
-            raise Exception(f"unknown timespan '{timespan}'")
+    for set_data in set_data_list:
+        if set_data["timestamp"] not in history_data:
+            history_data[set_data["timestamp"]] = []
+        history_data[set_data["timestamp"]].append({
+            "reps": set_data["reps"],
+            "weight": set_data["weight"],
+            "num_sets": set_data["num_sets"],
+        })
 
+    history_data = dict(sorted(history_data.items(), reverse=True))
+    history = list(history_data.values())
+
+    print(json.dumps(history, indent=2))
+
+    assert len(history) == len(resp_history)
+    for i, workout_data in enumerate(history):
+        for j, set_data in enumerate(workout_data):
+            for key in ["reps", "weight", "num_sets"]:
+                assert set_data[key] == resp_history[i]["table"]["rows"][j][key]
+
+    # todo: FIX ABOVE TEST
 
 # todo: create workouts and then test the exercise history function
 
