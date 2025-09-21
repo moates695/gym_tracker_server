@@ -31,7 +31,6 @@ async def test_workout_save(delete_test_users, create_user):
     response = client.post("/workout/save", json=req_body, headers=headers)
     assert response.status_code == 200
 
-
     try:
         conn = await setup_connection()
 
@@ -63,6 +62,7 @@ async def test_workout_save(delete_test_users, create_user):
                 select id, exercise_id, order_index
                 from workout_exercises 
                 where workout_id = $1
+                order by order_index
                 """, workout_row["id"]
             )
 
@@ -78,6 +78,7 @@ async def test_workout_save(delete_test_users, create_user):
                     select reps, weight, num_sets, set_class, order_index
                     from workout_set_data
                     where workout_exercise_id = $1
+                    order by order_index
                     """, workout_exercises_row["id"]
                 )
 
@@ -95,51 +96,24 @@ async def test_workout_save(delete_test_users, create_user):
     finally:
         if conn: await conn.close()
 
+async def save_workouts(workouts, headers):
+    for workout in workouts:
+        response = client.post("/workout/save", json=workout, headers=headers)
+        assert response.status_code == 200
+
 # todo: test empty save
 # todo: test invalid saves
 
-@pytest.mark.asyncio
-async def test_build_workouts(delete_test_users, create_user):
-    try:
-        conn = await setup_connection()
-        
-        lower_lim = 6
-        upper_lim = 12
-        for _ in range(10):
-            workouts = await build_workouts(conn, lower_lim, upper_lim)
-            assert len(workouts) >= lower_lim
-            assert len(workouts) <= upper_lim
-            for workout in workouts:
-                for exercise in workout["exercises"]:
-                    assert len(exercise["set_data"]) > 0
-                    for data in exercise["set_data"]:
-                        for key, value in data.items():
-                            if key == 'set_class':
-                                assert value in set_classes
-                                continue
-                            assert value > 0
-
-    except Exception as e:
-        print(str(e))
-        raise e
-    finally:
-        if conn: await conn.close()
-
-async def get_num_workouts(conn, decoded):
-    return await conn.fetchval(
-        """
-        select count(*)
-        from workouts w
-        where user_id = $1
-        """, decoded["user_id"]
-    )
-
-set_classes = ['working', 'dropset', 'warmup', 'cooldown']
-
 async def build_workouts(conn, lower_lim=5, upper_lim=10):
     workouts = []
+    start_timestamps = []
     for _ in range(random.randint(lower_lim, upper_lim)):
-        start_time = int(random_timestamp_ms())
+        while 1:
+            start_time = int(random_timestamp_ms())
+            if start_time in start_timestamps: continue
+            start_timestamps.append(start_time)
+            break
+
         duration = random.randint(5*60, 120*60) * 1000
         rows = await conn.fetch(
             """
@@ -172,11 +146,49 @@ async def build_workouts(conn, lower_lim=5, upper_lim=10):
             "duration": duration
         })
 
-    return workouts
+    return sorted(workouts, key=lambda e: e["start_time"], reverse=True)
+
+@pytest.mark.asyncio
+async def test_build_workouts(delete_test_users, create_user):
+    try:
+        conn = await setup_connection()
+        
+        lower_lim = 6
+        upper_lim = 12
+        for _ in range(10):
+            workouts = await build_workouts(conn, lower_lim, upper_lim)
+            assert len(workouts) >= lower_lim
+            assert len(workouts) <= upper_lim
+
+            last_timestamp_ms = now_timestamp_ms()
+            for workout in workouts:
+                for exercise in workout["exercises"]:
+                    assert len(exercise["set_data"]) > 0
+                    for data in exercise["set_data"]:
+                        for key, value in data.items():
+                            if key == 'set_class':
+                                assert value in set_classes
+                                continue
+                            assert value > 0
+            
+                assert last_timestamp_ms >= workout["start_time"]
+                last_timestamp_ms = workout["start_time"]
+
+    except Exception as e:
+        print(str(e))
+        raise e
+    finally:
+        if conn: await conn.close()
+
+async def get_num_workouts(conn, decoded):
+    return await conn.fetchval(
+        """
+        select count(*)
+        from workouts w
+        where user_id = $1
+        """, decoded["user_id"]
+    )
+
+set_classes = ['working', 'dropset', 'warmup', 'cooldown']
 
 
-
-async def save_workouts(workouts, headers):
-    for workout in workouts:
-        response = client.post("/workout/save", json=workout, headers=headers)
-        assert response.status_code == 200

@@ -203,7 +203,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             on we.workout_id = w.id
             where w.user_id = $1
             and we.exercise_id = $2
-            order by w.started_at, we.order_index, wsd.order_index desc
+            order by w.started_at, we.order_index, wsd.order_index
             """, credentials["user_id"], exercise_id 
         )
 
@@ -407,12 +407,12 @@ def build_history(rows):
         prev_set_idx = 0 if len(graph["weight_per_set"]) == 0 else graph["weight_per_set"][-1]["x"] + 1
         for i in range(row["num_sets"]):
             graph["weight_per_set"].append({
-                "x":  prev_set_idx + i,
+                "x": prev_set_idx + i,
                 "y": row["weight"]
             })
 
             graph["volume_per_set"].append({
-                "x":  prev_set_idx + i,
+                "x": prev_set_idx + i,
                 "y": row["reps"] * row["weight"] * row["num_sets"]
             })
 

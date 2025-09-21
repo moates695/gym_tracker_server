@@ -174,6 +174,7 @@ def check_volume_timespan_match(volume_timespan):
 
 def check_history_match(history):
     assert len(history) > 0
+    last_timestamp_ms = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
     for workout in history:
         assert workout["table"]["headers"] == ["reps", "weight", "sets"]
         set_idx = 0
@@ -196,10 +197,16 @@ def check_history_match(history):
                     rep_data = workout["graph"]["weight_per_rep"][rep_idx]
                     assert rep_data["x"] == rep_idx
                     assert rep_data["y"] == table_row["weight"]
-
                     rep_idx += 1
-
+                
                 set_idx += 1
+            
+        assert set_idx == len(workout["graph"]["weight_per_set"])
+        assert set_idx == len(workout["graph"]["volume_per_set"])
+        assert rep_idx == len(workout["graph"]["weight_per_rep"])
+
+        assert workout["started_at"] < last_timestamp_ms
+        last_timestamp_ms = workout["started_at"]
 
 def check_points_match(points):
     assert len(points) > 0
@@ -254,7 +261,7 @@ async def test_exercise_history_data(delete_test_users, create_user):
             check_n_rep_max_history_data(set_data_list, resp_json["n_rep_max"]["history"])
             check_volume_workout_data(exercise_id, workouts, resp_json["volume"]["workout"])
             check_volume_timespan_data(exercise_id, workouts, resp_json["volume"]["timespan"])
-            check_history_data(exercise_id, set_data_list, resp_json["history"])
+            check_history_data(exercise_id, workouts, resp_json["history"])
 
     except Exception as e:
         print(str(e))
@@ -325,7 +332,6 @@ def check_volume_workout_data(exercise_id, workouts, resp_workout):
         assert volume_workout[i]["volume"] == resp_workout["graph"][i]["y"]
         assert volume_workout[i]["timestamp"] == resp_workout["graph"][i]["x"]
 
-# todo: fix this, probably need to rework how bucket data computed in this test case
 def check_volume_timespan_data(exercise_id, workouts, resp_timespan):
     volume_workout = volume_per_workout(exercise_id, workouts)
 
@@ -368,51 +374,27 @@ def volume_per_workout(exercise_id, workouts) -> list[dict]:
     assert len(volume_workout) > 0
     return sorted(volume_workout, key=lambda e: e["timestamp"], reverse=True)
 
-def check_history_data(exercise_id, set_data_list, resp_history):
-    # history = []
-    # for workout in workouts:
-    #     set_data = workout[]
-    #     history.append({
-    #         "reps": workout["reps"],
-    #         "weight": workout["weight"],
-    #         "num_sets": workout["num_sets"],
-    #     })
-
-    history_data = {}
-    # for workout in sorted(workouts, key=lambda e: e["start_time"], reverse=True):
-    #     temp = []
-    #     for exercise in workout["exercises"]:
-    #         if exercise["id"] != exercise_id: continue
-    #         for set_data in exercise["set_data"]:
-    #             temp.append({
-    #                 "reps": set_data["reps"],
-    #                 "weight": set_data["weight"],
-    #                 "num_sets": set_data["num_sets"],
-    #             })
-    #     history.append(temp)
-                
-
-    for set_data in set_data_list:
-        if set_data["timestamp"] not in history_data:
-            history_data[set_data["timestamp"]] = []
-        history_data[set_data["timestamp"]].append({
-            "reps": set_data["reps"],
-            "weight": set_data["weight"],
-            "num_sets": set_data["num_sets"],
-        })
-
-    history_data = dict(sorted(history_data.items(), reverse=True))
-    history = list(history_data.values())
-
-    print(json.dumps(history, indent=2))
+def check_history_data(exercise_id, workouts, resp_history):
+    history = []
+    for workout in sorted(workouts, key=lambda e: e["start_time"], reverse=True):
+        workout_data = []
+        for exercise in workout["exercises"]:
+            if exercise["id"] != exercise_id: continue
+            for set_data in exercise["set_data"]:
+                workout_data.append({
+                    "reps": set_data["reps"],
+                    "weight": set_data["weight"],
+                    "sets": set_data["num_sets"],
+                })
+        if len(workout_data) == 0: continue
+        history.append(workout_data)
 
     assert len(history) == len(resp_history)
-    for i, workout_data in enumerate(history):
-        for j, set_data in enumerate(workout_data):
-            for key in ["reps", "weight", "num_sets"]:
-                assert set_data[key] == resp_history[i]["table"]["rows"][j][key]
-
-    # todo: FIX ABOVE TEST
+    for i in range(len(history)):
+        assert len(history[i]) == len(resp_history[i]["table"]["rows"])
+        for j in range(len(history[i])):
+            for key in history[i][j]:
+                assert history[i][j][key] == resp_history[i]["table"]["rows"][j][key]
 
 # todo: create workouts and then test the exercise history function
 
