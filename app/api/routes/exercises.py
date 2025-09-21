@@ -203,7 +203,7 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             on we.workout_id = w.id
             where w.user_id = $1
             and we.exercise_id = $2
-            order by w.started_at, we.order_index, wsd.order_index
+            order by w.started_at desc, we.order_index, wsd.order_index
             """, credentials["user_id"], exercise_id 
         )
 

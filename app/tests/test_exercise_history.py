@@ -262,6 +262,7 @@ async def test_exercise_history_data(delete_test_users, create_user):
             check_volume_workout_data(exercise_id, workouts, resp_json["volume"]["workout"])
             check_volume_timespan_data(exercise_id, workouts, resp_json["volume"]["timespan"])
             check_history_data(exercise_id, workouts, resp_json["history"])
+            check_points_data(exercise_id, workouts, resp_json["reps_sets_weight"])
 
     except Exception as e:
         print(str(e))
@@ -375,6 +376,30 @@ def volume_per_workout(exercise_id, workouts) -> list[dict]:
     return sorted(volume_workout, key=lambda e: e["timestamp"], reverse=True)
 
 def check_history_data(exercise_id, workouts, resp_history):
+    history = build_history(exercise_id, workouts)
+
+    assert len(history) == len(resp_history)
+    for i in range(len(history)):
+        assert len(history[i]) == len(resp_history[i]["table"]["rows"])
+        for j in range(len(history[i])):
+            for key in history[i][j]:
+                assert history[i][j][key] == resp_history[i]["table"]["rows"][j][key]
+
+def check_points_data(exercise_id, workouts, resp_points):
+    temp_history = build_history(exercise_id, workouts)
+    history = []
+    for temp in temp_history:
+        history.extend(temp)
+
+    assert len(history) == len(resp_points)
+    # for i in range(history):
+    for hist, resp in zip(history, resp_points):
+        assert hist["reps"] == resp["x"]
+        assert hist["weight"] == resp["y"]
+        assert hist["sets"] == resp["z"]
+
+
+def build_history(exercise_id, workouts):
     history = []
     for workout in sorted(workouts, key=lambda e: e["start_time"], reverse=True):
         workout_data = []
@@ -388,13 +413,6 @@ def check_history_data(exercise_id, workouts, resp_history):
                 })
         if len(workout_data) == 0: continue
         history.append(workout_data)
-
-    assert len(history) == len(resp_history)
-    for i in range(len(history)):
-        assert len(history[i]) == len(resp_history[i]["table"]["rows"])
-        for j in range(len(history[i])):
-            for key in history[i][j]:
-                assert history[i][j][key] == resp_history[i]["table"]["rows"][j][key]
-
-# todo: create workouts and then test the exercise history function
+    assert len(history) > 0
+    return history
 
