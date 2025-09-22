@@ -8,10 +8,19 @@ import os
 def random_weight():
     return random.randint(1, 200) + random.choice([0, .25, .5, .75])
 
-def random_timestamp():
-    now = datetime.now(timezone.utc).timestamp() * 1000
-    delta = 1000 * 60 * 60 * 24 * random.randint(1, 400)
+def random_volume():
+    volume = 0
+    for _ in range(3,15):
+        volume += random_weight() * random.randint(2,4)
+    return volume
+
+def random_timestamp_ms():
+    now = now_timestamp_ms()
+    delta = 1000 * 60 * 60 * 24 * random.randint(1, 1000)
     return now - delta
+
+def now_timestamp_ms():
+    return int(datetime.now(tz=timezone.utc).timestamp() * 1000)
 
 def datetime_to_timestamp_ms(dt):
     return int(dt.timestamp() * 1000)

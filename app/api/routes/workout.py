@@ -33,6 +33,7 @@ class WorkoutSave(BaseModel):
     duration: int #? ms
 
 #? ratio is applied to volume on the client
+#? bodyweight determined on the client
 @router.post("/workout/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
     try:
@@ -139,23 +140,8 @@ async def workout_overview_stats_real(credentials: dict):
                 "num_sets":  0,
                 "reps": 0,
             }
-
-            set_data_list = await conn.fetch(
-                """
-                select wsd.reps, wsd.weight, wsd.num_sets
-                from workout_exercises we
-                inner join workout_set_data wsd
-                on wsd.workout_exercise_id = we.id
-                where we.workout_id = $1
-                """, workout_data["id"]
-            )
-            for set_data in set_data_list:
-                totals["volume"] += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
-                totals["num_sets"] += set_data["num_sets"]
-                totals["reps"] += set_data["reps"]
-
             muscles = {}
-                            
+
             muscle_data_list = await conn.fetch(
                 """
                 select emt.ratio, mt.name target_name, mg.name group_name, wsd.reps, wsd.weight, wsd.num_sets
@@ -175,6 +161,10 @@ async def workout_overview_stats_real(credentials: dict):
             )
 
             for muscle_data in muscle_data_list:
+                totals["volume"] += muscle_data["reps"] * muscle_data["weight"] * muscle_data["num_sets"]
+                totals["num_sets"] += muscle_data["num_sets"]
+                totals["reps"] += muscle_data["reps"]
+
                 group = muscle_data["group_name"]
                 target = muscle_data["target_name"]
                 if group not in muscles.keys():
@@ -189,10 +179,18 @@ async def workout_overview_stats_real(credentials: dict):
                 muscles[group][target]["num_sets"] += muscle_data["num_sets"]
                 muscles[group][target]["reps"] += muscle_data["reps"]
 
+            num_exercises = await conn.fetchval(
+                """
+                select count(*)
+                from workout_exercises we
+                where we.workout_id = $1
+                """, workout_data["id"]
+            )
+
             workouts.append({
                 "started_at": datetime_to_timestamp_ms(workout_data["started_at"]),
                 "duration": workout_data["duration_secs"],
-                "num_exercises": 0,
+                "num_exercises": num_exercises,
                 "totals": totals,
                 "muscles": muscles
             })
@@ -228,7 +226,7 @@ async def workout_overview_stats_rand():
                 }
 
         workouts.append({
-            "started_at": random_timestamp(),
+            "started_at": random_timestamp_ms(),
             "duration": random.randint(20, 120) * 60 + random.random(),
             "num_exercises": random.randint(3,10),
             "totals": {

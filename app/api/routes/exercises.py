@@ -8,6 +8,9 @@ import os
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import random
+from copy import deepcopy
+import math
+import json
 
 from api.middleware.auth_token import *
 from api.routes.auth import verify_token
@@ -178,81 +181,38 @@ async def exercise_history(exercise_id: str, use_real: bool, credentials: dict =
         return await exercise_history_real(exercise_id, credentials)
     return await exercise_history_rand()
 
+emptyBaseData = {
+    "graph": [],
+    "table": {
+        "headers": [],
+        "rows": []
+    }
+}
+
 async def exercise_history_real(exercise_id: str, credentials: dict):
     try:
         conn = await setup_connection()
-        
+
         rows = await conn.fetch(
             """
-            select wsd.reps, wsd.weight, wsd.num_sets, wsd.created_at
-            from workouts w
+            select w.id workout_id, wsd.reps, wsd.weight, wsd.num_sets, wsd.order_index set_order_index, w.started_at
+            from workout_set_data wsd
             inner join workout_exercises we
-            on we.workout_id = w.id
-            inner join workout_set_data wsd
             on wsd.workout_exercise_id = we.id
+            inner join workouts w
+            on we.workout_id = w.id
             where w.user_id = $1
             and we.exercise_id = $2
-            order by wsd.created_at desc
+            order by w.started_at desc, we.order_index, wsd.order_index
             """, credentials["user_id"], exercise_id 
         )
 
-        n_rep_max_all_time = {}
-        for row in rows:
-            if n_rep_max_all_time.get(row["reps"], {"weight": 0})["weight"] < row["weight"]: continue
-            n_rep_max_all_time[row["reps"]] = {
-                "weight": row["weight"],
-                "timestamp": datetime_to_timestamp_ms(row["created_at"])
-            }
-
-        n_rep_max_history = {}
-        for row in rows:
-            if row["reps"] not in n_rep_max_history.keys():
-                n_rep_max_history[row["reps"]] = []
-            n_rep_max_history[row["reps"]].append({
-                "weight": row["weight"],
-                "timestamp": datetime_to_timestamp_ms(row["created_at"])
-            })
-
-        # for rep, history in n_rep_max_history.items():
-        #     n_rep_max_history[rep] = sorted(history, key=lambda x: x["timestamp"])
-
-        volume_days = {}
-        for row in rows:
-            date = row["created_at"].date()
-            if date not in volume_days.keys():
-                volume_days[date] = 0
-            volume_days[date] += row["reps"] * row["weight"] * row["num_sets"]
-
-        volume = [{
-            "volume": value,
-            "timestamp": date_to_timestamp_ms(key)
-        } for key, value in volume_days.items()]
-        volume = sorted(volume, key=lambda x: x["timestamp"], reverse=True)
-
-        history_days = {}
-        for row in rows:
-            date = row["created_at"].date()
-            if date not in history_days.keys():
-                history_days[date] = []
-            history_days[date].append({
-                "reps": row[0],
-                "weight": row[1],
-                "num_sets": row[2],
-            })
-
-        history = [{
-            "set_data": value,
-            "timestamp": date_to_timestamp_ms(key)
-        } for key, value in history_days.items()]
-        history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
-
-        reps_sets_weight = []
-        for row in rows:
-            reps_sets_weight.append({
-                "reps": row[0],
-                "weight": row[1],
-                "num_sets": row[2],
-            })
+        n_rep_max_all_time = build_n_rep_max_all_time(rows)
+        n_rep_max_history = build_n_rep_max_history(rows)
+        volume_workout = build_volume_workout(rows)
+        volume_timespan = build_volume_timespan(rows)
+        history = build_history(rows)
+        reps_sets_weight = build_reps_sets_weight(rows)
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -267,81 +227,411 @@ async def exercise_history_real(exercise_id: str, credentials: dict):
             "all_time": n_rep_max_all_time,
             "history": n_rep_max_history
         },
-        "volume": volume,
+        "volume": {
+            "workout": volume_workout,
+            "timespan": volume_timespan
+        },
         "history": history,
-        "reps_sets_weight": reps_sets_weight,
+        "reps_sets_weight": reps_sets_weight
     }
 
-async def exercise_history_rand():
-    now = datetime.now(timezone.utc).timestamp() * 1000
-    
-    reps = set([random.randint(1,25) for _ in range(20)])
-    
-    n_rep_max_all_time = {}
-    n_rep_max_history = {}
-    for rep in reps:
-        n_rep_max_all_time[rep] = {
-            "weight": random_weight(),
-            "timestamp": random_timestamp()
+def build_n_rep_max_all_time(rows):
+    n_rep_max_all_time_data = {}
+    for row in rows:
+        curr_max = n_rep_max_all_time_data.get(row["reps"], {"weight": -math.inf})["weight"]
+        if row["weight"] <= curr_max: continue
+        n_rep_max_all_time_data[row["reps"]] = {
+            "weight": row["weight"],
+            "timestamp": datetime_to_timestamp_ms(row["started_at"])
         }
 
-        history = []
-        used_days = []
-        for _ in range(random.randint(5,20)):
-            while _:
-                day = random.randint(1,400)
-                if day in used_days: continue
-                used_days.append(day)
-                break
-            
-            history.append({
-                "weight": random_weight(),
-                "timestamp": random_timestamp()
+    n_rep_max_all_time_data = dict(sorted(n_rep_max_all_time_data.items()))
+
+    n_rep_max_all_time = deepcopy(emptyBaseData)
+    n_rep_max_all_time["table"]["headers"] = ["rep", "weight", "date"]
+    for rep, data in n_rep_max_all_time_data.items():
+        n_rep_max_all_time["graph"].append({
+            "x": rep,
+            "y": data["weight"]
+        })
+        n_rep_max_all_time["table"]["rows"].append({
+            "rep": rep,
+            "weight": data["weight"],
+            "date": timestamp_ms_to_date_str(data["timestamp"])
+        })
+
+    return n_rep_max_all_time 
+
+def build_n_rep_max_history(rows):
+    n_rep_max_history_data = {}
+    for row in rows:
+        if row["reps"] not in n_rep_max_history_data.keys():
+            n_rep_max_history_data[row["reps"]] = {}
+        timestamp = datetime_to_timestamp_ms(row["started_at"])
+        curr_weight = n_rep_max_history_data[row["reps"]].get(timestamp, -math.inf)
+        if curr_weight >= row["weight"]: continue
+        n_rep_max_history_data[row["reps"]][timestamp] = row["weight"]
+
+    n_rep_max_history_data = dict(sorted(n_rep_max_history_data.items()))
+
+    n_rep_max_history = {}
+    for rep, data in n_rep_max_history_data.items():
+        temp_history = deepcopy(emptyBaseData)
+        temp_history["table"]["headers"] = ["weight", "date"]
+
+        for timestamp, weight in data.items():
+            temp_history["graph"].append({
+                "x": timestamp,
+                "y": weight
+            })
+            temp_history["table"]["rows"].append({
+                "weight": weight,
+                "date": timestamp
             })
 
-        history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
-        n_rep_max_history[rep] = history
+        temp_history["graph"] = sort_timeseries(temp_history["graph"], "x")
+        temp_history["table"]["rows"] = sort_timeseries(temp_history["table"]["rows"], "date", True)
 
-    volume = []
-    for _ in range(0, random.randint(20,30)):
-        volume.append({
-            "value": random_weight() * random.randint(2, 4),
-            "timestamp": random_timestamp()
+        n_rep_max_history[rep] = temp_history
+
+    return n_rep_max_history
+
+def build_volume_workout(rows):
+    volume_data = volume_per_workout(rows)
+
+    volume = deepcopy(emptyBaseData)
+    volume["table"]["headers"] = ["volume", "date"]
+    for data in volume_data.values():
+        volume["graph"].append({
+            "x": data["timestamp"],
+            "y": data["volume"]
+        })
+        volume["table"]["rows"].append({
+            "volume": data["volume"],
+            "date": data["timestamp"]
         })
 
-    volume = sorted(volume, key=lambda x: x["timestamp"], reverse=True)
+    volume["graph"] = sort_timeseries(volume["graph"], "x")
+    volume["table"]["rows"] = sort_timeseries(volume["table"]["rows"], "date", True)
 
-    history = []
-    for _ in range(random.randint(15,20)):
-        set_data = []
-        for _ in range(random.randint(3,15)):
-            set_data.append({
-                "reps": random.randint(5,15),
-                "weight": random_weight(),
-                "num_sets": random.randint(1,4)
+    return volume
+
+def build_volume_timespan(rows):
+    volume_data = volume_per_workout(rows)
+
+    timespan_data = {}    
+    now_ms = datetime.now(tz=timezone.utc).timestamp() * 1000
+    for timespan in ["week","month","3_months","6_months","year"]:  
+        timespan_ms = timespan_to_ms(timespan)
+        bucket_data = {}
+        for workout_data in volume_data.values():
+            bucket = int((now_ms - workout_data["timestamp"]) / timespan_ms)
+            if bucket not in bucket_data:
+                bucket_data[bucket] = 0
+            bucket_data[bucket] += workout_data["volume"]
+        timespan_data[timespan] = dict(sorted(bucket_data.items()))
+
+    volume_timespan = {}
+    for timespan, bucket_data in timespan_data.items():
+        timespan_ms = timespan_to_ms(timespan)
+        temp_data = deepcopy(emptyBaseData)
+        temp_data["table"]["headers"] = ["volume", "dates"]
+        for bucket, volume in bucket_data.items():
+            upper_timestamp = now_ms - bucket * timespan_ms
+            lower_timestamp = now_ms - (bucket + 1) * timespan_ms
+
+            temp_data["graph"].append({
+                "x": upper_timestamp,
+                "y": volume
+            })
+            temp_data["table"]["rows"].append({
+                "volume": volume,
+                "dates": f"{timestamp_ms_to_date_str(lower_timestamp)}-{timestamp_ms_to_date_str(upper_timestamp)}"
             })
 
-        history.append({
-            "set_data": set_data,
-            "timestamp": random_timestamp()
+        volume_timespan[timespan] = temp_data
+
+    return volume_timespan
+
+def volume_per_workout(rows):
+    volume_data = {}
+    for row in rows:
+        if row["workout_id"] not in volume_data:
+            volume_data[row["workout_id"]] = {
+                "volume": 0,
+                "timestamp": datetime_to_timestamp_ms(row["started_at"])
+            }
+        volume_data[row["workout_id"]]["volume"] += row["reps"] * row["weight"] * row["num_sets"]
+    return volume_data
+
+def timespan_to_ms(timespan):
+    day_ms = 24 * 60 * 60 * 1000
+    week_ms = 7 * day_ms
+    month_ms = 30.43 * day_ms
+    month_3_ms = 3 * month_ms
+    month_6_ms = 2 * month_3_ms
+    year_ms = 365.25 * day_ms
+
+    match timespan:
+        case 'week':
+            return week_ms
+        case 'month':
+            return month_ms
+        case '3_months':
+            return month_3_ms
+        case '6_months':
+            return month_6_ms
+        case 'year':
+            return year_ms
+        case _:
+            raise Exception(f"unknown timespan '{timespan}'")
+
+def build_history(rows):
+    history_data = {}
+    for row in rows:
+        if row["workout_id"] not in history_data:
+            history_data[row["workout_id"]] = {
+                "graph": {
+                    "weight_per_set": [],
+                    "volume_per_set": [],
+                    "weight_per_rep": [],
+                },
+                "table": {
+                    "headers": ["reps", "weight", "sets"],
+                    "rows": []
+                },
+                "started_at": date_to_timestamp_ms(row["started_at"]),
+            }
+
+        graph = history_data[row["workout_id"]]["graph"]
+        prev_set_idx = 0 if len(graph["weight_per_set"]) == 0 else graph["weight_per_set"][-1]["x"] + 1
+        for i in range(row["num_sets"]):
+            graph["weight_per_set"].append({
+                "x": prev_set_idx + i,
+                "y": row["weight"]
+            })
+
+            graph["volume_per_set"].append({
+                "x": prev_set_idx + i,
+                "y": row["reps"] * row["weight"] * row["num_sets"]
+            })
+
+            prev_rep_idx = 0 if len(graph["weight_per_rep"]) == 0 else graph["weight_per_rep"][-1]["x"] + 1
+            for j in range(row["reps"]):
+                graph["weight_per_rep"].append({
+                    "x": prev_rep_idx + j,
+                    "y": row["weight"]
+                })
+        
+        history_data[row["workout_id"]]["table"]["rows"].append({
+            "reps": row["reps"],
+            "weight": row["weight"],
+            "sets": row["num_sets"]
         })
+    
+    return sorted(history_data.values(), key=lambda e: e["started_at"], reverse=True)
 
-    history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
-
-    reps_sets_weight = []
-    for _ in range(random.randint(5,40)):
-        reps_sets_weight.append({
-            "reps": random.randint(5,15),
-            "weight": random_weight(),
-            "num_sets": random.randint(1,5)
+def build_reps_sets_weight(rows):
+    points = []
+    for row in rows:
+        points.append({
+            "x": row["reps"],
+            "y": row["weight"],
+            "z": row["num_sets"]
         })
+    return points
 
-    return {
-        "n_rep_max": {
-            "all_time": n_rep_max_all_time,
-            "history": n_rep_max_history
-        }, 
-        "volume": volume,
-        "history": history,
-        "reps_sets_weight": reps_sets_weight,
+async def exercise_history_rand():
+    # now = datetime.now(timezone.utc).timestamp() * 1000
+
+    emptyBaseData = {
+        "graph": [],
+        "table": {
+            "headers": [],
+            "rows": []
+        }
     }
+
+    history_data = {
+        "n_rep_max": {
+            "all_time": deepcopy(emptyBaseData),
+            "history": {}
+        },
+        "volume":  {
+            "workout": deepcopy(emptyBaseData),
+            "timespan": {
+                "week": deepcopy(emptyBaseData),
+                "month": deepcopy(emptyBaseData),
+                "3_months": deepcopy(emptyBaseData),
+                "6_months": deepcopy(emptyBaseData),
+                "year": deepcopy(emptyBaseData),
+            }
+        },
+        "history": [],
+        "reps_sets_weight": []
+    }
+
+    if random.random() < 0.05: return history_data
+
+    reps = set([random.randint(1,25) for _ in range(random.randint(1,15))])
+    num_workouts = random.randint(1,50)
+
+    n_rep_max_all_time = history_data["n_rep_max"]["all_time"]
+    n_rep_max_all_time["table"]["headers"] = ["rep", "weight", "date"]
+
+    for rep in reps:
+        n_rep_max_all_time["graph"].append({
+            "x": rep,
+            "y": random_weight()
+        })
+        n_rep_max_all_time["table"]["rows"].append({
+            "rep": rep,
+            "weight": random_weight(),
+            "date": timestamp_ms_to_date_str(random_timestamp_ms())
+        })
+
+        tempRepHistory = deepcopy(emptyBaseData)
+        tempRepHistory["table"]["headers"] = ["weight", "date"]
+        for _ in range(random.randint(1, num_workouts)):
+            weight = random_weight()
+            timestamp = random_timestamp_ms()
+            tempRepHistory["graph"].append({
+                "x": timestamp,
+                "y": weight
+            })
+            tempRepHistory["table"]["rows"].append({
+                "weight": weight,
+                "date": timestamp
+            })
+
+        tempRepHistory["graph"] = sort_timeseries(tempRepHistory["graph"], "x")
+        tempRepHistory["table"]["rows"] = sort_timeseries(tempRepHistory["table"]["rows"], "date", True)
+        
+        history_data["n_rep_max"]["history"][rep] = tempRepHistory
+
+    volume_workout = history_data["volume"]["workout"]
+    volume_workout["table"]["headers"] = ["volume", "date"]
+
+    for _ in range(num_workouts):
+        volume = random_volume()
+        timestamp = random_timestamp_ms()
+        volume_workout["graph"].append({
+            "x": timestamp,
+            "y": volume
+        })
+        volume_workout["table"]["rows"].append({
+            "volume": volume,
+            "date": timestamp
+        })
+
+    volume_workout["graph"] = sort_timeseries(volume_workout["graph"], "x")
+    volume_workout["table"]["rows"] = sort_timeseries(volume_workout["table"]["rows"], "date", True)
+
+
+    bucket_nums = set()
+    while len(bucket_nums) <= len(history_data["volume"]["timespan"].values()):
+        bucket_nums.add(random.randint(1, 50))
+    bucket_nums = list(bucket_nums)
+    bucket_nums.reverse()
+
+    for i, timespan_value in enumerate(history_data["volume"]["timespan"].values()):
+        timespan_value["table"]["headers"] = ["volume", "date"]
+        for _ in range(bucket_nums[i]):
+            volume = random_volume()
+            timestamp = random_timestamp_ms()
+            timespan_value["graph"].append({
+                "x": timestamp,
+                "y": volume
+            })
+            timespan_value["table"]["rows"].append({
+                "volume": volume,
+                "date": timestamp
+            })
+
+        timespan_value["graph"] = sort_timeseries(timespan_value["graph"], "x")
+        timespan_value["table"]["rows"] = sort_timeseries(timespan_value["table"]["rows"], "date", True)
+
+    for _ in range(num_workouts):
+        temp_history = {
+            "graph": {
+                "weight_per_set": [],
+                "volume_per_set": [],
+                "weight_per_rep": [],
+            },
+            "table": {
+                "headers": ["reps", "weight"],
+                "rows": []
+            },
+            "started_at": random_timestamp_ms()
+        }
+
+        num_sets = random.randint(2,4)
+        set_idx = 0
+        rep_idx = 0
+        for _ in range(num_sets):
+            num_reps = random.randint(3,15)
+            weight = random_weight()
+            volume = weight * num_reps
+            for _ in range(num_reps):
+                temp_history["graph"]["weight_per_rep"].append({
+                    "x": rep_idx,
+                    "y": weight
+                })
+
+                rep_idx += 1
+
+            temp_history["graph"]["weight_per_set"].append({
+                "x": set_idx,
+                "y": weight
+            })
+            temp_history["graph"]["volume_per_set"].append({
+                "x": set_idx,
+                "y": volume
+            })
+
+            temp_history["table"]["rows"].append({
+                "reps": num_reps,
+                "weight": weight
+            })
+
+            set_idx += 1
+
+        history_data["history"].append(temp_history)
+
+    history_data["history"] = sort_timeseries(history_data["history"], "started_at", True)
+
+    history_data["reps_sets_weight"] = generate_rand_3D_points()
+
+    return history_data
+
+def sort_timeseries(data, key, convert_timestamp=False):
+    series = sorted(data, key=lambda e: e[key], reverse=True)
+    if not convert_timestamp: return series
+    for elem in series:
+        elem[key] = timestamp_ms_to_date_str(elem[key])
+    return series
+
+def timestamp_ms_to_date_str(timestamp_ms):
+    return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%d/%m/%Y")
+
+def generate_rand_3D_points():
+    length = random.randint(3, 50)
+
+    weight = random.randint(60, 100)
+    reps = random.randint(4, 6)
+    sets = random.randint(2, 3)
+
+    data = []
+    for _ in range(length):
+        data.append({"x": reps, "y": weight, "z": sets})
+
+        reps += random.choice([1, 2])       
+        sets += random.choice([0, 1])       
+        weight -= random.randint(2, 5)      
+
+        if weight < 20:
+            weight = 20
+        if sets > 6:
+            sets = 6
+
+    return data
