@@ -559,7 +559,7 @@ async def exercise_history_rand():
                 "weight_per_rep": [],
             },
             "table": {
-                "headers": ["reps", "weight"],
+                "headers": ["reps", "weight", "sets"],
                 "rows": []
             },
             "started_at": random_timestamp_ms()
@@ -591,7 +591,8 @@ async def exercise_history_rand():
 
             temp_history["table"]["rows"].append({
                 "reps": num_reps,
-                "weight": weight
+                "weight": weight,
+                "sets": random.randint(1,3)
             })
 
             set_idx += 1

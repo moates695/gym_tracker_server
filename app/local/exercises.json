@@ -311,5 +311,114 @@
         "description": ""
       }
     ]
+  },
+  {
+    "name": "Leg Extension",
+    "targets": {
+      "legs/quads": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Seated Leg Curl",
+    "targets": {
+      "legs/hamstrings": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Lying Leg Curl",
+    "targets": {
+      "legs/hamstrings": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Seated Calf Raise",
+    "targets": {
+      "legs/calves": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Standing Calf Raise Machine",
+    "targets": {
+      "legs/calves": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Dumbbell Standing Calf Raise",
+    "targets": {
+      "legs/calves": 10,
+      "core": 2,
+      "shoulders": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Barbell Squat",
+    "targets": {
+      "legs/quads": 9,
+      "legs/glutes": 8,
+      "legs/hamstrings": 6,
+      "back/erectors": 5,
+      "core": 5,
+      "legs/calves": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Dumbbell Bulgarian Split Squats",
+    "targets": {
+      "legs/quads": 8,
+      "legs/glutes": 7,
+      "legs/hamstrings": 5,
+      "core": 4,
+      "legs/calves": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Smith Machine Bulgarian Split Squats",
+    "targets": {
+      "legs/quads": 9,
+      "legs/glutes": 8,
+      "legs/hamstrings": 4,
+      "core": 2,
+      "legs/calves": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Barbell Bulgarian Split Squats",
+    "targets": {
+      "legs/quads": 9,
+      "legs/glutes": 8,
+      "legs/hamstrings": 5,
+      "core": 5,
+      "legs/calves": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   }
 ]

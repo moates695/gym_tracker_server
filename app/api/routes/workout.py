@@ -108,6 +108,7 @@ async def save_set_data(conn, workout_exercise_id, set_data: SetData, index):
         ($1, $2, $3, $4, $5, $6)
         """, workout_exercise_id, index, set_data.reps, set_data.weight, set_data.num_sets, set_data.set_class
     )
+    print(set_data.set_class)
 
 # define body weight calc types like: lower leg, full body horizontal, full body pull etc
 # async def body_weight_calc(conn, user_id, exercise_id):
