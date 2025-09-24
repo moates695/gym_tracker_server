@@ -33,17 +33,6 @@
     "weight_type": "free"
   },
   {
-    "name": "Barbell Squat",
-    "targets": {
-      "legs/quads": 10,
-      "legs/glutes": 8,
-      "legs/hamstrings": 6
-    },
-    "is_body_weight": false,
-    "description": "",
-    "weight_type": "free"
-  },
-  {
     "name": "Deadlift",
     "targets": {
       "legs/glutes": 9,

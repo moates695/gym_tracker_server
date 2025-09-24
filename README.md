@@ -110,5 +110,6 @@ On FE, show variations with the parent exercise, most likely an expand option ne
 - how to handle >1 of things on the same day, like exercises returned in history (data and graph options).
 - check useEffects for bad object comparisons (objects, lists always false comparison)
 - add calesthenics weight type
+- where possible look to store info on save, instead of on request (e.g. workout overview stats can be stored on workout save and then retrieved later)
     
 ## Assumptions

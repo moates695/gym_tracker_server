@@ -7,6 +7,32 @@ from ..local.update_exercises import update
 from ..tests.test_register import valid_user
 
 @pytest.mark.asyncio
+async def test_base_case():
+    with open("app/local/exercises.json", "r") as file:
+        exercises = json.load(file)
+
+    try:
+        conn = await setup_connection()
+        original_rows = await fetch_exercise_data(conn)
+        await update(exercises)
+        original_rows2 = await fetch_exercise_data(conn)
+
+        # assert len(original_rows) == len(original_rows2)
+        # for e1, e2 in zip(original_rows, original_rows2):
+        #     try:
+        #         assert e1 == e2
+        #     except Exception as e:
+        #         print(e1)
+        #         print(e2)
+        #         raise e
+        assert original_rows == original_rows2
+
+    except Exception as e:
+        raise e
+    finally:
+        if conn: await conn.close()
+
+@pytest.mark.asyncio
 async def test_update_exercises():
     with open("app/local/exercises.json", "r") as file:
         exercises = json.load(file)
@@ -527,7 +553,7 @@ async def test_invalid_inserts_exercises(delete_test_users, create_user):
                 (name, is_body_weight, weight_type, parent_id)
                 values
                 ($1, false, 'free', $2);
-                """, name, parent_id
+                """, name.upper(), parent_id
             )
 
         await conn.execute(
@@ -536,7 +562,7 @@ async def test_invalid_inserts_exercises(delete_test_users, create_user):
             (name, is_body_weight, weight_type, user_id, parent_id)
             values
             ($1, false, 'free', $2, $3);
-            """, name.upper(), user_id, parent_id
+            """, name, user_id, parent_id
         )
 
         with pytest.raises(Exception):
@@ -598,7 +624,7 @@ async def test_invalid_inserts_exercises(delete_test_users, create_user):
         if conn: await conn.close()
 
 @pytest.mark.asyncio
-async def test_invalid_inserts_exercises():
+async def test_invalid_insert_exercises2():
     with open("app/local/exercises.json", "r") as file:
         exercises = json.load(file)
 
@@ -705,6 +731,7 @@ async def fetch_exercise_data(conn, include_custom=False):
         inner join exercise_muscle_targets emt
         on emt.exercise_id = e.id
         {"" if include_custom else "where e.user_id is null"}
+        order by e.id, emt.id
         """
     )
 
