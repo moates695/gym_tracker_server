@@ -240,6 +240,10 @@
   {
     "name": "Single Arm Cable Tricep Extension",
     "targets": {
+      "arms/tricep": 10,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3,
+      "shoulders": 2
     },
     "is_body_weight": false,
     "description": "",
@@ -262,6 +266,10 @@
   {
     "name": "Flared Cable Tricep Extension",
     "targets": {
+      "arms/tricep": 10,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3,
+      "shoulders": 2
     },
     "is_body_weight": false,
     "description": "",
@@ -270,6 +278,10 @@
   {
     "name": "Cable Tricep Extension",
     "targets": {
+      "arms/tricep": 9,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3,
+      "shoulders": 2
     },
     "is_body_weight": false,
     "description": "",

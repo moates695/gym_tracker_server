@@ -88,7 +88,6 @@ async def save_set_data(conn, workout_exercise_id, set_data: SetData, index):
         ($1, $2, $3, $4, $5, $6)
         """, workout_exercise_id, index, set_data.reps, set_data.weight, set_data.num_sets, set_data.set_class
     )
-    print(set_data.set_class)
 
 @router.get("/workout/overview/stats")
 async def workout_overview_stats(use_real: bool, credentials: dict = Depends(verify_token)):
@@ -102,7 +101,7 @@ async def workout_overview_stats_real(credentials: dict):
     try:
         conn = await setup_connection()
 
-        workouts_data = await conn.fetch(
+        workout_rows = await conn.fetch(
             """
             select *
             from workouts
@@ -111,13 +110,28 @@ async def workout_overview_stats_real(credentials: dict):
             """, credentials["user_id"]
         )
 
-        for workout_data in workouts_data:
+        for workout_row in workout_rows:
             totals = {
                 "volume": 0,
                 "num_sets":  0,
                 "reps": 0,
             }
             muscles = {}
+
+            total_rows = await conn.fetch(
+                """
+                select wsd.reps, wsd.weight, wsd.num_sets
+                from workout_set_data wsd
+                inner join workout_exercises we
+                on wsd.workout_exercise_id = we.id
+                where we.workout_id = $1
+                """, workout_row["id"]
+            )
+
+            for total_row in total_rows:
+                totals["volume"] += total_row["reps"] * total_row["weight"] * total_row["num_sets"]
+                totals["num_sets"] += total_row["num_sets"]
+                totals["reps"] += total_row["reps"]
 
             muscle_data_list = await conn.fetch(
                 """
@@ -134,14 +148,10 @@ async def workout_overview_stats_real(credentials: dict):
                 inner join workout_set_data wsd
                 on wsd.workout_exercise_id = we.id
                 where we.workout_id = $1
-                """, workout_data["id"]
+                """, workout_row["id"]
             )
 
             for muscle_data in muscle_data_list:
-                totals["volume"] += muscle_data["reps"] * muscle_data["weight"] * muscle_data["num_sets"]
-                totals["num_sets"] += muscle_data["num_sets"]
-                totals["reps"] += muscle_data["reps"]
-
                 group = muscle_data["group_name"]
                 target = muscle_data["target_name"]
                 if group not in muscles.keys():
@@ -161,12 +171,12 @@ async def workout_overview_stats_real(credentials: dict):
                 select count(*)
                 from workout_exercises we
                 where we.workout_id = $1
-                """, workout_data["id"]
+                """, workout_row["id"]
             )
 
             workouts.append({
-                "started_at": datetime_to_timestamp_ms(workout_data["started_at"]),
-                "duration": workout_data["duration_secs"],
+                "started_at": datetime_to_timestamp_ms(workout_row["started_at"]),
+                "duration": workout_row["duration_secs"],
                 "num_exercises": num_exercises,
                 "totals": totals,
                 "muscles": muscles
