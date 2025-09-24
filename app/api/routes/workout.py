@@ -65,26 +65,6 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         if conn: await conn.close()
     return {}
 
-# async def update_body_weights(conn, user_id, exercises: List[Exercise]):
-#     if not any(e.is_body_weight for e in exercises): return
-
-#     row = await conn.fetchrow(
-#         """
-#         select gender, weight
-#         from users
-#         where id = $1
-#         """, user_id
-#     )
-
-#     upper_mass_ratio = 0.62 if row["gender"] == "male" else 0.55
-
-#     for exercise in exercises:
-#         if not exercise.is_body_weight: continue
-#         # todo fetch classification from db table, then compute weight
-#         weight = 18.25
-#         for set_data in exercise.set_data:
-#             set_data.weight = weight
-
 async def save_exercise(conn, workout_id, exercise: Exercise, index): 
     workout_exercise_id = await conn.fetchval(
         """
@@ -109,10 +89,6 @@ async def save_set_data(conn, workout_exercise_id, set_data: SetData, index):
         """, workout_exercise_id, index, set_data.reps, set_data.weight, set_data.num_sets, set_data.set_class
     )
     print(set_data.set_class)
-
-# define body weight calc types like: lower leg, full body horizontal, full body pull etc
-# async def body_weight_calc(conn, user_id, exercise_id):
-#     pass
 
 @router.get("/workout/overview/stats")
 async def workout_overview_stats(use_real: bool, credentials: dict = Depends(verify_token)):
