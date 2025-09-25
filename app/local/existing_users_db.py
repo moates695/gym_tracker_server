@@ -73,7 +73,7 @@ async def check_workout_muscle_group_totals(conn, user_id):
             """
             insert into workout_muscle_group_totals
             values
-            ($1, $2, 0.0, 0, 0, 0, 0)
+            ($1, $2, 0.0, 0, 0, 0)
             """, user_id, group_id_row["id"]
         )
 
@@ -102,7 +102,7 @@ async def check_workout_muscle_target_totals(conn, user_id):
             """
             insert into workout_muscle_target_totals
             values
-            ($1, $2, 0.0, 0, 0, 0, 0)
+            ($1, $2, 0.0, 0, 0, 0)
             """, user_id, target_id_row["id"]
         )
 

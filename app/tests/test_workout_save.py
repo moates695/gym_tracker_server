@@ -11,7 +11,7 @@ from ..api.middleware.misc import *
 client = TestClient(app)
 
 @pytest.mark.asyncio
-async def test_workout_save(delete_test_users, create_user):
+async def test_save_workout(delete_test_users, create_user):
     auth_token = create_user
     decoded_auth_token = decode_token(auth_token)
     user_id = decoded_auth_token["user_id"]
@@ -103,6 +103,7 @@ async def save_workouts(workouts, headers):
 
 # todo: test empty save
 # todo: test invalid saves
+# todo: check that if register misses workout_totals (+ others) that the workout save func inserts baseline
 
 async def build_workouts(conn, lower_lim=5, upper_lim=10):
     workouts = []

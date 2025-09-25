@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import random
 import json
+from copy import deepcopy
 
 from api.middleware.auth_token import *
 from api.routes.auth import verify_token
@@ -58,20 +59,61 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             "num_sets": 0,
             "reps": 0,
         }
+        empty_totals = {
+            "volume": 0,
+            "num_sets": 0,
+            "reps": 0,
+            "counter": 0
+        }
+        group_totals = {}
+        target_totals = {}
+
         for i, exercise in enumerate(req.exercises):
             await save_exercise(conn, workout_id, exercise, i)
 
-            # ratio = await conn.fetchval(
-            #     """
-            #     select ratio
-            #     from exercise_muscle_data
-            #     """
-            # )
+            group_rows = await conn.fetch(
+                """
+                select distinct on (group_id) ratio, group_id
+                from exercise_muscle_data
+                where exercise_id = $1
+                order by group_id, ratio desc
+                """, exercise.id
+            )
 
-            for set_data in exercise["set_data"]:
-                totals["volume"] += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
-                totals["num_sets"] += set_data["num_sets"]
-                totals["reps"] += set_data["reps"]
+            target_rows = await conn.fetch(
+                """
+                select ratio, target_id
+                from exercise_muscle_data
+                where exercise_id = $1
+                """, exercise.id
+            )
+
+            for set_data in exercise.set_data:
+                volume = set_data.reps * set_data.weight * set_data.num_sets
+
+                totals["volume"] += volume
+                totals["num_sets"] += set_data.num_sets
+                totals["reps"] += set_data.reps
+
+                for group_row in group_rows:
+                    if group_row["group_id"] not in group_totals:
+                        group_totals[group_row["group_id"]] = deepcopy(empty_totals)
+                    group_totals[group_row["group_id"]]["volume"] += (group_row["ratio"] / 10) * volume
+                    group_totals[group_row["group_id"]]["num_sets"] += set_data.num_sets
+                    group_totals[group_row["group_id"]]["reps"] += set_data.reps
+
+                for target_row in target_rows:
+                    if target_row["target_id"] not in target_totals:
+                        target_totals[target_row["target_id"]] = deepcopy(empty_totals)
+                    target_totals[target_row["target_id"]]["volume"] += (target_row["ratio"] / 10) * volume
+                    target_totals[target_row["target_id"]]["num_sets"] += set_data.num_sets
+                    target_totals[target_row["target_id"]]["reps"] += set_data.reps
+
+            for group_row in group_rows:
+                group_totals[group_row["group_id"]]["counter"] += 1
+
+            for target_row in target_rows:
+                target_totals[target_row["target_id"]]["counter"] += 1
 
         current_totals = await conn.fetchrow(
             """
@@ -81,15 +123,25 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             """, credentials["user_id"]
         )
 
+        if current_totals == None:
+            current_totals = await conn.fetch(
+                """
+                insert into workout_totals
+                values
+                ($1, 0.0, 0, 0, 0.0, 0, 0)
+                returning *
+                """, credentials["user_id"]
+            )
+
         await conn.execute(
             """
             update workout_totals
             set
-                volume = $1
-                num_sets = $2
-                reps = $3
-                duration = $4
-                num_workouts = $5
+                volume = $1,
+                num_sets = $2,
+                reps = $3,
+                duration = $4,
+                num_workouts = $5,
                 num_exercises = $6
             where user_id = $7
             """, 
@@ -98,8 +150,87 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             current_totals["reps"] + totals["reps"],
             current_totals["duration"] + req.duration / 1000,
             current_totals["num_workouts"] + 1,
-            current_totals["num_exercises"] + len(req.exercises)
+            current_totals["num_exercises"] + len(req.exercises),
+            credentials["user_id"]
         )
+
+        for group_id, group_total in group_totals.items():
+            current_group_totals = await conn.fetchrow(
+                """
+                select *
+                from workout_muscle_group_totals
+                where user_id = $1
+                and muscle_group_id = $2
+                """, credentials["user_id"], group_id
+            )
+
+            if current_group_totals == None:
+                current_group_totals = await conn.fetch(
+                    """
+                    insert into workout_muscle_group_totals
+                    values
+                    ($1, $2, 0.0, 0, 0, 0)
+                    returning *
+                    """, credentials["user_id"], group_id
+                )
+
+            await conn.execute(
+                """
+                update workout_muscle_group_totals
+                set
+                    volume = $1,
+                    num_sets = $2,
+                    reps = $3,
+                    counter = $4
+                where user_id = $5
+                and muscle_group_id = $6
+                """,
+                current_group_totals["volume"] + group_total["volume"],
+                current_group_totals["num_sets"] + group_total["num_sets"],
+                current_group_totals["reps"] + group_total["reps"],
+                current_group_totals["counter"] + group_total["counter"],
+                credentials["user_id"],
+                group_id
+            )
+
+        for target_id, target_total in target_totals.items():
+            current_target_totals = await conn.fetchrow(
+                """
+                select *
+                from workout_muscle_target_totals
+                where user_id = $1
+                and muscle_target_id = $2
+                """, credentials["user_id"], target_id
+            )
+
+            if current_target_totals == None:
+                current_target_totals = await conn.fetch(
+                    """
+                    insert into workout_muscle_target_totals
+                    values
+                    ($1, $2, 0.0, 0, 0, 0)
+                    returning *
+                    """, credentials["user_id"], target_id
+                )
+
+            await conn.execute(
+                """
+                update workout_muscle_target_totals
+                set
+                    volume = $1,
+                    num_sets = $2,
+                    reps = $3,
+                    counter = $4
+                where user_id = $5
+                and muscle_target_id = $6
+                """,
+                current_target_totals["volume"] + target_total["volume"],
+                current_target_totals["num_sets"] + target_total["num_sets"],
+                current_target_totals["reps"] + target_total["reps"],
+                current_target_totals["counter"] + target_total["counter"],
+                credentials["user_id"],
+                group_id
+            )
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})

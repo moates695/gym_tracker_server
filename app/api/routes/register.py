@@ -95,6 +95,30 @@ async def register(req: Register):
                 """, user_id, req_json[data_map["key"]]
             )
 
+        await conn.execute(
+            """
+            insert into workout_totals
+            values
+            ($1, 0.0, 0, 0, 0.0, 0, 0)
+            """, user_id
+        )
+
+        for key in ["group", "target"]:
+            id_rows = await conn.fetch(
+                f"""
+                select id
+                from muscle_{key}s
+                """
+            )
+            for id_row in id_rows:
+                await conn.execute(
+                    f"""
+                    insert into workout_muscle_{key}_totals
+                    values
+                    ($1, $2, 0.0, 0, 0, 0)
+                    """, user_id, id_row["id"]
+                )
+
         if req.send_email:
             await send_validation_email(req.email, user_id)
 

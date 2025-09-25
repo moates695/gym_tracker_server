@@ -45,6 +45,7 @@ def create_user():
     client = TestClient(app)
 
     response = client.post("/register", json=valid_user)
+    assert response.status_code == 200
     temp_token = response.json()["temp_token"]
     
     response = client.get("/register/validate/receive", params={
