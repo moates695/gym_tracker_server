@@ -43,6 +43,7 @@ class Register(BaseModel):
             raise ValueError('Password must contain at least one special character.')
         return v
 
+# todo: add to workout_totals, workout_muscle_group/target_totals
 @router.post("/register")
 async def register(req: Register):
     req_json = json.loads(req.model_dump_json())

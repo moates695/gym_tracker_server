@@ -53,8 +53,53 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             """, credentials["user_id"], start_time, req.duration / 1000
         )
 
+        totals = {
+            "volume": 0,
+            "num_sets": 0,
+            "reps": 0,
+        }
         for i, exercise in enumerate(req.exercises):
             await save_exercise(conn, workout_id, exercise, i)
+
+            # ratio = await conn.fetchval(
+            #     """
+            #     select ratio
+            #     from exercise_muscle_data
+            #     """
+            # )
+
+            for set_data in exercise["set_data"]:
+                totals["volume"] += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                totals["num_sets"] += set_data["num_sets"]
+                totals["reps"] += set_data["reps"]
+
+        current_totals = await conn.fetchrow(
+            """
+            select *
+            from workout_totals
+            where user_id = $1
+            """, credentials["user_id"]
+        )
+
+        await conn.execute(
+            """
+            update workout_totals
+            set
+                volume = $1
+                num_sets = $2
+                reps = $3
+                duration = $4
+                num_workouts = $5
+                num_exercises = $6
+            where user_id = $7
+            """, 
+            current_totals["volume"] + totals["volume"],
+            current_totals["num_sets"] + totals["num_sets"],
+            current_totals["reps"] + totals["reps"],
+            current_totals["duration"] + req.duration / 1000,
+            current_totals["num_workouts"] + 1,
+            current_totals["num_exercises"] + len(req.exercises)
+        )
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
