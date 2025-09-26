@@ -46,146 +46,206 @@ async def test_save_workout(delete_test_users, create_user):
 
         assert len(workouts) == await get_num_workouts(conn, decoded_auth_token)
 
-        workout_rows = await conn.fetch(
-            """
-            select w.id, w.started_at, w.duration_secs
-            from workouts w
-            where w.user_id = $1
-            """, user_id
-        )
-
-        assert len(workouts) == len(workout_rows)
-        for workout, workout_row in zip(workouts, workout_rows):
-            assert workout["start_time"] == workout_row["started_at"].timestamp() * 1000
-            assert workout["duration"] / 1000 == workout_row["duration_secs"]
-
-            workout_exercises_rows = await conn.fetch(
-                """
-                select id, exercise_id, order_index
-                from workout_exercises 
-                where workout_id = $1
-                order by order_index
-                """, workout_row["id"]
-            )
-
-            assert len(workout_exercises_rows) == len(workout["exercises"])
-
-            for i, exercise in enumerate(workout["exercises"]):
-                workout_exercises_row = workout_exercises_rows[i]
-                assert workout_exercises_row["order_index"] == i
-                assert str(workout_exercises_row["exercise_id"]) == exercise["id"]
-
-                workout_set_data_rows = await conn.fetch(
-                    """
-                    select reps, weight, num_sets, set_class, order_index
-                    from workout_set_data
-                    where workout_exercise_id = $1
-                    order by order_index
-                    """, workout_exercises_row["id"]
-                )
-
-                assert len(exercise["set_data"]) == len(workout_set_data_rows)
-
-                for j, set_data in enumerate(exercise["set_data"]):
-                    workout_set_data_row = workout_set_data_rows[j]
-                    assert workout_set_data_row["order_index"] == j
-                    for muscle_key in ['reps','weight','num_sets','set_class']:
-                        assert set_data[muscle_key] == workout_set_data_row[muscle_key]
-
-        totals = {
-            "volume": 0,
-            "num_sets": 0,
-            "reps": 0,
-            "duration": 0,
-            "num_workouts": 0,
-            "num_exercises": 0
-        }
-        for workout in workouts:
-            totals["num_workouts"] += 1
-            totals["duration"] += workout["duration"] / 1000
-            for exercise in workout["exercises"]:
-                totals["num_exercises"] += 1
-                for set_data in exercise["set_data"]:
-                    totals["volume"] += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
-                    totals["num_sets"] += set_data["num_sets"]
-                    totals["reps"] += set_data["reps"]
-
-        db_totals = await conn.fetchrow(
-            """
-            select *
-            from workout_totals
-            where user_id = $1
-            """, user_id
-        )
-        
-        int_keys = ["num_sets", "reps", "num_workouts", "num_exercises"]
-        for muscle_key in int_keys:
-            assert totals[muscle_key] == db_totals[muscle_key]
-
-        float_keys = ["volume", "duration"]
-        for muscle_key in float_keys:
-            assert math.isclose(totals[muscle_key], db_totals[muscle_key], abs_tol=0.5)
-
-        empty_totals = {
-            "volume": 0,
-            "num_sets": 0,
-            "reps": 0,
-            "counter": 0
-        }
-
-        for muscle_key in ["group", "target"]:
-            muscle_total = {}
-            rows = await conn.fetch(
-                f"""
-                select distinct {muscle_key}_id as id
-                from muscle_groups_targets
-                """
-            )
-            for row in rows:
-                muscle_total[row["id"]] = deepcopy(empty_totals)
-
-            for workout in workouts:
-                for exercise in workout["exercises"]:
-                    rows = await conn.fetch(
-                        f"""
-                        select distinct on ({muscle_key}_id) ratio, {muscle_key}_id as id
-                        from exercise_muscle_data
-                        where exercise_id = $1
-                        order by {muscle_key}_id, ratio desc
-                        """, exercise["id"]
-                    )
-                    
-                    for set_data in exercise["set_data"]:
-                        for row in rows:
-                            volume = (row["ratio"] / 10) * set_data["reps"] * set_data["weight"] * set_data["num_sets"]
-                            muscle_total[row["id"]]["volume"] += volume
-                            muscle_total[row["id"]]["num_sets"] += set_data["num_sets"]
-                            muscle_total[row["id"]]["reps"] += set_data["reps"]
-
-                    for row in rows:
-                        muscle_total[row["id"]]["counter"] += 1
-
-            for muscle_id, total in muscle_total.items():
-                db_totals = await conn.fetchrow(
-                    f"""
-                    select *
-                    from workout_muscle_{muscle_key}_totals
-                    where user_id = $1
-                    and muscle_{muscle_key}_id = $2
-                    """, user_id, muscle_id
-                )
-
-                int_keys = ["num_sets", "reps", "counter"]
-                for key in int_keys:
-                    assert total[key] == db_totals[key]
-                assert math.isclose(total["volume"], db_totals["volume"], abs_tol=0.5)
-
+        await check_correct_save(conn, user_id, workouts)
+        await check_workout_totals(conn, user_id, workouts)
+        await check_workout_stats(conn, user_id, workouts)
 
     except Exception as e:
         print(str(e))
         raise e
     finally:
         if conn: await conn.close()
+
+async def check_correct_save(conn, user_id, workouts):
+    workout_rows = await conn.fetch(
+        """
+        select w.id, w.started_at, w.duration_secs
+        from workouts w
+        where w.user_id = $1
+        """, user_id
+    )
+
+    assert len(workouts) == len(workout_rows)
+    for workout, workout_row in zip(workouts, workout_rows):
+        assert workout["start_time"] == workout_row["started_at"].timestamp() * 1000
+        assert workout["duration"] / 1000 == workout_row["duration_secs"]
+
+        workout_exercises_rows = await conn.fetch(
+            """
+            select id, exercise_id, order_index
+            from workout_exercises 
+            where workout_id = $1
+            order by order_index
+            """, workout_row["id"]
+        )
+
+        assert len(workout_exercises_rows) == len(workout["exercises"])
+
+        for i, exercise in enumerate(workout["exercises"]):
+            workout_exercises_row = workout_exercises_rows[i]
+            assert workout_exercises_row["order_index"] == i
+            assert str(workout_exercises_row["exercise_id"]) == exercise["id"]
+
+            workout_set_data_rows = await conn.fetch(
+                """
+                select reps, weight, num_sets, set_class, order_index
+                from workout_set_data
+                where workout_exercise_id = $1
+                order by order_index
+                """, workout_exercises_row["id"]
+            )
+
+            assert len(exercise["set_data"]) == len(workout_set_data_rows)
+
+            for j, set_data in enumerate(exercise["set_data"]):
+                workout_set_data_row = workout_set_data_rows[j]
+                assert workout_set_data_row["order_index"] == j
+                for muscle_key in ['reps','weight','num_sets','set_class']:
+                    assert set_data[muscle_key] == workout_set_data_row[muscle_key]
+
+async def check_workout_totals(conn, user_id, workouts):
+    totals = {
+        "volume": 0,
+        "num_sets": 0,
+        "reps": 0,
+        "duration": 0,
+        "num_workouts": 0,
+        "num_exercises": 0
+    }
+    for workout in workouts:
+        totals["num_workouts"] += 1
+        totals["duration"] += workout["duration"] / 1000
+        for exercise in workout["exercises"]:
+            totals["num_exercises"] += 1
+            for set_data in exercise["set_data"]:
+                totals["volume"] += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                totals["num_sets"] += set_data["num_sets"]
+                totals["reps"] += set_data["reps"]
+
+    db_totals = await conn.fetchrow(
+        """
+        select *
+        from workout_totals
+        where user_id = $1
+        """, user_id
+    )
+    
+    int_keys = ["num_sets", "reps", "num_workouts", "num_exercises"]
+    for muscle_key in int_keys:
+        assert totals[muscle_key] == db_totals[muscle_key]
+
+    float_keys = ["volume", "duration"]
+    for muscle_key in float_keys:
+        assert math.isclose(totals[muscle_key], db_totals[muscle_key], abs_tol=0.5)
+
+    empty_totals = {
+        "volume": 0,
+        "num_sets": 0,
+        "reps": 0,
+        "counter": 0
+    }
+
+    for muscle_key in ["group", "target"]:
+        muscle_total = {}
+        rows = await conn.fetch(
+            f"""
+            select distinct {muscle_key}_id as id
+            from muscle_groups_targets
+            """
+        )
+        for row in rows:
+            muscle_total[row["id"]] = deepcopy(empty_totals)
+
+        for workout in workouts:
+            for exercise in workout["exercises"]:
+                rows = await conn.fetch(
+                    f"""
+                    select distinct on ({muscle_key}_id) ratio, {muscle_key}_id as id
+                    from exercise_muscle_data
+                    where exercise_id = $1
+                    order by {muscle_key}_id, ratio desc
+                    """, exercise["id"]
+                )
+                
+                for set_data in exercise["set_data"]:
+                    for row in rows:
+                        volume = (row["ratio"] / 10) * set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                        muscle_total[row["id"]]["volume"] += volume
+                        muscle_total[row["id"]]["num_sets"] += set_data["num_sets"]
+                        muscle_total[row["id"]]["reps"] += set_data["reps"]
+
+                for row in rows:
+                    muscle_total[row["id"]]["counter"] += 1
+
+        for muscle_id, total in muscle_total.items():
+            db_totals = await conn.fetchrow(
+                f"""
+                select *
+                from workout_muscle_{muscle_key}_totals
+                where user_id = $1
+                and muscle_{muscle_key}_id = $2
+                """, user_id, muscle_id
+            )
+
+            int_keys = ["num_sets", "reps", "counter"]
+            for key in int_keys:
+                assert total[key] == db_totals[key]
+            assert math.isclose(total["volume"], db_totals["volume"], abs_tol=0.5)
+
+async def check_workout_stats(conn, user_id, workouts):
+    workout_stats = await conn.fetch(
+        """
+        select *
+        from previous_workout_stats pws
+        inner join workouts w
+        on pws.workout_id = w.id
+        where w.user_id = $1
+        """, user_id
+    )
+    assert len(workouts) == len(workout_stats)
+    for workout, workout_stat in zip(workouts, workout_stats):
+        totals = {
+            "volume": 0,
+            "num_sets": 0,
+            "reps": 0,
+        }
+        for exercise in workout["exercises"]:
+            for set_data in exercise["set_data"]:
+                totals["volume"] += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                totals["num_sets"] += set_data["num_sets"]
+                totals["reps"] += set_data["reps"]
+
+        assert math.isclose(totals["volume"], workout_stat["volume"], abs_tol=0.5)
+        assert totals["num_sets"] == workout_stat["num_sets"]
+        assert totals["reps"] == workout_stat["reps"]
+
+async def check_workout_muscle_stats(conn, user_id, workouts):
+    # muscle_stats = await conn.fetch(
+    #     """
+    #     select *
+    #     from previous_workout_muscle_target_stats pwms
+    #     inner join workouts w
+    #     on pwms.workout_id = w.id
+    #     where w.user_id = $1
+    #     """, user_id
+    # )
+
+    # todo THIS FUNCTION
+    empty = {
+        "volume": 0,
+        "num_sets": 0,
+        "reps": 0,
+    }
+    for workout in workouts:
+        muscle_totals = {}
+        for exercise in workout["exercises"]:
+            await conn.fetch(
+                """
+                select target_id, ratio
+                from exercise_muscle_data
+                """
+            )
+            for set_data in exercise["set_data"]: 
 
 async def save_workouts(workouts, headers):
     for workout in workouts:

@@ -33,7 +33,6 @@ class WorkoutSave(BaseModel):
     start_time: int #? timestamp ms
     duration: int #? ms
 
-#? ratio is applied to volume on the client
 #? bodyweight determined on the client
 @router.post("/workout/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
@@ -154,82 +153,62 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             credentials["user_id"]
         )
 
-        for group_id, group_total in group_totals.items():
-            current_group_totals = await conn.fetchrow(
-                """
-                select *
-                from workout_muscle_group_totals
-                where user_id = $1
-                and muscle_group_id = $2
-                """, credentials["user_id"], group_id
-            )
-
-            if current_group_totals == None:
-                current_group_totals = await conn.fetch(
-                    """
-                    insert into workout_muscle_group_totals
-                    values
-                    ($1, $2, 0.0, 0, 0, 0)
-                    returning *
-                    """, credentials["user_id"], group_id
+        for key in ["group", "target"]:
+            muscle_totals = group_totals if key == "group" else target_totals
+            for muscle_id, muscle_total in muscle_totals.items():
+                current_totals = await conn.fetchrow(
+                    f"""
+                    select *
+                    from workout_muscle_{key}_totals
+                    where user_id = $1
+                    and muscle_{key}_id = $2
+                    """, credentials["user_id"], muscle_id
                 )
 
-            await conn.execute(
-                """
-                update workout_muscle_group_totals
-                set
-                    volume = $1,
-                    num_sets = $2,
-                    reps = $3,
-                    counter = $4
-                where user_id = $5
-                and muscle_group_id = $6
-                """,
-                current_group_totals["volume"] + group_total["volume"],
-                current_group_totals["num_sets"] + group_total["num_sets"],
-                current_group_totals["reps"] + group_total["reps"],
-                current_group_totals["counter"] + group_total["counter"],
-                credentials["user_id"],
-                group_id
-            )
+                if current_totals == None:
+                    current_totals = await conn.fetch(
+                        f"""
+                        insert into workout_muscle_{key}_totals
+                        values
+                        ($1, $2, 0.0, 0, 0, 0)
+                        returning *
+                        """, credentials["user_id"], muscle_id
+                    )
+
+                await conn.execute(
+                    f"""
+                    update workout_muscle_{key}_totals
+                    set
+                        volume = $1,
+                        num_sets = $2,
+                        reps = $3,
+                        counter = $4
+                    where user_id = $5
+                    and muscle_{key}_id = $6
+                    """,
+                    current_totals["volume"] + muscle_total["volume"],
+                    current_totals["num_sets"] + muscle_total["num_sets"],
+                    current_totals["reps"] + muscle_total["reps"],
+                    current_totals["counter"] + muscle_total["counter"],
+                    credentials["user_id"],
+                    muscle_id
+                )
+
+        await conn.execute(
+            """
+            insert into previous_workout_stats
+            values
+            ($1, $2, $3, $4)
+            """, workout_id, totals["volume"], totals["num_sets"], totals["reps"]
+        )
 
         for target_id, target_total in target_totals.items():
-            current_target_totals = await conn.fetchrow(
-                """
-                select *
-                from workout_muscle_target_totals
-                where user_id = $1
-                and muscle_target_id = $2
-                """, credentials["user_id"], target_id
-            )
-
-            if current_target_totals == None:
-                current_target_totals = await conn.fetch(
-                    """
-                    insert into workout_muscle_target_totals
-                    values
-                    ($1, $2, 0.0, 0, 0, 0)
-                    returning *
-                    """, credentials["user_id"], target_id
-                )
-
             await conn.execute(
                 """
-                update workout_muscle_target_totals
-                set
-                    volume = $1,
-                    num_sets = $2,
-                    reps = $3,
-                    counter = $4
-                where user_id = $5
-                and muscle_target_id = $6
-                """,
-                current_target_totals["volume"] + target_total["volume"],
-                current_target_totals["num_sets"] + target_total["num_sets"],
-                current_target_totals["reps"] + target_total["reps"],
-                current_target_totals["counter"] + target_total["counter"],
-                credentials["user_id"],
-                target_id
+                insert into previous_workout_muscle_target_stats
+                values
+                ($1, $2, $3, $4, $5)
+                """, workout_id, target_id, target_total["volume"], target_total["num_sets"], target_total["reps"]
             )
 
     except HTTPException as e:
