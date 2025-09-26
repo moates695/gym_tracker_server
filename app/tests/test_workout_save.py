@@ -239,13 +239,21 @@ async def check_workout_muscle_stats(conn, user_id, workouts):
     for workout in workouts:
         muscle_totals = {}
         for exercise in workout["exercises"]:
-            await conn.fetch(
+            muscle_rows = await conn.fetch(
                 """
                 select target_id, ratio
                 from exercise_muscle_data
-                """
+                where exercise_id = $1
+                """, exercise["id"]
             )
             for set_data in exercise["set_data"]: 
+                for muscle_row in muscle_rows:
+                    if muscle_row["target_id"] not in muscle_totals:
+                        muscle_totals[muscle_row["target_id"]] = deepcopy(empty)
+                    volume = (muscle_row["ratio"] / 10) * set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                    muscle_totals[muscle_row["target_id"]]["volume"] += volume
+                    muscle_totals[muscle_row["target_id"]]["num_sets"] += set_data["num_sets"]
+                    muscle_totals[muscle_row["target_id"]]["reps"] += set_data["reps"]
 
 async def save_workouts(workouts, headers):
     for workout in workouts:
