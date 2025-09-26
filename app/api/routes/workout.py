@@ -229,7 +229,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                 current_target_totals["reps"] + target_total["reps"],
                 current_target_totals["counter"] + target_total["counter"],
                 credentials["user_id"],
-                group_id
+                target_id
             )
 
     except HTTPException as e:

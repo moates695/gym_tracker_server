@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 import random
 import json
+import math
+from copy import deepcopy
 
 from ..main import app
 from ..api.middleware.auth_token import decode_token
@@ -87,8 +89,97 @@ async def test_save_workout(delete_test_users, create_user):
                 for j, set_data in enumerate(exercise["set_data"]):
                     workout_set_data_row = workout_set_data_rows[j]
                     assert workout_set_data_row["order_index"] == j
-                    for key in ['reps','weight','num_sets','set_class']:
-                        assert set_data[key] == workout_set_data_row[key]
+                    for muscle_key in ['reps','weight','num_sets','set_class']:
+                        assert set_data[muscle_key] == workout_set_data_row[muscle_key]
+
+        totals = {
+            "volume": 0,
+            "num_sets": 0,
+            "reps": 0,
+            "duration": 0,
+            "num_workouts": 0,
+            "num_exercises": 0
+        }
+        for workout in workouts:
+            totals["num_workouts"] += 1
+            totals["duration"] += workout["duration"] / 1000
+            for exercise in workout["exercises"]:
+                totals["num_exercises"] += 1
+                for set_data in exercise["set_data"]:
+                    totals["volume"] += set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                    totals["num_sets"] += set_data["num_sets"]
+                    totals["reps"] += set_data["reps"]
+
+        db_totals = await conn.fetchrow(
+            """
+            select *
+            from workout_totals
+            where user_id = $1
+            """, user_id
+        )
+        
+        int_keys = ["num_sets", "reps", "num_workouts", "num_exercises"]
+        for muscle_key in int_keys:
+            assert totals[muscle_key] == db_totals[muscle_key]
+
+        float_keys = ["volume", "duration"]
+        for muscle_key in float_keys:
+            assert math.isclose(totals[muscle_key], db_totals[muscle_key], abs_tol=0.5)
+
+        empty_totals = {
+            "volume": 0,
+            "num_sets": 0,
+            "reps": 0,
+            "counter": 0
+        }
+
+        for muscle_key in ["group", "target"]:
+            muscle_total = {}
+            rows = await conn.fetch(
+                f"""
+                select distinct {muscle_key}_id as id
+                from muscle_groups_targets
+                """
+            )
+            for row in rows:
+                muscle_total[row["id"]] = deepcopy(empty_totals)
+
+            for workout in workouts:
+                for exercise in workout["exercises"]:
+                    rows = await conn.fetch(
+                        f"""
+                        select distinct on ({muscle_key}_id) ratio, {muscle_key}_id as id
+                        from exercise_muscle_data
+                        where exercise_id = $1
+                        order by {muscle_key}_id, ratio desc
+                        """, exercise["id"]
+                    )
+                    
+                    for set_data in exercise["set_data"]:
+                        for row in rows:
+                            volume = (row["ratio"] / 10) * set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                            muscle_total[row["id"]]["volume"] += volume
+                            muscle_total[row["id"]]["num_sets"] += set_data["num_sets"]
+                            muscle_total[row["id"]]["reps"] += set_data["reps"]
+
+                    for row in rows:
+                        muscle_total[row["id"]]["counter"] += 1
+
+            for muscle_id, total in muscle_total.items():
+                db_totals = await conn.fetchrow(
+                    f"""
+                    select *
+                    from workout_muscle_{muscle_key}_totals
+                    where user_id = $1
+                    and muscle_{muscle_key}_id = $2
+                    """, user_id, muscle_id
+                )
+
+                int_keys = ["num_sets", "reps", "counter"]
+                for key in int_keys:
+                    assert total[key] == db_totals[key]
+                assert math.isclose(total["volume"], db_totals["volume"], abs_tol=0.5)
+
 
     except Exception as e:
         print(str(e))
@@ -103,6 +194,7 @@ async def save_workouts(workouts, headers):
 
 # todo: test empty save
 # todo: test invalid saves
+
 # todo: check that if register misses workout_totals (+ others) that the workout save func inserts baseline
 
 async def build_workouts(conn, lower_lim=5, upper_lim=10):
