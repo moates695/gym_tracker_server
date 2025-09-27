@@ -18,6 +18,7 @@ from api.middleware.misc import *
 
 router = APIRouter()
 
+# TODO update this to use new external tables and test (+ below routes too)
 @router.get("/users/data/get")
 async def users_data(credentials: dict = Depends(verify_token)):
     try:

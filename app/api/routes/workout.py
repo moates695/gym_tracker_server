@@ -33,6 +33,7 @@ class WorkoutSave(BaseModel):
     start_time: int #? timestamp ms
     duration: int #? ms
 
+# todo: save to new table `previous_workout_muscle_group_stats`, write checks and use in history stats
 #? bodyweight determined on the client
 @router.post("/workout/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
