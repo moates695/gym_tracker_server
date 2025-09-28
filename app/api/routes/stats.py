@@ -94,6 +94,7 @@ async def stats_history(credentials: dict = Depends(verify_token)):
                 select *
                 from previous_workout_muscle_group_stats
                 where workout_id = $1
+                and volume <> 0
                 order by volume desc
                 limit 3
                 """, workout_row["id"]
@@ -137,6 +138,15 @@ async def stats_history(credentials: dict = Depends(verify_token)):
                     "targets": {}
                 }
 
+            for group_name in group_id_name_map.values():
+                if group_name in workout_muscle_stats: continue
+                workout_muscle_stats[group_name] = {
+                    "volume": 0,
+                    "num_sets": 0,
+                    "reps": 0,
+                    "targets": {}
+                }
+
             prev_target_stats_rows = await conn.fetch(
                 """
                 select *
@@ -152,6 +162,19 @@ async def stats_history(credentials: dict = Depends(verify_token)):
                     "num_sets": target_stats_row["num_sets"],
                     "reps": target_stats_row["reps"],
                 }
+
+            for target_name, group_name in target_group_map.items():
+                if target_name in workout_muscle_stats[group_name]["targets"]: continue
+                workout_muscle_stats[group_name]["targets"][target_name] = {
+                    "volume": 0,
+                    "num_sets": 0,
+                    "reps": 0,
+                }
+
+            for group_name in workout_muscle_stats:
+                workout_muscle_stats[group_name]["targets"] = dict(sorted(workout_muscle_stats[group_name]["targets"].items()))
+
+            workout_muscle_stats = dict(sorted(workout_muscle_stats.items()))
 
             replay = []
             workout_exercise_rows = await conn.fetch(
