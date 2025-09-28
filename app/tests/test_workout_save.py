@@ -49,7 +49,8 @@ async def test_save_workout(delete_test_users, create_user):
         await check_correct_save(conn, user_id, workouts)
         await check_workout_totals(conn, user_id, workouts)
         await check_workout_stats(conn, user_id, workouts)
-        await check_workout_muscle_stats(conn, user_id, workouts)
+        await check_workout_muscle_target_stats(conn, user_id, workouts)
+        await check_workout_muscle_group_stats(conn, user_id, workouts)
 
     except Exception as e:
         print(str(e))
@@ -221,8 +222,8 @@ async def check_workout_stats(conn, user_id, workouts):
         assert totals["num_sets"] == workout_stat["num_sets"]
         assert totals["reps"] == workout_stat["reps"]
 
-async def check_workout_muscle_stats(conn, user_id, workouts):
-    muscle_stats_rows = await conn.fetch(
+async def check_workout_muscle_target_stats(conn, user_id, workouts):
+    stats_rows = await conn.fetch(
         """
         select *
         from previous_workout_muscle_target_stats p
@@ -232,21 +233,21 @@ async def check_workout_muscle_stats(conn, user_id, workouts):
         order by w.started_at desc
         """, user_id
     )
-    grouped_muscle_stats = {}
-    for muscle_stats_row in muscle_stats_rows:
-        workout_id = muscle_stats_row["workout_id"]
-        target_id = muscle_stats_row["muscle_target_id"]
-        if workout_id not in grouped_muscle_stats:
-            grouped_muscle_stats[workout_id] = {}
-        grouped_muscle_stats[workout_id][target_id] = {
-            "volume": muscle_stats_row["volume"],
-            "num_sets": muscle_stats_row["num_sets"],
-            "reps": muscle_stats_row["reps"],
+    grouped_stats = {}
+    for stats_row in stats_rows:
+        workout_id = stats_row["workout_id"]
+        target_id = stats_row["muscle_target_id"]
+        if workout_id not in grouped_stats:
+            grouped_stats[workout_id] = {}
+        grouped_stats[workout_id][target_id] = {
+            "volume": stats_row["volume"],
+            "num_sets": stats_row["num_sets"],
+            "reps": stats_row["reps"],
         }
 
 
-    assert len(workouts) == len(grouped_muscle_stats.keys())
-    for workout, db_muscle_stats in zip(workouts, grouped_muscle_stats.values()):
+    assert len(workouts) == len(grouped_stats.keys())
+    for workout, db_stats in zip(workouts, grouped_stats.values()):
         muscle_stats = {}
         for exercise in workout["exercises"]:
             muscle_rows = await conn.fetch(
@@ -269,11 +270,66 @@ async def check_workout_muscle_stats(conn, user_id, workouts):
                     muscle_stats[muscle_row["target_id"]]["num_sets"] += set_data["num_sets"]
                     muscle_stats[muscle_row["target_id"]]["reps"] += set_data["reps"]
 
-        assert len(muscle_stats.keys()) == len(db_muscle_stats.keys())             
+        assert len(muscle_stats.keys()) == len(db_stats.keys())             
         for key in muscle_stats:
-            assert math.isclose(muscle_stats[key]["volume"], db_muscle_stats[key]["volume"], abs_tol=0.5)
+            assert math.isclose(muscle_stats[key]["volume"], db_stats[key]["volume"], abs_tol=0.5)
             for int_key in ["num_sets", "reps"]:
-                assert muscle_stats[key][int_key] == db_muscle_stats[key][int_key]
+                assert muscle_stats[key][int_key] == db_stats[key][int_key]
+
+async def check_workout_muscle_group_stats(conn, user_id, workouts):
+    stats_rows = await conn.fetch(
+        """
+        select *
+        from previous_workout_muscle_group_stats p
+        inner join workouts w
+        on p.workout_id = w.id
+        where user_id = $1
+        order by w.started_at desc
+        """, user_id
+    )
+    grouped_stats = {}
+    for stats_row in stats_rows:
+        workout_id = stats_row["workout_id"]
+        group_id = stats_row["muscle_group_id"]
+        if workout_id not in grouped_stats:
+            grouped_stats[workout_id] = {}
+        grouped_stats[workout_id][group_id] = {
+            "volume": stats_row["volume"],
+            "num_sets": stats_row["num_sets"],
+            "reps": stats_row["reps"],
+        }
+
+
+    assert len(workouts) == len(grouped_stats.keys())
+    for workout, db_stats in zip(workouts, grouped_stats.values()):
+        muscle_stats = {}
+        for exercise in workout["exercises"]:
+            muscle_rows = await conn.fetch(
+                """
+                select distinct on (group_id) ratio, group_id
+                from exercise_muscle_data
+                where exercise_id = $1
+                order by group_id, ratio desc
+                """, exercise["id"]
+            )
+            for muscle_row in muscle_rows:
+                for set_data in exercise["set_data"]: 
+                    if muscle_row["group_id"] not in muscle_stats:
+                        muscle_stats[muscle_row["group_id"]] = {
+                            "volume": 0,
+                            "num_sets": 0,
+                            "reps": 0,
+                        }
+                    volume = (muscle_row["ratio"] / 10) * set_data["reps"] * set_data["weight"] * set_data["num_sets"]
+                    muscle_stats[muscle_row["group_id"]]["volume"] += volume
+                    muscle_stats[muscle_row["group_id"]]["num_sets"] += set_data["num_sets"]
+                    muscle_stats[muscle_row["group_id"]]["reps"] += set_data["reps"]
+
+        assert len(muscle_stats.keys()) == len(db_stats.keys())             
+        for key in muscle_stats:
+            assert math.isclose(muscle_stats[key]["volume"], db_stats[key]["volume"], abs_tol=0.5)
+            for int_key in ["num_sets", "reps"]:
+                assert muscle_stats[key][int_key] == db_stats[key][int_key]
 
 async def save_workouts(workouts, headers):
     for workout in workouts:

@@ -203,6 +203,15 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             """, workout_id, totals["volume"], totals["num_sets"], totals["reps"]
         )
 
+        for group_id, group_total in group_totals.items():
+            await conn.execute(
+                """
+                insert into previous_workout_muscle_group_stats
+                values
+                ($1, $2, $3, $4, $5)
+                """, workout_id, group_id, group_total["volume"], group_total["num_sets"], group_total["reps"]
+            )
+
         for target_id, target_total in target_totals.items():
             await conn.execute(
                 """
