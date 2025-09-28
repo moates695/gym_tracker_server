@@ -1,13 +1,13 @@
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 import pytest_asyncio
 import pytest
 from fastapi.testclient import TestClient
 
-from api.middleware.database import setup_connection, load_env_vars
+from app.api.middleware.database import setup_connection, load_env_vars
 from ..main import app
 from ..tests.test_register import valid_user
 

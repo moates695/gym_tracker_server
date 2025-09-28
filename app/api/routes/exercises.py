@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Security, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal
-from api.middleware.database import setup_connection
 import jwt
 import os
 from datetime import datetime, timedelta, timezone
@@ -12,9 +11,10 @@ from copy import deepcopy
 import math
 import json
 
-from api.middleware.auth_token import *
-from api.routes.auth import verify_token
-from api.middleware.misc import *
+from app.api.middleware.database import setup_connection
+from app.api.middleware.auth_token import *
+from app.api.routes.auth import verify_token
+from app.api.middleware.misc import *
 
 router = APIRouter()
 security = HTTPBearer()

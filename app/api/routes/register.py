@@ -12,11 +12,11 @@ import jwt
 from datetime import datetime, timedelta, timezone
 import bcrypt
 
-from api.middleware.database import setup_connection
-from api.middleware.auth_token import *
-from api.routes.auth import verify_token, verify_temp_token
-from api.routes.users import fetch_user_data
-from api.middleware.misc import *
+from app.api.middleware.database import setup_connection
+from app.api.middleware.auth_token import *
+from app.api.routes.auth import verify_token, verify_temp_token
+from app.api.routes.users import fetch_user_data
+from app.api.middleware.misc import *
 
 router = APIRouter()
 

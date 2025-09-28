@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Security, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Literal
-from api.middleware.database import setup_connection
 import jwt
 import os
 from datetime import datetime, timedelta, timezone
@@ -11,9 +10,10 @@ import random
 import json
 from copy import deepcopy
 
-from api.middleware.auth_token import *
-from api.routes.auth import verify_token
-from api.middleware.misc import *
+from app.api.middleware.database import setup_connection
+from app.api.middleware.auth_token import *
+from app.api.routes.auth import verify_token
+from app.api.middleware.misc import *
 
 router = APIRouter()
 security = HTTPBearer()
@@ -33,7 +33,6 @@ class WorkoutSave(BaseModel):
     start_time: int #? timestamp ms
     duration: int #? ms
 
-# todo: save to new table `previous_workout_muscle_group_stats`, write checks and use in history stats
 #? bodyweight determined on the client
 @router.post("/workout/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
