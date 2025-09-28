@@ -16,18 +16,16 @@ router = APIRouter()
 security = HTTPBearer()
 
 @router.get("/muscles/get_maps")
-async def workout_save(credentials: dict = Depends(verify_token)):
+async def muscles_get_maps_route(credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
 
         rows = await conn.fetch(
             """
-            select mg.name as group_name, mt.name as target_name
-            from muscle_groups mg
-            inner join muscle_targets mt
-            on mt.muscle_group_id = mg.id
+            select group_name, target_name
+            from muscle_groups_targets
             """
-        ) # todo: use new view instead
+        )
 
         group_to_targets = {}
         target_to_group = {}
