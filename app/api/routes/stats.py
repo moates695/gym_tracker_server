@@ -69,26 +69,6 @@ async def stats_history(credentials: dict = Depends(verify_token)):
         )
         if workout_rows is None: workout_rows = []
 
-        # muscle_group_rows = await conn.fetch(
-        #     """
-        #     select id, name
-        #     from muscle_groups
-        #     """
-        # )
-        # group_id_name_map = {
-        #     row["id"]: row["name"] for row in muscle_group_rows
-        # }
-
-        # muscle_target_rows = await conn.fetch(
-        #     """
-        #     select id, name
-        #     from muscle_targets
-        #     """
-        # )
-        # target_id_name_map = {
-        #     row["id"]: row["name"] for row in muscle_target_rows
-        # }
-
         muscle_rows = await conn.fetch(
             """
             select group_id, group_name, target_id, target_name
@@ -109,9 +89,20 @@ async def stats_history(credentials: dict = Depends(verify_token)):
 
         stats = []
         for workout_row in workout_rows:
+            top_group_rows = await conn.fetch(
+                """
+                select *
+                from previous_workout_muscle_group_stats
+                where workout_id = $1
+                order by volume desc
+                limit 3
+                """, workout_row["id"]
+            )
+            
             metadata = {
                 "started_at": date_to_timestamp_ms(workout_row["started_at"]),
-                "duration": workout_row["duration_secs"]
+                "duration": workout_row["duration_secs"],
+                "top_groups": [group_id_name_map[row["muscle_group_id"]] for row in top_group_rows]
             }
 
             prev_stats_row = await conn.fetchrow(
