@@ -8,7 +8,7 @@ Activate venv: `source venv/bin/activate && pip install -r requirements.txt`.
 
 **Check/change** environment in `.env`.
 
-Start fastapi server: `python app/main.py`.
+Start fastapi server: `python -m app.main`.
 
 Start ngrok: `ngrok http --url=subtly-ample-bluebird.ngrok-free.app 8000`.
 

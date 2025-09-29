@@ -118,6 +118,7 @@ async def stats_history(credentials: dict = Depends(verify_token)):
                 "volume": prev_stats_row["volume"],
                 "num_sets": prev_stats_row["num_sets"],
                 "reps": prev_stats_row["reps"],
+                "num_exercises": prev_stats_row["num_exercises"]
             }
 
             workout_muscle_stats = {}
@@ -200,7 +201,7 @@ async def stats_history(credentials: dict = Depends(verify_token)):
                         "reps": set_data_row["reps"],
                         "weight": set_data_row["weight"],
                         "num_sets": set_data_row["num_sets"],
-                        "set_class": set_data_row["set_class"],
+                        "class": set_data_row["set_class"],
                     })
 
                 temp_row = await conn.fetchrow(
