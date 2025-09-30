@@ -54,6 +54,8 @@ async def fetch_user_data(user_id: str) -> dict | None:
         if row is None: raise Exception("user data not found")
 
         return {
+            "email": row["email"],
+            "username": row["username"],
             "first_name": row["first_name"],
             "last_name": row["last_name"],
             "gender": row["gender"],
