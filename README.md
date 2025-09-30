@@ -125,5 +125,7 @@ Body weight exercises are designated a ratio of body weight that they use. We us
 - create script to populate workouts for a test user (moates695@gmail.com)
 - on log out, clear data from store (FE)
 - CHECK key={i} being used correctly, switch to identifier for components
+- variations need ratios as well (for bodyweight exercises) [+write tests]
+- on FE use a helper function for bodyweights?
     
 ## Assumptions
