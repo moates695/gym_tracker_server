@@ -84,7 +84,7 @@ async def register(req: Register):
         )
         user_id = row["id"]
 
-        for data_map in user_data_to_tables:
+        for key, data_map in user_data_tables_map.items():
             if data_map["table"] == "users": continue
             await conn.execute(
                 f"""
@@ -92,7 +92,7 @@ async def register(req: Register):
                 (user_id, {data_map["column"]})
                 values
                 ($1, $2);
-                """, user_id, req_json[data_map["key"]]
+                """, user_id, req_json[key]
             )
 
         await conn.execute(
@@ -154,7 +154,6 @@ async def resend_validation_email(credentials: dict = Depends(verify_temp_token)
 
 async def send_validation_email(email: str, user_id: str):
     token = generate_token(email, user_id, minutes=15, is_temp=True)
-    # link = f"{os.getenv('SERVER_ADDRESS')}:{os.getenv('SERVER_PORT')}/register/validate/receive?token={token}"
     link = f"{os.getenv('SERVER_ADDRESS')}/register/validate/receive?token={token}"
 
     msg = EmailMessage()

@@ -51,8 +51,10 @@ def create_user():
     response = client.get("/register/validate/receive", params={
         "token": temp_token
     })
+    assert response.status_code == 200
 
     response = client.get("/register/validate/check", headers={
         "Authorization": f"Bearer {temp_token}"
     })
+    assert response.status_code == 200
     return response.json()["auth_token"]

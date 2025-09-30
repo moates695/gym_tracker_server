@@ -22,11 +22,9 @@ router = APIRouter()
 @router.get("/users/data/get")
 async def users_data(credentials: dict = Depends(verify_token)):
     try:
-        user_data = await fetch_user_data(credentials["user_id"])
         return {
-            "user_data": user_data
+            "user_data": await fetch_user_data(credentials["user_id"])
         }
-    
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
@@ -38,9 +36,18 @@ async def fetch_user_data(user_id: str) -> dict | None:
 
         row = await conn.fetchrow(
             """
-            select *
-            from user_data
-            where id = $1
+            select distinct on (u.id) u.*, w.weight, h.height, p.ped_status, g.goal_status
+            from users u
+            inner join user_weights w
+            on w.user_id = u.id
+            inner join user_heights h
+            on h.user_id = u.id
+            inner join user_ped_status p
+            on p.user_id = u.id
+            inner join user_goals g
+            on g.user_id = u.id
+            where u.id = $1
+            order by u.id, w.created_at desc, h.created_at desc, p.created_at desc, g.created_at desc
             """, user_id
         )
 
@@ -79,7 +86,7 @@ async def users_weight(req: Update, credentials: dict = Depends(verify_token)):
 
         for key, value in req_json.items():
             if value is None: continue
-            data_map = get_user_data_map(key)
+            data_map = user_data_tables_map[key]
             if data_map["table"] == "users":
                 await conn.execute(
                     f"""
@@ -112,12 +119,12 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
         conn = await setup_connection()
 
         history = {}
-        for data_map in user_data_to_tables:
+        for key, data_map in user_data_tables_map.items():
             if data_map["table"] == "users": continue
 
             rows = await conn.fetch(
                 f"""
-                select {data_map["column"]}, created_at
+                select *
                 from {data_map["table"]}
                 where user_id = $1
                 order by created_at desc
@@ -131,7 +138,7 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
                     "created_at": row["created_at"].timestamp()
                 })
 
-            history[data_map["key"]] = temp
+            history[key] = temp
 
         return {
             "data_history": history

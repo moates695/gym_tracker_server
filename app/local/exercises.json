@@ -1,6 +1,6 @@
 [
   {
-    "name": "Push-Up",
+    "name": "Push Up",
     "targets": {
       "chest": 8,
       "arms/tricep": 6,
@@ -8,7 +8,33 @@
     },
     "is_body_weight": true,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "wide",
+        "targets": {
+          "chest": 10,
+          "arms/tricep": 4,
+          "shoulders": 4
+        }
+      },
+      {
+        "name": "regular",
+        "targets": {
+          "chest": 8,
+          "arms/tricep": 8,
+          "shoulders": 4
+        }
+      },
+      {
+        "name": "close",
+        "targets": {
+          "chest": 7,
+          "arms/tricep": 10,
+          "shoulders": 4
+        }
+      }
+    ]
   },
   {
     "name": "Dumbbell Bicep Curl",
@@ -122,11 +148,24 @@
     "targets": {
       "chest": 10,
       "arms/tricep": 6,
-      "shoulders": 6
+      "shoulders": 3
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "wide grip"
+      },
+      {
+        "name": "close grip",
+        "targets": {
+          "chest": 9,
+          "arms/tricep": 8,
+          "shoulders": 3
+        }
+      }
+    ]
   },
   {
     "name": "Mountain Climber",
@@ -421,5 +460,119 @@
     "is_body_weight": false,
     "description": "",
     "weight_type": "free"
+  },
+  {
+    "name": "Dumbbell Bench Press",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Incline Dumbbell Bench Press",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 8,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Dumbbell Fly",
+    "targets": {
+      "chest": 8,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Incline Dumbbell Fly",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 8,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Cable Chest Fly",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Cable Chest Press",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Seated Chest Press",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Seated Incline Chest Press",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 8,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Seated Decline Chest Press",
+    "targets": {
+      "chest/upper": 8,
+      "chest/lower": 10,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Pec Fly Machine",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
   }
 ]

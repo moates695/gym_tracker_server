@@ -653,7 +653,7 @@ async def test_invalid_insert_exercises2():
             """
             select id
             from exercises
-            where name = 'Push-Up'
+            where name = 'Push Up'
             and user_id is null
             and parent_id is null;
             """

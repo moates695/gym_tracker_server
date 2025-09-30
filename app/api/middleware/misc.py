@@ -36,49 +36,37 @@ height_field = Field(ge=0, le=500)
 weight_field = Field(ge=0, le=500)
 goal_status_literal = Literal["bulking", "cutting", "maintaining"]
 ped_status_literal = Literal["natural", "juicing", "silent"]
-
-user_data_to_tables = [
-    {
-        "key": 'first_name',
+    
+user_data_tables_map = {
+    "first_name": {
         "table": 'users',
         "column": 'first_name',
     },
-    {
-        "key": 'last_name',
+    "last_name": {
         "table": 'users',
         "column": 'last_name',
     },
-    {
-        "key": 'gender',
+    "gender": {
         "table": 'users',
         "column": 'gender',
     },
-    {
-        "key": 'height',
+    "height": {
         "table": 'user_heights',
         "column": 'height',
     },
-    {
-        "key": 'weight',
+    "weight": {
         "table": 'user_weights',
         "column": 'weight',
     },
-    {
-        "key": 'goal_status',
+    "goal_status": {
         "table": 'user_goals',
         "column": 'goal_status',
     },
-    {
-        "key": 'ped_status',
+    "ped_status": {
         "table": 'user_ped_status',
         "column": 'ped_status',
-    },
-]
-
-def get_user_data_map(key: str):
-    for data_map in user_data_to_tables:
-        if data_map["key"] != key: continue
-        return data_map
+    }
+}
     
 def load_env_vars():
     os.environ.clear()

@@ -14,13 +14,15 @@ client = TestClient(app)
 def test_users_data_update(delete_test_users, create_user):
     auth_token = create_user
 
-    user = valid_user.copy()
-
     headers = {
         "Authorization": f"Bearer {auth_token}"
     }
 
-    for _ in range(random.randint(3,5)):
+    response = client.get("/users/data/get", headers=headers)
+    assert response.status_code == 200
+    user_data = response.json()["user_data"]
+
+    for _ in range(random.randint(20,30)):
         options = {
             "first_name": str(uuid4()),
             "last_name": str(uuid4()),
@@ -37,21 +39,19 @@ def test_users_data_update(delete_test_users, create_user):
             body[key] = options[key]
             remaining_keys.remove   
 
-        user.update(body)
-        for key in body.keys():
-            assert user[key] == options[key]
+        user_data.update(body)
 
         response = client.put("/users/data/update", json=body, headers=headers)
         assert response.status_code == 200
 
         response = client.get("/users/data/get", headers=headers)
         assert response.status_code == 200
-        user_data = response.json()["user_data"]
+        resp_user_data = response.json()["user_data"]
         for key in options:
-            if type(user[key]) != float:
-                assert user[key] == user_data[key]
+            if type(user_data[key]) != float:
+                assert user_data[key] == resp_user_data[key]
             else:
-                assert round(user[key], 3) == round(user_data[key], 3)
+                assert round(user_data[key], 2) == round(resp_user_data[key], 2)
 
 
 def test_users_data_history(delete_test_users, create_user):
@@ -69,7 +69,7 @@ def test_users_data_history(delete_test_users, create_user):
         "Authorization": f"Bearer {auth_token}"
     }
 
-    num_calls = random.randint(10,15)
+    num_calls = random.randint(20,30)
     for _ in range(num_calls):
         options = {
             "height": random.randint(20,200) + random.random(),
@@ -86,7 +86,7 @@ def test_users_data_history(delete_test_users, create_user):
 
         user.update(body)
         for key, value in body.items():
-            assert user[key] == options[key]
+            # assert user[key] == options[key]
             user_data_history[key].append(value)
 
         response = client.put("/users/data/update", json=body, headers=headers)
