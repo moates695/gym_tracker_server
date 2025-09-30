@@ -66,6 +66,17 @@ Handling variations:
 
 On FE, show variations with the parent exercise, most likely an expand option next to exercises that have variations, from there, the only difference in appearance/function will be that a variation has a secondary name attached to it.
 
+#### Body Weight
+
+Body weight exercises are designated a ratio of body weight that they use. We use the following ratios to determine it:
+- upper:lower body weight ratio
+    - men: 60:40
+    - women: 50:50
+- center of mass:
+    - men: 56.5% height
+    - women: 54.5% height
+- arm socket: 82% height
+
 ## TODO
 
 - Add global leaderboards

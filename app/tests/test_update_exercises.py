@@ -1,6 +1,7 @@
 import pytest
 import json
 from uuid import uuid4
+import math
 
 from ..api.middleware.database import setup_connection
 from ..local.update_exercises import update
@@ -46,7 +47,8 @@ async def test_update_exercises():
                 "back/traps": 6,
                 "core": 4
             },
-            "is_body_weight": False,
+            "is_body_weight": True,
+            "ratio": 0.2,
             "description": "description1",
             "weight_type": "machine"
         },
@@ -58,7 +60,7 @@ async def test_update_exercises():
                 "core/lower abs": 6,
                 "core": 4,
             },
-            "is_body_weight": True,
+            "is_body_weight": False,
             "description": "description1",
             "weight_type": "free"
         },
@@ -107,6 +109,7 @@ async def test_update_exercises():
                     "core": 4
                 },
                 "is_body_weight": True,
+                "ratio": 0.4,
                 "description": "description1NEW",
                 "weight_type": "cable"
             }
@@ -152,6 +155,131 @@ async def test_update_exercises():
         assert dummy1_target_id_2 == dummy2_target_id_2
 
         assert back_traps_ratio == await fetch_target_ratio(conn, dummy1_exercise1_id, dummy2_target_id_2)
+
+    except Exception as e:
+        raise e
+    finally:
+        await update(exercises)
+        assert original_rows == await fetch_exercise_data(conn)
+        if conn: await conn.close()
+
+@pytest.mark.asyncio
+async def test_update_exercises_bodyweight():
+    with open("app/local/exercises.json", "r") as file:
+        exercises = json.load(file)
+
+    dummy = [
+        {
+            "name": "Pytest 1",
+            "targets": {
+                "arms/exterior forearm": 8,
+                "arms/interior forearm": 8,
+                "back/traps": 6,
+                "core": 4
+            },
+            "is_body_weight": True,
+            "ratio": 0.2,
+            "description": "description1",
+            "weight_type": "machine"
+        },
+        {
+            "name": "Pytest 2",
+            "targets": {
+                "arms/exterior forearm": 8,
+                "arms/interior forearm": 8,
+                "back/traps": 6,
+                "core": 4
+            },
+            "is_body_weight": True,
+            "ratio": {
+                "male": 0.3,
+                "female": 0.5
+            },
+            "description": "description1",
+            "weight_type": "machine"
+        },
+    ]
+
+    try:
+        conn = await setup_connection()
+
+        original_rows = await fetch_exercise_data(conn)
+
+        combined = exercises + dummy
+        await update(combined)
+
+        exercise1_id = await conn.fetchval(
+            """
+            select id
+            from exercises
+            where name = $1
+            and user_id is null;
+            """, "Pytest 1"
+        )
+
+        assert math.isclose(0.2, await conn.fetchval(
+            """
+            select ratio
+            from bodyweight_exercise_ratios
+            where exercise_id = $1
+            and gender = 'male'
+            """, exercise1_id
+        ), abs_tol=0.001)
+        assert math.isclose(0.2, await conn.fetchval(
+            """
+            select ratio
+            from bodyweight_exercise_ratios
+            where exercise_id = $1
+            and gender = 'female'
+            """, exercise1_id
+        ), abs_tol=0.001)
+
+        exercise2_id = await conn.fetchval(
+            """
+            select id
+            from exercises
+            where name = $1
+            and user_id is null;
+            """, "Pytest 2"
+        )
+        assert math.isclose(0.3, await conn.fetchval(
+            """
+            select ratio
+            from bodyweight_exercise_ratios
+            where exercise_id = $1
+            and gender = 'male'
+            """, exercise2_id
+        ), abs_tol=0.001)
+        assert math.isclose(0.5, await conn.fetchval(
+            """
+            select ratio
+            from bodyweight_exercise_ratios
+            where exercise_id = $1
+            and gender = 'female'
+            """, exercise2_id
+        ), abs_tol=0.001)
+
+        await update(exercises)
+
+        assert not await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from bodyweight_exercise_ratios
+                where exercise_id = $1
+            )
+            """, exercise1_id
+        )
+
+        assert not await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from bodyweight_exercise_ratios
+                where exercise_id = $1
+            )
+            """, exercise2_id
+        )
 
     except Exception as e:
         raise e

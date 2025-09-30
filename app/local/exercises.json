@@ -7,8 +7,12 @@
       "shoulders": 4
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.69,
+      "female": 0.66
+    },
     "description": "",
-    "weight_type": "free",
+    "weight_type": "calisthenic",
     "variations": [
       {
         "name": "wide",
@@ -48,15 +52,16 @@
     "weight_type": "free"
   },
   {
-    "name": "Pull-Up",
+    "name": "Pull Up",
     "targets": {
       "back/lats": 10,
       "arms/bicep": 6,
       "arms/exterior forearm": 3
     },
     "is_body_weight": true,
+    "ratio": 1,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Deadlift",
@@ -77,8 +82,12 @@
       "back/erectors": 3
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.69,
+      "female": 0.66
+    },
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Overhead Shoulder Press",
@@ -119,6 +128,7 @@
       "shoulders": 3
     },
     "is_body_weight": true,
+    "ratio": 1,
     "description": "",
     "weight_type": "free"
   },
@@ -129,8 +139,12 @@
       "core": 6
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.6,
+      "female": 0.65
+    },
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Lunge",
@@ -140,6 +154,7 @@
       "legs/hamstrings": 6
     },
     "is_body_weight": true,
+    "ratio": 1,
     "description": "",
     "weight_type": "free"
   },
@@ -175,8 +190,12 @@
       "legs/quads": 5
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.4,
+      "female": 0.5
+    },
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Bent-Over Row",
@@ -199,6 +218,10 @@
       "back/erectors": 9
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.6,
+      "female": 0.5
+    },
     "description": "",
     "weight_type": "free"
   },
@@ -210,8 +233,9 @@
       "core": 3
     },
     "is_body_weight": true,
+    "ratio": 0.35,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Burpee",
@@ -222,8 +246,9 @@
       "shoulders": 3
     },
     "is_body_weight": true,
+    "ratio": 1,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Seated Calf Raise",
@@ -240,8 +265,12 @@
       "core": 4
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.4,
+      "female": 0.5
+    },
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Face Pull",

@@ -69,7 +69,7 @@ async def update_exercise(conn, exercise, db_exercises, group_name_to_target_ids
     await update_exercise_variations(conn, exercise_id, exercise, db_exercises, group_name_to_target_ids, target_name_to_id)
     return exercise_id
 
-async def update_exercise_base(conn, exercise, db_exercises, group_name_to_target_ids, target_name_to_id) -> str:    
+async def update_exercise_base(conn, exercise, db_exercises, group_name_to_target_ids, target_name_to_id) -> str:
     if exercise["name"] not in db_exercises.keys():
         exercise_id = await conn.fetchval(
             """
@@ -100,6 +100,27 @@ async def update_exercise_base(conn, exercise, db_exercises, group_name_to_targe
     if exercise["name"] in db_exercises.keys():
         exercise_id = db_exercises[exercise["name"]]["id"]
 
+    if exercise["is_body_weight"]:
+        ratios = exercise["ratio"]
+        if isinstance(ratios, (int, float)):
+            ratios = {
+                "male": ratios,
+                "female": ratios
+            }
+
+        for gender, ratio in ratios.items():
+            await conn.execute(
+                """
+                insert into bodyweight_exercise_ratios
+                (exercise_id, ratio, gender)
+                values 
+                ($1, $2, $3)
+                on conflict (exercise_id, gender) do update
+                    set ratio = EXCLUDED.ratio
+                """, exercise_id, ratio, gender
+            )
+        
+
     rows = await conn.fetch(
         """
         select *
@@ -114,8 +135,8 @@ async def update_exercise_base(conn, exercise, db_exercises, group_name_to_targe
     target_data = get_target_data(exercise, group_name_to_target_ids, target_name_to_id)
 
     valid_exercise_muscle_target_ids = []
-    for target_id, ratio in target_data.items():
-        muscle_target_id = await update_exercise_muscle_target(conn, target_id, ratio, exercise_id, db_exercise_target_ids)
+    for target_id, ratios in target_data.items():
+        muscle_target_id = await update_exercise_muscle_target(conn, target_id, ratios, exercise_id, db_exercise_target_ids)
         valid_exercise_muscle_target_ids.append(muscle_target_id)
 
     await conn.execute(
