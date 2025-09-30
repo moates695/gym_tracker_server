@@ -81,6 +81,10 @@ async def test_exercise_list(delete_test_users, create_user):
                     for key in variation["frequency"]:
                         assert math.isclose(variation["frequency"][key], frequency[variation["id"]][key], abs_tol=0.5)
                 
+            if exercise["is_body_weight"]:
+                for gender in ["male","female"]:
+                    assert isinstance(exercise["ratios"][gender], (int, float))
+                    assert 0 < exercise["ratios"][gender] <= 1
 
     except Exception as e:
         print(str(e))

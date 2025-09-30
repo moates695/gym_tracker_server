@@ -40,7 +40,7 @@ async def exercises_list_all(use_real: bool, credentials: dict = Depends(verify_
 
         exercises = []
         for exercise_row in exercise_rows:
-
+            exercise_id = str(exercise_row["id"])
             variation_rows = await conn.fetch(
                 """
                 select *, (user_id = $1) as is_custom
@@ -67,7 +67,7 @@ async def exercises_list_all(use_real: bool, credentials: dict = Depends(verify_
                 })
 
             exercises.append({
-                "id": str(exercise_row["id"]),
+                "id": exercise_id,
                 "name": exercise_row["name"],
                 "is_body_weight": exercise_row["is_body_weight"],
                 "muscle_data": await fetch_exercise_muscle_data(conn, exercise_row),
@@ -77,6 +77,8 @@ async def exercises_list_all(use_real: bool, credentials: dict = Depends(verify_
                 "frequency": await fetch_exercise_frequency(use_real, conn, exercise_row["id"], credentials["user_id"]),
                 "variations": variations
             })
+            if exercise_row["is_body_weight"]:
+                exercises[-1]["ratios"] = await fetch_bodyweight_ratios(conn, exercise_id)
 
         exercises.sort(key=lambda e: e["name"].lower())
 
@@ -174,6 +176,20 @@ async def fetch_exercise_frequency_rand():
 def get_days_past(started_at):
     now = datetime.now(timezone.utc)
     return abs(now - started_at.astimezone(timezone.utc)).days
+
+async def fetch_bodyweight_ratios(conn, exercise_id):
+    rows = await conn.fetch(
+        """
+        select ratio, gender
+        from bodyweight_exercise_ratios
+        where exercise_id = $1
+        """, exercise_id
+    )
+
+    ratios = {}
+    for row in rows:
+        ratios[row["gender"]] = row["ratio"]
+    return ratios
 
 @router.get("/exercise/history")
 async def exercise_history(exercise_id: str, use_real: bool, credentials: dict = Depends(verify_token)):
