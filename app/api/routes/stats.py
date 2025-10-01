@@ -14,6 +14,7 @@ from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
 from app.api.middleware.misc import *
+from app.api.routes.muscles import get_muscle_maps
 
 router = APIRouter()
 security = HTTPBearer()
@@ -231,7 +232,6 @@ async def stats_history(credentials: dict = Depends(verify_token)):
                     "set_data": set_data
                 })
 
-
             stats.append({
                 "metadata": metadata,
                 "workout_stats": workout_stats,
@@ -241,6 +241,65 @@ async def stats_history(credentials: dict = Depends(verify_token)):
 
         return {
             "stats": stats
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
+# todo order return group/target names
+@router.get("/stats/distributions")
+async def stats_history(credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+
+        distributions = {}
+        muscle_maps = await get_muscle_maps()
+        
+        group_rows = await conn.fetch(
+            """
+            select t.*, m.name
+            from workout_muscle_group_totals t
+            inner join muscle_groups m
+            on t.muscle_group_id = m.id
+            where t.user_id = $1
+            """, credentials["user_id"]
+        )
+
+        for group_row in group_rows:
+            targets = {}
+            for target_name in muscle_maps["group_to_targets"][group_row["name"]]:
+                target_row = await conn.fetchrow(
+                    """
+                    select t.*
+                    from workout_muscle_target_totals t
+                    inner join muscle_targets m
+                    on t.muscle_target_id = m.id
+                    where user_id = $1
+                    and m.name = $2
+                    """, credentials["user_id"], target_name
+                )
+                targets[target_name] = {
+                    "volume": target_row["volume"],
+                    "num_sets": target_row["num_sets"],
+                    "reps": target_row["reps"],
+                    "num_exercises": target_row["counter"],
+                }
+
+            distributions[group_row["name"]] = {
+                "volume": group_row["volume"],
+                "num_sets": group_row["num_sets"],
+                "reps": group_row["reps"],
+                "num_exercises": group_row["counter"],
+                "targets": targets
+            }
+
+        return {
+            "distributions": distributions
         }
 
     except HTTPException as e:

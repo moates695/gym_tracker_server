@@ -18,6 +18,15 @@ security = HTTPBearer()
 @router.get("/muscles/get_maps")
 async def muscles_get_maps_route(credentials: dict = Depends(verify_token)):
     try:
+        return await get_muscle_maps()
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+
+async def get_muscle_maps():
+    try:
         conn = await setup_connection()
 
         rows = await conn.fetch(
@@ -39,15 +48,13 @@ async def muscles_get_maps_route(credentials: dict = Depends(verify_token)):
 
             target_to_group[target_name] = group_name
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+        return {
+            "group_to_targets": group_to_targets,
+            "target_to_group": target_to_group
+        }
+
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
-
-    return {
-        "group_to_targets": group_to_targets,
-        "target_to_group": target_to_group
-    }
