@@ -289,6 +289,7 @@ async def stats_history(credentials: dict = Depends(verify_token)):
                     "reps": target_row["reps"],
                     "num_exercises": target_row["counter"],
                 }
+            targets = dict(sorted(targets.items()))
 
             distributions[group_row["name"]] = {
                 "volume": group_row["volume"],
@@ -299,7 +300,7 @@ async def stats_history(credentials: dict = Depends(verify_token)):
             }
 
         return {
-            "distributions": distributions
+            "distributions": dict(sorted(distributions.items()))
         }
 
     except HTTPException as e:
