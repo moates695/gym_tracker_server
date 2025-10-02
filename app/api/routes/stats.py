@@ -352,6 +352,7 @@ async def stats_history(credentials: dict = Depends(verify_token)):
                 "num_sets": total_row["num_sets"],
                 "reps": total_row["reps"],
                 "counter": total_row["counter"],
+                "groups": await getExerciseGroups(conn, exercise_id)
             })
             variation_name = name_map[exercise_id]["variation_name"]
             if variation_name is None: continue
@@ -368,3 +369,17 @@ async def stats_history(credentials: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+async def getExerciseGroups(conn, exercise_id):
+    rows = await conn.fetch(
+        """
+        select distinct mgt.group_name
+        from exercise_muscle_targets emt
+        inner join muscle_groups_targets mgt 
+        on emt.muscle_target_id = mgt.target_id 
+        where emt.exercise_id = $1
+        and emt.ratio >= 7
+        """, exercise_id
+    )
+
+    return [row["group_name"] for row in rows]

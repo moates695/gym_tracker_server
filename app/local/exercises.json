@@ -262,7 +262,7 @@
   {
     "name": "Hanging Leg Raise",
     "targets": {
-      "core": 4
+      "core": 10
     },
     "is_body_weight": true,
     "ratio": {
