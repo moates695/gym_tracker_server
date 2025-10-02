@@ -128,5 +128,7 @@ Body weight exercises are designated a ratio of body weight that they use. We us
 - variations need ratios as well (for bodyweight exercises) [+write tests]
 - on FE use a helper function for bodyweights?
 - make local script to update database totals based on saved workout data?
-    
+- add bar graph to ExerciseData.tsx
+- CHECK FOR fetches/functions with potential errors that dont have try catch
+
 ## Assumptions
