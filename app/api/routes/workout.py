@@ -87,12 +87,22 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                 """, exercise.id
             )
 
+            exercise_totals = {
+                "volume": 0,
+                "num_sets": 0,
+                "reps": 0,
+            }
+
             for set_data in exercise.set_data:
                 volume = set_data.reps * set_data.weight * set_data.num_sets
 
                 totals["volume"] += volume
                 totals["num_sets"] += set_data.num_sets
                 totals["reps"] += set_data.reps
+
+                exercise_totals["volume"] += volume
+                exercise_totals["num_sets"] += set_data.num_sets
+                exercise_totals["reps"] += set_data.reps
 
                 for group_row in group_rows:
                     if group_row["group_id"] not in group_totals:
@@ -114,6 +124,44 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             for target_row in target_rows:
                 target_totals[target_row["target_id"]]["counter"] += 1
 
+            current_exercise_totals = await conn.fetchrow(
+                """
+                select *
+                from exercise_totals
+                where user_id = $1
+                and exercise_id = $2
+                """, credentials["user_id"], exercise.id
+            )
+            if current_exercise_totals is None:
+                current_exercise_totals = await conn.fetch(
+                    """
+                    insert into exercise_totals
+                    (user_id, exercise_id, volume, num_sets, reps, counter)
+                    values
+                    ($1, $2, 0.0, 0, 0, 0)
+                    returning *
+                    """, credentials["user_id"], exercise.id
+                )
+
+            await conn.execute(
+                """
+                update exercise_totals
+                set 
+                    volume = $1,
+                    num_sets = $2,
+                    reps = $3,
+                    counter = $4
+                where user_id = $5
+                and exercise_id = $6
+                """,
+                current_exercise_totals["volume"] + exercise_totals["volume"],
+                current_exercise_totals["num_sets"] + exercise_totals["num_sets"],
+                current_exercise_totals["reps"] + exercise_totals["reps"],
+                current_exercise_totals["counter"] + 1,
+                credentials["user_id"],
+                exercise.id
+            )
+
         current_totals = await conn.fetchrow(
             """
             select *
@@ -126,6 +174,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             current_totals = await conn.fetch(
                 """
                 insert into workout_totals
+                (user_id, volume, num_sets, reps, duration, num_workouts, num_exercises)
                 values
                 ($1, 0.0, 0, 0, 0.0, 0, 0)
                 returning *
@@ -156,7 +205,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         for key in ["group", "target"]:
             muscle_totals = group_totals if key == "group" else target_totals
             for muscle_id, muscle_total in muscle_totals.items():
-                current_totals = await conn.fetchrow(
+                current_muscle_totals = await conn.fetchrow(
                     f"""
                     select *
                     from workout_muscle_{key}_totals
@@ -165,10 +214,11 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                     """, credentials["user_id"], muscle_id
                 )
 
-                if current_totals == None:
-                    current_totals = await conn.fetch(
+                if current_muscle_totals == None:
+                    current_muscle_totals = await conn.fetch(
                         f"""
                         insert into workout_muscle_{key}_totals
+                        (user_id, volume, num_sets, reps, counter)
                         values
                         ($1, $2, 0.0, 0, 0, 0)
                         returning *
@@ -186,10 +236,10 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                     where user_id = $5
                     and muscle_{key}_id = $6
                     """,
-                    current_totals["volume"] + muscle_total["volume"],
-                    current_totals["num_sets"] + muscle_total["num_sets"],
-                    current_totals["reps"] + muscle_total["reps"],
-                    current_totals["counter"] + muscle_total["counter"],
+                    current_muscle_totals["volume"] + muscle_total["volume"],
+                    current_muscle_totals["num_sets"] + muscle_total["num_sets"],
+                    current_muscle_totals["reps"] + muscle_total["reps"],
+                    current_muscle_totals["counter"] + muscle_total["counter"],
                     credentials["user_id"],
                     muscle_id
                 )
@@ -207,6 +257,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             await conn.execute(
                 """
                 insert into previous_workout_muscle_group_stats
+                (workout_id, muscle_group_id, volume, num_sets, reps)
                 values
                 ($1, $2, $3, $4, $5)
                 """, workout_id, group_id, group_total["volume"], group_total["num_sets"], group_total["reps"]
@@ -216,6 +267,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             await conn.execute(
                 """
                 insert into previous_workout_muscle_target_stats
+                (workout_id, muscle_target_id, volume, num_sets, reps)
                 values
                 ($1, $2, $3, $4, $5)
                 """, workout_id, target_id, target_total["volume"], target_total["num_sets"], target_total["reps"]

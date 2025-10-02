@@ -64,6 +64,7 @@ async def check_correct_save(conn, user_id, workouts):
         select w.id, w.started_at, w.duration_secs
         from workouts w
         where w.user_id = $1
+        order by w.started_at desc
         """, user_id
     )
 

@@ -119,6 +119,22 @@ async def register(req: Register):
                     """, user_id, id_row["id"]
                 )
 
+        exercise_id_rows = await conn.fetch(
+            """
+            select id
+            from exercises
+            """
+        )
+        for exercise_id_row in exercise_id_rows:
+            await conn.execute(
+                """
+                insert into exercise_totals
+                (user_id, exercise_id, volume, num_sets, reps, counter)
+                values
+                ($1, $2, 0.0, 0, 0, 0)
+                """, user_id, exercise_id_row["id"]
+            )
+
         if req.send_email:
             await send_validation_email(req.email, user_id)
 

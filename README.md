@@ -127,5 +127,6 @@ Body weight exercises are designated a ratio of body weight that they use. We us
 - CHECK key={i} being used correctly, switch to identifier for components
 - variations need ratios as well (for bodyweight exercises) [+write tests]
 - on FE use a helper function for bodyweights?
+- make local script to update database totals based on saved workout data?
     
 ## Assumptions

@@ -18,10 +18,11 @@ async def main():
         )
 
         for row in rows:
-           user_id = str(row["id"])
-           await check_workout_totals(conn, user_id)
-           await check_workout_muscle_group_totals(conn, user_id)
-           await check_workout_muscle_target_totals(conn, user_id)
+            user_id = str(row["id"])
+            await check_workout_totals(conn, user_id)
+            await check_workout_muscle_group_totals(conn, user_id)
+            await check_workout_muscle_target_totals(conn, user_id)
+            await check_exercise_totals(conn, user_id)
 
     except Exception as e:
         raise e
@@ -104,6 +105,35 @@ async def check_workout_muscle_target_totals(conn, user_id):
             values
             ($1, $2, 0.0, 0, 0, 0)
             """, user_id, target_id_row["id"]
+        )
+
+async def check_exercise_totals(conn, user_id):
+    exercise_id_rows = await conn.fetch(
+        """
+        select id
+        from exercises
+        """
+    )
+    for exercise_id_row in exercise_id_rows:
+        exists = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from exercise_totals
+                where user_id = $1
+                and exercise_id = $2
+            )
+            """, user_id, exercise_id_row["id"]
+        )
+        if exists: continue
+
+        await conn.execute(
+            """
+            insert into exercise_totals
+            (user_id, exercise_id, volume, num_sets, reps, counter)
+            values
+            ($1, $2, 0.0, 0, 0, 0)
+            """, user_id, exercise_id_row["id"]
         )
 
 if __name__ == "__main__":
