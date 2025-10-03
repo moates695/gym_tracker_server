@@ -9,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import random
 import json
 from copy import deepcopy
+import math
 
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
@@ -389,56 +390,43 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
     try:
         conn = await setup_connection()
 
-        around_rows = await conn.fetch(
+        user_row_num = await conn.fetchval(
             """
-            WITH ranked AS (
-                SELECT
-                    *,
-                    ROW_NUMBER() OVER (ORDER BY volume DESC) AS row_num
-                FROM volume_leaderboard
-            )
-            SELECT 
-               r.*,
-                rank() over (order by volume desc) as rank_num,
-                u.username
-            FROM ranked r
-            inner join users u
-            on r.user_id = u.id
-            WHERE row_num BETWEEN (
-                    (
-                        SELECT row_num 
-                        FROM ranked 
-                        WHERE user_id = $1
-                    ) - $2
-                ) AND (
-                    (
-                        SELECT row_num 
-                        FROM ranked 
-                        WHERE user_id = $1
-                    ) + $2
-                )
-            ORDER BY row_num
-            """, credentials["user_id"], side_num
+            select row_number() over (order by volume desc) row_num
+            from volume_leaderboard
+            where user_id = $1
+            """, credentials["user_id"]
         )
 
-        around_leaderboard = []
-        user_row_num = None
-        for around_row in around_rows:
-            around_leaderboard.append({
-                "username": around_row["username"],
-                "volume": around_row["volume"],
-                "rank": around_row["rank_num"],
-            })
-            if str(around_row["user_id"]) != credentials["user_id"]: continue
-            user_row_num = around_row["row_num"]
-
-        top_leaderboard = []
-        if user_row_num > top_num:
+        fracture = None
+        if user_row_num <= top_num + side_num + 1:
+            rows = await conn.fetch(
+                """
+                select 
+                    l.*,
+                    rank() over (order by volume desc) rank_num,
+                    u.username
+                from volume_leaderboard l
+                inner join users u
+                on l.user_id = u.id
+                order by volume desc
+                limit $1
+                """, top_num + 2 * side_num + 1
+            )
+            leaderboard = []
+            for row in rows:
+                leaderboard.append({
+                    "username": row["username"],
+                    "volume": row["volume"],
+                    "rank": row["rank_num"],
+                })
+        else:
+            fracture = top_num
             top_rows = await conn.fetch(
                 """
                 select 
                     l.*,
-                    rank() over (order by volume desc) as rank_num,
+                    rank() over (order by volume desc) rank_num,
                     u.username
                 from volume_leaderboard l
                 inner join users u
@@ -447,16 +435,49 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
                 limit $1
                 """, top_num
             )
-            for top_row in top_rows:
-                top_leaderboard.append({
-                    "username": top_row["username"],
-                    "volume": top_row["volume"],
-                    "rank": top_row["rank_num"],
+
+            side_rows = await conn.fetch(
+                """
+                with ranked as (
+                    select
+                        *,
+                        row_number() over (aorder by volume desc) as row_num
+                    from volume_leaderboard
+                )
+                select
+                r.*,
+                    rank() over (order by volume desc) as rank_num,
+                    u.username
+                from ranked r
+                inner join users u
+                on r.user_id = u.id
+                where row_num between (
+                        (
+                            select row_num 
+                            from ranked 
+                            where user_id = $1
+                        ) - $2
+                    ) and (
+                        (
+                            select row_num 
+                            from ranked 
+                            where user_id = $1
+                        ) + $2
+                    )
+                order by row_num
+                """, credentials["user_id"], side_num
+            )
+            leaderboard = []
+            for row in top_rows + side_rows:
+                leaderboard.append({
+                    "username": row["username"],
+                    "volume": row["volume"],
+                    "rank": row["rank_num"],
                 })
 
         return {
-            "top_leaderboard": top_leaderboard,
-            "around_leaderboard": around_leaderboard
+            "leaderboard": leaderboard,
+            "fracture": fracture
         }
 
     except HTTPException as e:
@@ -466,8 +487,6 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
-
-    
 
 # overall most volume, sets, reps, workouts, duration, excercises
 #   filter based on gender and current age (new date of birth input field)
