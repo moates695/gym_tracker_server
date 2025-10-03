@@ -130,5 +130,7 @@ Body weight exercises are designated a ratio of body weight that they use. We us
 - make local script to update database totals based on saved workout data?
 - add bar graph to ExerciseData.tsx
 - CHECK FOR fetches/functions with potential errors that dont have try catch
+- consolidate functions in register, workout_save and existing_users_db for inserting starting values into tables that track overall progress
+- show large numbers concisely on frontend
 
 ## Assumptions

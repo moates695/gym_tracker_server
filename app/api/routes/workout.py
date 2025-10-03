@@ -273,6 +273,37 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                 """, workout_id, target_id, target_total["volume"], target_total["num_sets"], target_total["reps"]
             )
 
+        current_volume = await conn.fetchval(
+            """
+            select volume
+            from volume_leaderboard
+            where user_id = $1
+            """, credentials["user_id"]
+        )
+        if current_volume is None:
+            current_volume = await conn.fetchval(
+                """
+                insert into volume_leaderboard
+                (user_id, volume, last_updated)
+                values
+                ($1, $2, $3)
+                returning volume
+                """, credentials["user_id"], 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+            )
+
+        await conn.execute(
+            """
+            update volume_leaderboard
+            set 
+                volume = $1,
+                last_updated = $2
+            where user_id = $3
+            """, 
+            current_volume + totals["volume"],
+            datetime.now(tz=timezone.utc).replace(tzinfo=None),
+            credentials["user_id"]
+        )
+
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:

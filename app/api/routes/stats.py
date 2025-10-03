@@ -252,7 +252,7 @@ async def stats_history(credentials: dict = Depends(verify_token)):
         if conn: await conn.close()
 
 @router.get("/stats/distributions")
-async def stats_history(credentials: dict = Depends(verify_token)):
+async def stats_distributions(credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
 
@@ -310,9 +310,8 @@ async def stats_history(credentials: dict = Depends(verify_token)):
     finally:
         if conn: await conn.close()
 
-# todo favourite exercises per muscle group (choose with activation level over 7)
 @router.get("/stats/favourites")
-async def stats_history(credentials: dict = Depends(verify_token)):
+async def stats_favourites(credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
 
@@ -383,3 +382,107 @@ async def getExerciseGroups(conn, exercise_id):
     )
 
     return [row["group_name"] for row in rows]
+
+# return top X people, then surrounding Y people from table?
+@router.get("/stats/leaderboards/overall/volume")
+async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+
+        around_rows = await conn.fetch(
+            """
+            WITH ranked AS (
+                SELECT
+                    *,
+                    ROW_NUMBER() OVER (ORDER BY volume DESC) AS row_num
+                FROM volume_leaderboard
+            )
+            SELECT 
+               r.*,
+                rank() over (order by volume desc) as rank_num,
+                u.username
+            FROM ranked r
+            inner join users u
+            on r.user_id = u.id
+            WHERE row_num BETWEEN (
+                    (
+                        SELECT row_num 
+                        FROM ranked 
+                        WHERE user_id = $1
+                    ) - $2
+                ) AND (
+                    (
+                        SELECT row_num 
+                        FROM ranked 
+                        WHERE user_id = $1
+                    ) + $2
+                )
+            ORDER BY row_num
+            """, credentials["user_id"], side_num
+        )
+
+        around_leaderboard = []
+        user_row_num = None
+        for around_row in around_rows:
+            around_leaderboard.append({
+                "username": around_row["username"],
+                "volume": around_row["volume"],
+                "rank": around_row["rank_num"],
+            })
+            if str(around_row["user_id"]) != credentials["user_id"]: continue
+            user_row_num = around_row["row_num"]
+
+        top_leaderboard = []
+        if user_row_num > top_num:
+            top_rows = await conn.fetch(
+                """
+                select 
+                    l.*,
+                    rank() over (order by volume desc) as rank_num,
+                    u.username
+                from volume_leaderboard l
+                inner join users u
+                on l.user_id = u.id
+                order by volume desc
+                limit $1
+                """, top_num
+            )
+            for top_row in top_rows:
+                top_leaderboard.append({
+                    "username": top_row["username"],
+                    "volume": top_row["volume"],
+                    "rank": top_row["rank_num"],
+                })
+
+        return {
+            "top_leaderboard": top_leaderboard,
+            "around_leaderboard": around_leaderboard
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
+    
+
+# overall most volume, sets, reps, workouts, duration, excercises
+#   filter based on gender and current age (new date of birth input field)
+# for each exercise
+#   most volume, sets, reps
+#       filter gender, age
+#   n rep max
+#       filter by gender, age at time of lift, weight at time of lift, height at time of lift
+
+# give top percentage and total rank based on filters
+
+# age, height filter should be a range
+# show global leaderboards and then versus friends
+
+# on FE show a bell curve based on chosen stats?
+
+#! use insert on conflict for updates?
+#! refresh materialised views (or may need to drop because of filtering)

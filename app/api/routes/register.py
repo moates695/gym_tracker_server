@@ -135,6 +135,15 @@ async def register(req: Register):
                 """, user_id, exercise_id_row["id"]
             )
 
+        await conn.execute(
+            """
+            insert into volume_leaderboard
+            (user_id, volume, last_updated)
+            values
+            ($1, $2, $3)
+            """, user_id, 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+        )
+
         if req.send_email:
             await send_validation_email(req.email, user_id)
 
