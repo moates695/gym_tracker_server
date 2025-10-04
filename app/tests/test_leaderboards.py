@@ -24,12 +24,12 @@ async def test_overall_volume(delete_users, create_user):
 @pytest.mark.asyncio
 async def test_overall_volume(delete_users):
     top_num = 10
-    remain_num = 20
+    side_num = 20
     params = {
         "top_num": top_num,
-        "remain_num": remain_num
+        "side_num": side_num
     }
-    expected_len = top_num + remain_num
+    expected_len = top_num + 2 * side_num + 1
     num_users = 3 * expected_len
 
     try:
@@ -65,7 +65,7 @@ async def test_overall_volume(delete_users):
             )
         user_data.reverse()
 
-        #? ranked first
+        # ranked first
         response = client.get(
             "/stats/leaderboards/overall/volume", 
             headers=getHeaders(user_data[0]["token"]),
@@ -79,10 +79,11 @@ async def test_overall_volume(delete_users):
             assert resp_json["leaderboard"][i]["rank"] == i + 1
             assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"]
 
-        #? ranked just inside of fracture limit
+        # ranked just inside of fracture limit
+        user_idx = top_num + side_num
         response = client.get(
             "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(user_data[top_num + remain_num - 1]["token"]),
+            headers=getHeaders(user_data[user_idx]["token"]),
             params=params,
         )
         assert response.status_code == 200
@@ -93,12 +94,11 @@ async def test_overall_volume(delete_users):
             assert resp_json["leaderboard"][i]["rank"] == i + 1
             assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"]
 
-        #? ranked just outside of fracture limit
-        user_idx = top_num + remain_num
-        user = user_data[user_idx]
+        # ranked just outside of fracture limit
+        user_idx = top_num + side_num + 1
         response = client.get(
             "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(user["token"]),
+            headers=getHeaders(user_data[user_idx]["token"]),
             params=params,
         )
         assert response.status_code == 200
@@ -109,18 +109,19 @@ async def test_overall_volume(delete_users):
         for i in range(top_num):
             assert resp_json["leaderboard"][i]["rank"] == i + 1
             assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"] 
-
+        
+        assert resp_json["leaderboard"][top_num]["rank"] == top_num + 2
         start_rank = resp_json["leaderboard"][top_num]["rank"]
         for i in range(top_num, expected_len):
             assert resp_json["leaderboard"][i]["rank"] == start_rank + i - top_num
-            assert resp_json["leaderboard"][i]["username"] == user_data[user_idx - int(remain_num / 2) + i - top_num]["username"]
+            assert resp_json["leaderboard"][i]["username"] == user_data[user_idx - side_num + i - top_num]["username"]
+        assert resp_json["leaderboard"][-1]["rank"] == top_num + 2 * side_num + 2
 
-        #? middle of pack
+        # middle of pack
         user_idx = int(num_users / 2)
-        user = user_data[user_idx]
         response = client.get(
             "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(user["token"]),
+            headers=getHeaders(user_data[user_idx]["token"]),
             params=params,
         )
         assert response.status_code == 200
@@ -132,18 +133,18 @@ async def test_overall_volume(delete_users):
             assert resp_json["leaderboard"][i]["rank"] == i + 1
             assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"]
         
+        assert resp_json["leaderboard"][top_num]["rank"] == user_idx - side_num + 1
         start_rank = resp_json["leaderboard"][top_num]["rank"]
         for i in range(top_num, expected_len):
             assert resp_json["leaderboard"][i]["rank"] == start_rank + i - top_num
-            assert resp_json["leaderboard"][i]["username"] == user_data[user_idx - int(remain_num / 2) + i - top_num]["username"]
+            assert resp_json["leaderboard"][i]["username"] == user_data[user_idx - side_num + i - top_num]["username"]
+        assert resp_json["leaderboard"][-1]["rank"] == user_idx + side_num + 1
 
-
-        #? ranked just outside of final limit
-        user_idx = num_users - remain_num
-        user = user_data[user_idx]
+        # ranked just outside of final limit
+        user_idx = num_users - side_num - 2
         response = client.get(
             "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(user["token"]),
+            headers=getHeaders(user_data[user_idx]["token"]),
             params=params,
         )
         assert response.status_code == 200
@@ -155,30 +156,18 @@ async def test_overall_volume(delete_users):
             assert resp_json["leaderboard"][i]["rank"] == i + 1
             assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"] 
 
+        assert resp_json["leaderboard"][top_num]["rank"] == num_users - 2 * side_num - 1
         start_rank = resp_json["leaderboard"][top_num]["rank"]
         for i in range(top_num, expected_len):
             assert resp_json["leaderboard"][i]["rank"] == start_rank + i - top_num
-            assert resp_json["leaderboard"][i]["username"] == user_data[user_idx - int(remain_num / 2) + i - top_num]["username"]
+            assert resp_json["leaderboard"][i]["username"] == user_data[user_idx - side_num + i - top_num]["username"]
+        assert resp_json["leaderboard"][-1]["rank"] == num_users - 1
 
-        # #? ranked just inside of final limit
-        # response = client.get(
-        #     "/stats/leaderboards/overall/volume", 
-        #     headers=getHeaders(user_data[-(top_num + side_num)]["token"]),
-        #     params=params,
-        # )
-        # assert response.status_code == 200
-        # resp_json = response.json()
-        # assert resp_json["fracture"] == top_num
-        # assert len(resp_json["leaderboard"]) == length
-
-        # assert resp_json["leaderboard"][-1]["username"] == user_data[-1]["username"]
-
-        #? ranked last
-        user_idx = num_users - 1
-        user = user_data[user_idx]
+        # ranked just inside of final limit
+        user_idx = num_users - side_num - 1
         response = client.get(
             "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(user["token"]),
+            headers=getHeaders(user_data[user_idx]["token"]),
             params=params,
         )
         assert response.status_code == 200
@@ -188,11 +177,36 @@ async def test_overall_volume(delete_users):
 
         for i in range(top_num):
             assert resp_json["leaderboard"][i]["rank"] == i + 1
+            assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"] 
 
+        assert resp_json["leaderboard"][top_num]["rank"] == num_users - 2 * side_num
         start_rank = resp_json["leaderboard"][top_num]["rank"]
         for i in range(top_num, expected_len):
             assert resp_json["leaderboard"][i]["rank"] == start_rank + i - top_num
-            assert resp_json["leaderboard"][i]["username"] == user_data[user_idx - remain_num + 1 + i - top_num]["username"]
+            assert resp_json["leaderboard"][i]["username"] == user_data[user_idx - side_num + i - top_num]["username"]
+        assert resp_json["leaderboard"][-1]["rank"] == num_users
+
+        # ranked last
+        user_idx = num_users - 1
+        response = client.get(
+            "/stats/leaderboards/overall/volume", 
+            headers=getHeaders(user_data[user_idx]["token"]),
+            params=params,
+        )
+        assert response.status_code == 200
+        resp_json = response.json()
+        assert resp_json["fracture"] == top_num
+        assert len(resp_json["leaderboard"]) == expected_len
+
+        for i in range(top_num):
+            assert resp_json["leaderboard"][i]["rank"] == i + 1
+            assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"] 
+
+        assert resp_json["leaderboard"][top_num]["rank"] == num_users - 2 * side_num
+        start_rank = resp_json["leaderboard"][top_num]["rank"]
+        for i in range(top_num, expected_len):
+            assert resp_json["leaderboard"][i]["rank"] == start_rank + i - top_num
+            assert resp_json["leaderboard"][i]["username"] == user_data[num_users - (2 * side_num) + i - top_num - 1]["username"]
 
     except Exception as e:
         print(str(e))
