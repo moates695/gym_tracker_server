@@ -13,7 +13,7 @@ from ..api.middleware.misc import *
 client = TestClient(app)
 
 @pytest.mark.asyncio
-async def test_save_workout(delete_test_users, create_user):
+async def test_save_workout(delete_users, create_user):
     auth_token = create_user
     decoded_auth_token = decode_token(auth_token)
     user_id = decoded_auth_token["user_id"]
@@ -387,7 +387,7 @@ async def build_workouts(conn, lower_lim=5, upper_lim=10):
     return sorted(workouts, key=lambda e: e["start_time"], reverse=True)
 
 @pytest.mark.asyncio
-async def test_build_workouts(delete_test_users, create_user):
+async def test_build_workouts(delete_users, create_user):
     try:
         conn = await setup_connection()
         

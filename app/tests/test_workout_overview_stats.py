@@ -13,7 +13,7 @@ from .test_workout_save import get_num_workouts, build_workouts, save_workouts
 client = TestClient(app)
 
 @pytest.mark.asyncio
-async def test_workout_overview_stats(delete_test_users, create_user):
+async def test_workout_overview_stats(delete_users, create_user):
     auth_token = create_user
     decoded_auth_token = decode_token(auth_token)
     user_id = decoded_auth_token["user_id"]

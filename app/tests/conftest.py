@@ -17,15 +17,22 @@ def pytest_configure(config):
     if os.getenv('ENVIRONMENT') != 'prod': return
     pytest.exit("Tests cannot run in production environment", returncode=1)
 
-@pytest_asyncio.fixture(scope="function")
-async def delete_test_users():
-    await _delete_test_users()
+@pytest.fixture(scope="session", autouse=True)
+def patch_env():
+    old_val = os.environ.get("ENVIRONMENT")
+    os.environ["ENVIRONMENT"] = "pytest"
     yield
-    await _delete_test_users()
+    os.environ["ENVIRONMENT"] = old_val
 
-async def _delete_test_users():
+@pytest_asyncio.fixture(scope="function")
+async def delete_users():
+    await _delete_users()
+    yield
+    await _delete_users()
+
+async def _delete_users():
     try:
-        conn = await setup_connection(os.environ["PYTEST_DATABASE"])
+        conn = await setup_connection()
 
         await conn.execute(
             """
@@ -36,14 +43,6 @@ async def _delete_test_users():
 
     except Exception as e:
         raise Exception(f"Error in fixture: {e}")
-    finally:
-        if conn: await conn.close()
-
-@pytest_asyncio.fixture(scope="function")
-async def pytest_db_conn():
-    conn = await setup_connection(os.environ["PYTEST_DATABASE"])
-    try:
-        yield conn
     finally:
         if conn: await conn.close()
 
@@ -65,3 +64,5 @@ def create_user():
     })
     assert response.status_code == 200
     return response.json()["auth_token"]
+
+

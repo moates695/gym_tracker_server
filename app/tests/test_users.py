@@ -11,7 +11,7 @@ from ..tests.test_register import valid_user
 
 client = TestClient(app)
 
-def test_users_data_update(delete_test_users, create_user):
+def test_users_data_update(delete_users, create_user):
     auth_token = create_user
 
     headers = {
@@ -54,7 +54,7 @@ def test_users_data_update(delete_test_users, create_user):
                 assert round(user_data[key], 2) == round(resp_user_data[key], 2)
 
 
-def test_users_data_history(delete_test_users, create_user):
+def test_users_data_history(delete_users, create_user):
     auth_token = create_user
 
     user = valid_user.copy()

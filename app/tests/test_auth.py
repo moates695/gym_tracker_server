@@ -10,7 +10,7 @@ from ..api.middleware.auth_token import generate_token
 
 client = TestClient(app)
 
-def test_verify_token(delete_test_users):
+def test_verify_token(delete_users):
     response = client.get("/protected")
     assert response.status_code == 403
     response = client.get("/protected_temp")

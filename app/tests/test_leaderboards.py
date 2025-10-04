@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone, timedelta
 import math
 from uuid import uuid4
+import os
 
 from ..main import app
 from ..api.middleware.auth_token import decode_token, generate_token
@@ -17,8 +18,7 @@ from ..tests.test_register import valid_user
 client = TestClient(app)
 
 @pytest.mark.asyncio
-async def test_overall_volume(delete_test_users):
-    
+async def test_overall_volume(delete_users):
     top_num = 10
     side_num = 20
     params = {
@@ -29,13 +29,6 @@ async def test_overall_volume(delete_test_users):
 
     try:
         conn = await setup_connection()
-
-        curr_max_volume = await conn.fetchval(
-            """
-            select max(volume)
-            from volume_leaderboard
-            """
-        )
 
         user_data = []
         for i in range(2 * length):
@@ -61,7 +54,7 @@ async def test_overall_volume(delete_test_users):
                 (user_id, volume, last_updated)
                 values
                 ($1, $2, $3)
-                """, user_id, curr_max_volume + i + 10, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+                """, user_id, i, datetime.now(tz=timezone.utc).replace(tzinfo=None)
             )
 
         response = client.get(

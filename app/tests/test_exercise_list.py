@@ -15,7 +15,7 @@ from ..api.routes.exercises import timespan_to_ms, get_days_past
 client = TestClient(app)
 
 @pytest.mark.asyncio
-async def test_exercise_list(delete_test_users, create_user):
+async def test_exercise_list(delete_users, create_user):
     auth_token = create_user
 
     headers = {

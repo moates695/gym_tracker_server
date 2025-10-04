@@ -1,24 +1,21 @@
 import os
 import asyncpg
 import asyncio
+from dotenv import load_dotenv
 
 from .misc import load_env_vars
 
-load_env_vars()
-
-database_config = {
-    "database": os.getenv("DATABASE"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT"))
-}
-
-async def setup_connection(database: str = None) -> asyncpg.connection.Connection:
+async def setup_connection() -> asyncpg.connection.Connection:
     try:
-        config = database_config.copy()
-        if database != None: config["database"] = database
-        return await asyncpg.connect(**config)
+        load_env_vars()
+        return await asyncpg.connect(**{
+            "database": os.getenv("DATABASE"),
+            "user": os.getenv("DB_USER"),
+            "password": os.getenv("DB_PASSWORD"),
+            "host": os.getenv("DB_HOST"),
+            "port": int(os.getenv("DB_PORT"))
+        })
+
     except Exception as e:
         print(e)
         import traceback

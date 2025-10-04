@@ -599,7 +599,7 @@ async def test_update_exercises_invalid_variations():
         if conn: await conn.close()
 
 @pytest.mark.asyncio
-async def test_invalid_inserts_exercises(delete_test_users, create_user):
+async def test_invalid_inserts_exercises(delete_users, create_user):
     with open("app/local/exercises.json", "r") as file:
         exercises = json.load(file)
 

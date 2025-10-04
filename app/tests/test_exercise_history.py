@@ -17,7 +17,7 @@ client = TestClient(app)
 # todo: test data returned in correct order (reps ascending, time desending if applicable)
 # todo: check returned types are correct (datetime vs timestamp)
 @pytest.mark.asyncio
-async def test_exercise_history_match(delete_test_users, create_user):
+async def test_exercise_history_match(delete_users, create_user):
     auth_token = create_user
     # decoded_auth_token = decode_token(auth_token)
     # user_id = decoded_auth_token["user_id"]
@@ -223,7 +223,7 @@ def prelim_shape_check(data, table_headers):
             assert header in table_row.keys()
 
 @pytest.mark.asyncio
-async def test_exercise_history_data(delete_test_users, create_user):
+async def test_exercise_history_data(delete_users, create_user):
     auth_token = create_user
     # decoded_auth_token = decode_token(auth_token)
     # user_id = decoded_auth_token["user_id"]
