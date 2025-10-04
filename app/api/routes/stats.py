@@ -385,7 +385,6 @@ async def getExerciseGroups(conn, exercise_id):
     return [row["group_name"] for row in rows]
 
 @router.get("/stats/leaderboards/overall/volume")
-# async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credentials: dict = Depends(verify_token)):
 async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
@@ -415,94 +414,17 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
         user_ids = []
         fracture = None
         if user_row_num <= top_num + side_num + 1:
-            rows = await conn.fetch(
-                """
-                select 
-                    l.*,
-                    rank() over (order by volume desc) rank_num,
-                    u.username
-                from volume_leaderboard l
-                inner join users u
-                on l.user_id = u.id
-                order by volume desc
-                limit $1
-                """, top_num + 2 * side_num + 1
-            )
-
+            rows = await fetch_top_rows(conn, top_num + 2 * side_num + 1)
         elif user_row_num >= num_rows - side_num:
             fracture = top_num
-            top_rows = await conn.fetch(
-                """
-                select 
-                    l.*,
-                    rank() over (order by volume desc) rank_num,
-                    u.username
-                from volume_leaderboard l
-                inner join users u
-                on l.user_id = u.id
-                order by volume desc
-                limit $1
-                """, top_num
-            )
-
-            side_rows = await conn.fetch(
-                """
-                with numbered as (
-                    select
-                        *,
-                        row_number() over (order by volume desc) as row_num,
-                        rank() over (order by volume desc) as rank_num
-                    from volume_leaderboard
-                )
-                select n.*, u.username
-                from numbered n
-                inner join users u
-                on n.user_id = u.id
-                where n.row_num >= $1
-                order by n.row_num
-                """, num_rows - 2 * side_num
-            )
-
+            top_rows = await fetch_top_rows(conn, top_num)
+            side_rows = await fetch_rows_between(conn, num_rows - 2 * side_num, num_rows)
             rows = top_rows + side_rows
-
         else:
             fracture = top_num
-            top_rows = await conn.fetch(
-                """
-                select 
-                    l.*,
-                    rank() over (order by volume desc) rank_num,
-                    u.username
-                from volume_leaderboard l
-                inner join users u
-                on l.user_id = u.id
-                order by volume desc
-                limit $1
-                """, top_num
-            )
-
-            side_rows = await conn.fetch(
-                """
-                with numbered as (
-                    select
-                        *,
-                        row_number() over (order by volume desc) as row_num,
-                        rank() over (order by volume desc) as rank_num
-                    from volume_leaderboard
-                )
-                select n.*, u.username
-                from numbered n
-                inner join users u
-                on n.user_id = u.id
-                where n.row_num between $1 and $2
-                order by n.row_num
-                """, 
-                user_row_num - side_num,
-                user_row_num + side_num
-            )
-
+            top_rows = await fetch_top_rows(conn, top_num)
+            side_rows = await fetch_rows_between(conn, user_row_num - side_num, user_row_num + side_num)
             rows = top_rows + side_rows
-
 
         leaderboard = []
         for row in rows:
@@ -526,6 +448,40 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+async def fetch_top_rows(conn, num):
+    return await conn.fetch(
+        """
+        select 
+            l.*,
+            rank() over (order by volume desc) rank_num,
+            u.username
+        from volume_leaderboard l
+        inner join users u
+        on l.user_id = u.id
+        order by volume desc
+        limit $1
+        """, num
+    )
+
+async def fetch_rows_between(conn, lower, upper):
+    return await conn.fetch(
+        """
+        with numbered as (
+            select
+                *,
+                row_number() over (order by volume desc) as row_num,
+                rank() over (order by volume desc) as rank_num
+            from volume_leaderboard
+        )
+        select n.*, u.username
+        from numbered n
+        inner join users u
+        on n.user_id = u.id
+        where n.row_num between $1 and $2
+        order by n.row_num
+        """, lower, upper
+    )
 
 # overall most volume, sets, reps, workouts, duration, excercises
 #   filter based on gender and current age (new date of birth input field)
