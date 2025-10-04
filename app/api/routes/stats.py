@@ -411,7 +411,8 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
             from volume_leaderboard
             """
         )
-        
+
+        user_ids = []
         fracture = None
         if user_row_num <= top_num + side_num + 1:
             rows = await conn.fetch(
@@ -505,11 +506,13 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
 
         leaderboard = []
         for row in rows:
+            if row["user_id"] in user_ids: continue
             leaderboard.append({
                 "username": row["username"],
                 "volume": row["volume"],
                 "rank": row["rank_num"],
             })
+            user_ids.append(row["user_id"])
 
         return {
             "leaderboard": leaderboard,
