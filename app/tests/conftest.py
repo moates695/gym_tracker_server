@@ -25,18 +25,25 @@ async def delete_test_users():
 
 async def _delete_test_users():
     try:
-        conn = await setup_connection()
+        conn = await setup_connection(os.environ["PYTEST_DATABASE"])
 
         await conn.execute(
             """
             delete
-            from users
-            where lower(email) like '%@pytest.com';
+            from users;
             """
         )
 
     except Exception as e:
         raise Exception(f"Error in fixture: {e}")
+    finally:
+        if conn: await conn.close()
+
+@pytest_asyncio.fixture(scope="function")
+async def pytest_db_conn():
+    conn = await setup_connection(os.environ["PYTEST_DATABASE"])
+    try:
+        yield conn
     finally:
         if conn: await conn.close()
 

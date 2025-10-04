@@ -14,9 +14,11 @@ database_config = {
     "port": int(os.getenv("DB_PORT"))
 }
 
-async def setup_connection() -> asyncpg.connection.Connection:
+async def setup_connection(database: str = None) -> asyncpg.connection.Connection:
     try:
-        return await asyncpg.connect(**database_config)
+        config = database_config.copy()
+        if database != None: config["database"] = database
+        return await asyncpg.connect(**config)
     except Exception as e:
         print(e)
         import traceback

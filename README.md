@@ -132,5 +132,6 @@ Body weight exercises are designated a ratio of body weight that they use. We us
 - CHECK FOR fetches/functions with potential errors that dont have try catch
 - consolidate functions in register, workout_save and existing_users_db for inserting starting values into tables that track overall progress
 - show large numbers concisely on frontend
+- create a database purely for testing, that can be torn down at will (pytest db), include read only tests for other environments
 
 ## Assumptions

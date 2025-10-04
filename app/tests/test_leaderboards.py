@@ -17,16 +17,15 @@ from ..tests.test_register import valid_user
 client = TestClient(app)
 
 @pytest.mark.asyncio
-async def test_overall_volume(delete_test_users, create_user):
-    auth_token = create_user
-
-    # headers = {
-    #     "Authorization": f"Bearer {auth_token}"
-    # }
+async def test_overall_volume(delete_test_users):
+    
+    top_num = 10
+    side_num = 20
     params = {
-        "top_num": 10,
-        "side_num": 20
+        "top_num": top_num,
+        "side_num": side_num
     }
+    length = top_num + 2 * side_num + 1
 
     try:
         conn = await setup_connection()
@@ -39,7 +38,7 @@ async def test_overall_volume(delete_test_users, create_user):
         )
 
         user_data = []
-        for i in range(100):
+        for i in range(2 * length):
             email = str(uuid4())
             user_id = await conn.fetchval(
                 """
@@ -62,7 +61,7 @@ async def test_overall_volume(delete_test_users, create_user):
                 (user_id, volume, last_updated)
                 values
                 ($1, $2, $3)
-                """, user_id, curr_max_volume + i + 1, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+                """, user_id, curr_max_volume + i + 10, datetime.now(tz=timezone.utc).replace(tzinfo=None)
             )
 
         response = client.get(
@@ -73,9 +72,46 @@ async def test_overall_volume(delete_test_users, create_user):
         assert response.status_code == 200
         resp_json = response.json()
         assert resp_json["fracture"] is None
-        assert len(resp_json["leaderboard"]) == 51
-        # for i in range()
+        assert len(resp_json["leaderboard"]) == length
+        for i in range(length):
+            assert resp_json["leaderboard"][i]["rank"] == i + 1
 
+        response = client.get(
+            "/stats/leaderboards/overall/volume", 
+            headers=getHeaders(user_data[int(length / 2)]["token"]),
+            params=params,
+        )
+        assert response.status_code == 200
+        resp_json = response.json()
+        assert resp_json["fracture"] == top_num
+        assert len(resp_json["leaderboard"]) == length
+        
+        for i in range(top_num):
+            assert resp_json["leaderboard"][i]["rank"] == i + 1
+        
+        start_idx = top_num
+        start_rank = resp_json["leaderboard"][start_idx]["rank"]
+        for i in range(start_idx, length):
+            assert resp_json["leaderboard"][i]["rank"] == start_rank + i - start_idx
+
+        response = client.get(
+            "/stats/leaderboards/overall/volume", 
+            headers=getHeaders(user_data[0]["token"]),
+            params=params,
+        )
+        assert response.status_code == 200
+        resp_json = response.json()
+        assert resp_json["fracture"] == top_num
+        assert len(resp_json["leaderboard"]) == length
+
+        for i in range(top_num):
+            assert resp_json["leaderboard"][i]["rank"] == i + 1
+
+        start_idx = top_num
+        start_rank = resp_json["leaderboard"][start_idx]["rank"]
+        for i in range(start_idx, length):
+            assert resp_json["leaderboard"][i]["rank"] == start_rank + i - start_idx
+        
     except Exception as e:
         print(str(e))
         raise e

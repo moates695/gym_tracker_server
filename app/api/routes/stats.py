@@ -392,10 +392,24 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
 
         user_row_num = await conn.fetchval(
             """
-            select row_number() over (order by volume desc) row_num
-            from volume_leaderboard
-            where user_id = $1
+            with numbered as (
+                select
+                    *,
+                    row_number() over (order by volume desc) as row_num
+                from volume_leaderboard
+            )
+            select n.row_num
+            from numbered n
+            inner join volume_leaderboard l
+            on n.user_id = l.user_id
+            where l.user_id = $1
             """, credentials["user_id"]
+        )
+        num_rows = await conn.fetchval(
+            """
+            select count(*)
+            from volume_leaderboard
+            """
         )
 
         fracture = None
@@ -420,6 +434,47 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
                     "volume": row["volume"],
                     "rank": row["rank_num"],
                 })
+        elif user_row_num >= num_rows - side_num:
+            fracture = top_num
+            top_rows = await conn.fetch(
+                """
+                select 
+                    l.*,
+                    rank() over (order by volume desc) rank_num,
+                    u.username
+                from volume_leaderboard l
+                inner join users u
+                on l.user_id = u.id
+                order by l.volume desc
+                limit $1
+                """, top_num
+            )
+
+            side_rows = await conn.fetch(
+                """
+                with numbered as (
+                    select
+                        *,
+                        row_number() over (order by volume desc) as row_num,
+                        rank() over (order by volume desc) as rank_num
+                    from volume_leaderboard
+                )
+                select n.*, u.username
+                from numbered n
+                inner join users u
+                on n.user_id = u.id
+                where n.row_num >= $1
+                order by n.row_num
+                """, num_rows - 2 * side_num
+            )
+
+            leaderboard = []
+            for row in top_rows + side_rows:
+                leaderboard.append({
+                    "username": row["username"],
+                    "volume": row["volume"],
+                    "rank": row["rank_num"],
+                })
         else:
             fracture = top_num
             top_rows = await conn.fetch(
@@ -431,42 +486,29 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
                 from volume_leaderboard l
                 inner join users u
                 on l.user_id = u.id
-                order by volume desc
+                order by l.volume desc
                 limit $1
                 """, top_num
             )
 
             side_rows = await conn.fetch(
                 """
-                with ranked as (
+                with numbered as (
                     select
                         *,
-                        row_number() over (aorder by volume desc) as row_num
+                        row_number() over (order by volume desc) as row_num,
+                        rank() over (order by volume desc) as rank_num
                     from volume_leaderboard
                 )
-                select
-                r.*,
-                    rank() over (order by volume desc) as rank_num,
-                    u.username
-                from ranked r
+                select n.*, u.username
+                from numbered n
                 inner join users u
-                on r.user_id = u.id
-                where row_num between (
-                        (
-                            select row_num 
-                            from ranked 
-                            where user_id = $1
-                        ) - $2
-                    ) and (
-                        (
-                            select row_num 
-                            from ranked 
-                            where user_id = $1
-                        ) + $2
-                    )
-                order by row_num
-                """, credentials["user_id"], side_num
+                on n.user_id = u.id
+                where n.row_num between $1 and $2
+                order by n.row_num
+                """, user_row_num - side_num, user_row_num + side_num
             )
+
             leaderboard = []
             for row in top_rows + side_rows:
                 leaderboard.append({
