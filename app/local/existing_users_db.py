@@ -25,6 +25,7 @@ async def main():
             await check_workout_muscle_target_totals(conn, user_id)
             await check_exercise_totals(conn, user_id)
             await check_volume_leaderboard(conn, user_id)
+            # todo check other overall leaderboards
 
     except Exception as e:
         raise e

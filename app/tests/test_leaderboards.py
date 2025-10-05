@@ -318,7 +318,7 @@ async def insert_users(conn, num_users):
         user_data.append({
             "user_id": user_id,
             "email": email,
-            "token": generate_token(email, user_id, minutes=5),
+            "token": generate_token(email, user_id, minutes=30),
             "username": username
         })
     user_data.reverse()

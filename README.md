@@ -133,5 +133,7 @@ Body weight exercises are designated a ratio of body weight that they use. We us
 - consolidate functions in register, workout_save and existing_users_db for inserting starting values into tables that track overall progress
 - show large numbers concisely on frontend
 - create a database purely for testing, that can be torn down at will (pytest db), include read only tests for other environments
+- in leaderboards page, highlight friends in leaderboard (if visible)
+- in leaderboards, show friends ranks and maybe also on graph (if many friends may select some to view?)
 
 ## Assumptions

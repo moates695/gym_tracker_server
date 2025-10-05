@@ -384,6 +384,7 @@ async def getExerciseGroups(conn, exercise_id):
 
     return [row["group_name"] for row in rows]
 
+# todo tests for gender and age fields (could make test the filtered views, then assume output is correct)
 @router.get("/stats/leaderboards/overall")
 async def stats_leaderboards_overall_volume(
     table: Literal['volume','sets','reps'],
@@ -448,6 +449,10 @@ async def stats_leaderboards_overall_volume(
             """
         )
 
+        print(user_row_num)
+        print(num_rows)
+        print(top_num)
+        print(side_num)
         user_ids = []
         if user_row_num <= top_num + side_num + 1:
             rows = await fetch_top_rows(conn, column, top_num + 2 * side_num + 1)
@@ -465,7 +470,7 @@ async def stats_leaderboards_overall_volume(
             if row["user_id"] in user_ids: continue
             leaderboard.append({
                 "username": row["username"],
-                column: row[column],
+                "value": row[column],
                 "rank": row["rank_num"],
             })
             user_ids.append(row["user_id"])
@@ -512,8 +517,6 @@ async def fetch_rows_between(conn, lower, upper):
         """, lower, upper
     )
 
-# overall most volume, sets, reps, workouts, duration, excercises
-#   filter based on gender and current age (new date of birth input field)
 # for each exercise
 #   most volume, sets, reps
 #       filter gender, age
