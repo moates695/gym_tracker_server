@@ -384,7 +384,6 @@ async def getExerciseGroups(conn, exercise_id):
 
     return [row["group_name"] for row in rows]
 
-# todo add filters for gender, current age
 @router.get("/stats/leaderboards/overall")
 async def stats_leaderboards_overall_volume(
     table: Literal['volume','sets','reps'],

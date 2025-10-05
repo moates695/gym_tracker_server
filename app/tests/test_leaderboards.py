@@ -17,8 +17,6 @@ from ..tests.test_register import valid_user
 
 client = TestClient(app)
 
-# todo test for overlapping top and remain rows in small samples
-# todo test for no users
 @pytest.mark.asyncio
 async def test_overall_volume_standard(delete_users):
     top_num = 10

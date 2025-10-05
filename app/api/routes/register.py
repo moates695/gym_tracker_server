@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 from email.message import EmailMessage
 import os
 import jwt
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 import bcrypt
 
 from app.api.middleware.database import setup_connection
@@ -31,6 +31,7 @@ class Register(BaseModel):
     weight: float = weight_field
     goal_status: goal_status_literal
     ped_status: ped_status_literal
+    date_of_birth: str
     send_email: bool = True
 
     @field_validator('password')
@@ -76,11 +77,11 @@ async def register(req: Register):
         row = await conn.fetchrow(
             """
             insert into users
-            (email, password, username, first_name, last_name, gender)
+            (email, password, username, first_name, last_name, gender, date_of_birth)
             values
-            ($1, $2, $3, $4, $5, $6)
+            ($1, $2, $3, $4, $5, $6, $7)
             returning id
-            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender
+            """, req.email, hashed_pwd, req.username, req.first_name, req.last_name, req.gender, date.fromisoformat(req.date_of_birth)
         )
         user_id = row["id"]
 
@@ -135,14 +136,16 @@ async def register(req: Register):
                 """, user_id, exercise_id_row["id"]
             )
 
-        await conn.execute(
-            """
-            insert into volume_leaderboard
-            (user_id, volume, last_updated)
-            values
-            ($1, $2, $3)
-            """, user_id, 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
-        )
+        for table in ["volume", "sets", "reps"]:
+            column = table if table != "sets" else "num_sets"
+            await conn.execute(
+                f"""
+                insert into {table}_leaderboard
+                (user_id, {column}, last_updated)
+                values
+                ($1, $2, $3)
+                """, user_id, 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+            )
 
         if req.send_email:
             await send_validation_email(req.email, user_id)

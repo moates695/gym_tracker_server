@@ -291,18 +291,20 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                 """, credentials["user_id"], 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
             )
 
-        await conn.execute(
-            """
-            update volume_leaderboard
-            set 
-                volume = $1,
-                last_updated = $2
-            where user_id = $3
-            """, 
-            current_volume + totals["volume"],
-            datetime.now(tz=timezone.utc).replace(tzinfo=None),
-            credentials["user_id"]
-        )
+        for table in ["volume", "sets", "reps"]:
+            column = table if table != "sets" else "num_sets"
+            await conn.execute(
+                f"""
+                update {table}_leaderboard
+                set 
+                    {column} = $1,
+                    last_updated = $2
+                where user_id = $3
+                """, 
+                current_volume + totals[column],
+                datetime.now(tz=timezone.utc).replace(tzinfo=None),
+                credentials["user_id"]
+            )
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})

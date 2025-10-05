@@ -20,6 +20,7 @@ valid_user = {
     "weight": 98,
     "goal_status": "cutting",
     "ped_status": 'natural',
+    "date_of_birth": "2001-09-11",
     "send_email": False
 }
 
