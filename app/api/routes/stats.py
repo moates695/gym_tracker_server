@@ -412,16 +412,17 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
         )
 
         user_ids = []
-        fracture = None
+        # fracture = None
         if user_row_num <= top_num + side_num + 1:
             rows = await fetch_top_rows(conn, top_num + 2 * side_num + 1)
         elif user_row_num >= num_rows - side_num:
-            fracture = top_num
+            # if num_rows
+            # fracture = top_num
             top_rows = await fetch_top_rows(conn, top_num)
             side_rows = await fetch_rows_between(conn, num_rows - 2 * side_num, num_rows)
             rows = top_rows + side_rows
         else:
-            fracture = top_num
+            # fracture = top_num
             top_rows = await fetch_top_rows(conn, top_num)
             side_rows = await fetch_rows_between(conn, user_row_num - side_num, user_row_num + side_num)
             rows = top_rows + side_rows
@@ -435,6 +436,11 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
                 "rank": row["rank_num"],
             })
             user_ids.append(row["user_id"])
+
+        if len(leaderboard) <= top_num + 1 or leaderboard[top_num - 1]["rank"] + 1 == leaderboard[top_num]["rank"]:
+            fracture = None
+        else:
+            fracture = top_num
 
         return {
             "leaderboard": leaderboard,

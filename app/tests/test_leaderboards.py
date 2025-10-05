@@ -17,10 +17,6 @@ from ..tests.test_register import valid_user
 
 client = TestClient(app)
 
-@pytest.mark.asyncio
-async def test_overall_volume(delete_users, create_user):
-    pass
-
 # todo test for overlapping top and remain rows in small samples
 # todo test for no users
 @pytest.mark.asyncio
@@ -214,14 +210,141 @@ async def test_overall_volume(delete_users):
         print(str(e))
         raise e
     finally:
-        try:
+        if conn: await conn.close()
+
+@pytest.mark.asyncio
+async def test_overall_volume_empty(delete_users):
+    try:
+        conn = await setup_connection()
+        
+        email = str(uuid4())
+        user_id = await conn.fetchval(
+            """
+            insert into users
+            (email, password, username, first_name, last_name, gender)
+            values
+            ($1, $2, $3, $4, $5, $6)
+            returning id
+            """, email, str(uuid4()), str(uuid4()), str(uuid4()), str(uuid4()), 'male'
+        )
+        token = generate_token(email, user_id, minutes=5)
+        response = client.get(
+            "/stats/leaderboards/overall/volume", 
+            headers=getHeaders(token),
+            params={
+                "top_num": 10,
+                "side_num": 20
+            },
+        )
+
+        response = client.get(
+            "/stats/leaderboards/overall/volume", 
+            headers=getHeaders(token),
+            params={
+                "top_num": 10,
+                "side_num": 20
+            },
+        )
+        with pytest.raises(Exception):
+            response.raise_for_status()
+
+        await conn.execute(
+            """
+            insert into volume_leaderboard
+            (user_id, volume, last_updated)
+            values
+            ($1, $2, $3)
+            """, user_id, 0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+        )
+
+        response = client.get(
+            "/stats/leaderboards/overall/volume", 
+            headers=getHeaders(token),
+            params={
+                "top_num": 10,
+                "side_num": 20
+            },
+        )
+        assert response.status_code == 200
+        resp_json = response.json()
+        assert resp_json["fracture"] == None
+        assert len(resp_json["leaderboard"]) == 1
+    except Exception as e:
+        print(str(e))
+        raise e
+    finally:
+        if conn: await conn.close()
+
+@pytest.mark.asyncio
+async def test_overall_volume_small(delete_users):
+    top_num = 4
+    side_num = 3
+    params = {
+        "top_num": top_num,
+        "side_num": side_num
+    }
+    # expected_len = top_num + 2 * side_num + 1
+
+    try:
+        conn = await setup_connection()
+
+        for num_users in range(1, 12):
+            print('num users ', num_users)
+            user_data = []
+            for i in range(num_users):
+                email = str(uuid4())
+                username = str(uuid4())
+                user_id = await conn.fetchval(
+                    """
+                    insert into users
+                    (email, password, username, first_name, last_name, gender)
+                    values
+                    ($1, $2, $3, $4, $5, $6)
+                    returning id
+                    """, email, str(uuid4()), username, str(uuid4()), str(uuid4()), 'male'
+                )
+                user_data.append({
+                    "user_id": user_id,
+                    "email": email,
+                    "token": generate_token(email, user_id, minutes=5),
+                    "username": username
+                })
+                await conn.execute(
+                    """
+                    insert into volume_leaderboard
+                    (user_id, volume, last_updated)
+                    values
+                    ($1, $2, $3)
+                    """, user_id, i, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+                )
+            user_data.reverse()
+
+            for user_idx in range(num_users):
+                print('user idx ', user_idx)
+                response = client.get(
+                    "/stats/leaderboards/overall/volume", 
+                    headers=getHeaders(user_data[user_idx]["token"]),
+                    params=params,
+                )
+                assert response.status_code == 200
+                resp_json = response.json()
+                assert resp_json["fracture"] == None
+                assert len(resp_json["leaderboard"]) == num_users
+                for i in range(num_users):
+                    assert resp_json["leaderboard"][i]["rank"] == i + 1
+                    assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"] 
+
             await conn.execute(
                 """
-                delete from users
-                where is_verified = false
+                delete
+                from users;
                 """
             )
-        except Exception: pass
+
+    except Exception as e:
+        print(str(e))
+        raise e
+    finally:
         if conn: await conn.close()
 
 def getHeaders(auth_token):
