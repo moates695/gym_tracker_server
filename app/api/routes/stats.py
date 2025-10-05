@@ -385,8 +385,9 @@ async def getExerciseGroups(conn, exercise_id):
     return [row["group_name"] for row in rows]
 
 # todo add filters for gender, current age
-@router.get("/stats/leaderboards/overall/volume")
+@router.get("/stats/leaderboards/overall")
 async def stats_leaderboards_overall_volume(
+    table: Literal['volume','sets','reps'],
     top_num: int, 
     side_num: int, 
     gender: str = None, 
@@ -409,12 +410,12 @@ async def stats_leaderboards_overall_volume(
             upper_age = float(math.inf)
 
         await conn.execute(
-            """
+            f"""
             create temp table filtered as
             select 
                 l.*,
                 (DATE_PART('day', NOW() - date_of_birth) / 365.25)::float as age
-            from volume_leaderboard l
+            from {table}_leaderboard l
             inner join users u
             on l.user_id = u.id
             where u.gender = any($1)
@@ -422,13 +423,14 @@ async def stats_leaderboards_overall_volume(
             """, gender_list, lower_age, upper_age
         )
 
+        column = table if table != 'sets' else "num_sets"
         await conn.execute(
-            """
+            f"""
             create temp table numbered as
             select 
                 f.*,
-                row_number() over (order by volume desc) as row_num,
-                rank() over (order by volume desc) as rank_num
+                row_number() over (order by {column} desc) as row_num,
+                rank() over (order by {column} desc) as rank_num
             from filtered f
             """
         )
@@ -464,7 +466,7 @@ async def stats_leaderboards_overall_volume(
             if row["user_id"] in user_ids: continue
             leaderboard.append({
                 "username": row["username"],
-                "volume": row["volume"],
+                column: row[column],
                 "rank": row["rank_num"],
             })
             user_ids.append(row["user_id"])
