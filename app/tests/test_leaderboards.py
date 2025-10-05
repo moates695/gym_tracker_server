@@ -20,12 +20,14 @@ client = TestClient(app)
 # todo test for overlapping top and remain rows in small samples
 # todo test for no users
 @pytest.mark.asyncio
-async def test_overall_volume(delete_users):
+async def test_overall_volume_standard(delete_users):
     top_num = 10
     side_num = 20
+    gender = "male"
     params = {
         "top_num": top_num,
-        "side_num": side_num
+        "side_num": side_num,
+        "gender": gender
     }
     expected_len = top_num + 2 * side_num + 1
     num_users = 3 * expected_len
@@ -44,7 +46,7 @@ async def test_overall_volume(delete_users):
                 values
                 ($1, $2, $3, $4, $5, $6)
                 returning id
-                """, email, str(uuid4()), username, str(uuid4()), str(uuid4()), 'male'
+                """, email, str(uuid4()), username, str(uuid4()), str(uuid4()), gender
             )
             user_data.append({
                 "user_id": user_id,
@@ -233,7 +235,8 @@ async def test_overall_volume_empty(delete_users):
             headers=getHeaders(token),
             params={
                 "top_num": 10,
-                "side_num": 20
+                "side_num": 20,
+                "gender": "male"
             },
         )
 
@@ -242,7 +245,8 @@ async def test_overall_volume_empty(delete_users):
             headers=getHeaders(token),
             params={
                 "top_num": 10,
-                "side_num": 20
+                "side_num": 20,
+                "gender": "male"
             },
         )
         with pytest.raises(Exception):
@@ -262,7 +266,8 @@ async def test_overall_volume_empty(delete_users):
             headers=getHeaders(token),
             params={
                 "top_num": 10,
-                "side_num": 20
+                "side_num": 20,
+                "gender": "male"
             },
         )
         assert response.status_code == 200
@@ -281,7 +286,8 @@ async def test_overall_volume_small(delete_users):
     side_num = 3
     params = {
         "top_num": top_num,
-        "side_num": side_num
+        "side_num": side_num,
+                "gender": "male"
     }
     # expected_len = top_num + 2 * side_num + 1
 

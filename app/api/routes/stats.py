@@ -384,25 +384,33 @@ async def getExerciseGroups(conn, exercise_id):
 
     return [row["group_name"] for row in rows]
 
+# todo add filters for gender, current age
 @router.get("/stats/leaderboards/overall/volume")
-async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credentials: dict = Depends(verify_token)):
+async def stats_leaderboards_overall_volume(top_num: int, side_num: int, gender: str, credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
 
         user_row_num = await conn.fetchval(
             """
-            with numbered as (
+            with filtered as (
+                select l.*
+                from volume_leaderboard l
+                inner join users u
+                on l.user_id = u.id
+                where u.gender = $2
+            ),
+            numbered as (
                 select
                     *,
                     row_number() over (order by volume desc) as row_num
-                from volume_leaderboard
+                from filtered
             )
             select n.row_num
             from numbered n
             inner join volume_leaderboard l
             on n.user_id = l.user_id
             where l.user_id = $1
-            """, credentials["user_id"]
+            """, credentials["user_id"], gender
         )
         num_rows = await conn.fetchval(
             """
@@ -412,17 +420,13 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, credent
         )
 
         user_ids = []
-        # fracture = None
         if user_row_num <= top_num + side_num + 1:
             rows = await fetch_top_rows(conn, top_num + 2 * side_num + 1)
         elif user_row_num >= num_rows - side_num:
-            # if num_rows
-            # fracture = top_num
             top_rows = await fetch_top_rows(conn, top_num)
             side_rows = await fetch_rows_between(conn, num_rows - 2 * side_num, num_rows)
             rows = top_rows + side_rows
         else:
-            # fracture = top_num
             top_rows = await fetch_top_rows(conn, top_num)
             side_rows = await fetch_rows_between(conn, user_row_num - side_num, user_row_num + side_num)
             rows = top_rows + side_rows
