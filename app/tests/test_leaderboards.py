@@ -36,10 +36,9 @@ async def test_overall_volume_standard(delete_users):
         user_data = await insert_users(conn, num_users)
 
         for table in ["volume", "sets", "reps"]:
-            # column = table if table != "sets" else "num_sets"
-            # ranked first
             params["table"] = table
 
+            # ranked first
             response = client.get(
                 "/stats/leaderboards/overall", 
                 headers=getHeaders(user_data[0]["token"]),
@@ -190,50 +189,54 @@ async def test_overall_volume_standard(delete_users):
 
 @pytest.mark.asyncio
 async def test_overall_volume_empty(delete_users):
+    params={
+        "top_num": 10,
+        "side_num": 20,
+        "gender": "male",
+    }
+
     try:
         conn = await setup_connection()
 
-        user_data = await insert_users(conn, 1)
-        await conn.execute(
-            """
-            delete
-            from volume_leaderboard
-            """
-        )
+        for table in ["volume", "sets", "reps"]:
+            params["table"] = table
+            column = table if table != "sets" else "num_sets"
 
-        response = client.get(
-            "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(user_data[0]["token"]),
-            params={
-                "top_num": 10,
-                "side_num": 20,
-            },
-        )
-        with pytest.raises(Exception):
-            response.raise_for_status()
+            user_data = await insert_users(conn, 1)
+            await conn.execute(
+                f"""
+                delete
+                from {table}_leaderboard
+                """
+            )
 
-        await conn.execute(
-            """
-            insert into volume_leaderboard
-            (user_id, volume, last_updated)
-            values
-            ($1, $2, $3)
-            """, user_data[0]["user_id"], 0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
-        )
+            response = client.get(
+                "/stats/leaderboards/overall", 
+                headers=getHeaders(user_data[0]["token"]),
+                params=params,
+            )
+            with pytest.raises(Exception):
+                response.raise_for_status()
 
-        response = client.get(
-            "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(user_data[0]["token"]),
-            params={
-                "top_num": 10,
-                "side_num": 20,
-                "gender": "male"
-            },
-        )
-        assert response.status_code == 200
-        resp_json = response.json()
-        assert resp_json["fracture"] == None
-        assert len(resp_json["leaderboard"]) == 1
+            await conn.execute(
+                f"""
+                insert into {table}_leaderboard
+                (user_id, {column}, last_updated)
+                values
+                ($1, $2, $3)
+                """, user_data[0]["user_id"], 0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+            )
+
+            response = client.get(
+                "/stats/leaderboards/overall", 
+                headers=getHeaders(user_data[0]["token"]),
+                params=params,
+            )
+            assert response.status_code == 200
+            resp_json = response.json()
+            assert resp_json["fracture"] == None
+            assert len(resp_json["leaderboard"]) == 1
+
     except Exception as e:
         print(str(e))
         raise e
@@ -252,29 +255,32 @@ async def test_overall_volume_small(delete_users):
     try:
         conn = await setup_connection()
 
-        for num_users in range(1, 12):
-            user_data = await insert_users(conn, num_users)
+        for table in ["volume", "sets", "reps"]:
+            params["table"] = table
+            
+            for num_users in range(1, 12):
+                user_data = await insert_users(conn, num_users)
 
-            for user_idx in range(num_users):
-                response = client.get(
-                    "/stats/leaderboards/overall/volume", 
-                    headers=getHeaders(user_data[user_idx]["token"]),
-                    params=params,
+                for user_idx in range(num_users):
+                    response = client.get(
+                        "/stats/leaderboards/overall", 
+                        headers=getHeaders(user_data[user_idx]["token"]),
+                        params=params,
+                    )
+                    assert response.status_code == 200
+                    resp_json = response.json()
+                    assert resp_json["fracture"] == None
+                    assert len(resp_json["leaderboard"]) == num_users
+                    for i in range(num_users):
+                        assert resp_json["leaderboard"][i]["rank"] == i + 1
+                        assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"] 
+
+                await conn.execute(
+                    """
+                    delete
+                    from users;
+                    """
                 )
-                assert response.status_code == 200
-                resp_json = response.json()
-                assert resp_json["fracture"] == None
-                assert len(resp_json["leaderboard"]) == num_users
-                for i in range(num_users):
-                    assert resp_json["leaderboard"][i]["rank"] == i + 1
-                    assert resp_json["leaderboard"][i]["username"] == user_data[i]["username"] 
-
-            await conn.execute(
-                """
-                delete
-                from users;
-                """
-            )
 
     except Exception as e:
         print(str(e))

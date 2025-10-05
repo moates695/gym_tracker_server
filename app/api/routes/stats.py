@@ -451,13 +451,13 @@ async def stats_leaderboards_overall_volume(
 
         user_ids = []
         if user_row_num <= top_num + side_num + 1:
-            rows = await fetch_top_rows(conn, top_num + 2 * side_num + 1)
+            rows = await fetch_top_rows(conn, column, top_num + 2 * side_num + 1)
         elif user_row_num >= num_rows - side_num:
-            top_rows = await fetch_top_rows(conn, top_num)
+            top_rows = await fetch_top_rows(conn, column, top_num)
             side_rows = await fetch_rows_between(conn, num_rows - 2 * side_num, num_rows)
             rows = top_rows + side_rows
         else:
-            top_rows = await fetch_top_rows(conn, top_num)
+            top_rows = await fetch_top_rows(conn, column, top_num)
             side_rows = await fetch_rows_between(conn, user_row_num - side_num, user_row_num + side_num)
             rows = top_rows + side_rows
 
@@ -489,21 +489,21 @@ async def stats_leaderboards_overall_volume(
     finally:
         if conn: await conn.close()
 
-async def fetch_top_rows(conn, num):
+async def fetch_top_rows(conn, column, num):
     return await conn.fetch(
-        """
+        f"""
         select n.*, u.username
         from numbered n
         inner join users u
         on n.user_id = u.id
-        order by volume desc
+        order by {column} desc
         limit $1
         """, num
     )
 
 async def fetch_rows_between(conn, lower, upper):
     return await conn.fetch(
-        """
+        f"""
         select n.*, u.username
         from numbered n
         inner join users u
