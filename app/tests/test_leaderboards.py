@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from copy import deepcopy
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 import math
 from uuid import uuid4
 import os
@@ -23,11 +23,9 @@ client = TestClient(app)
 async def test_overall_volume_standard(delete_users):
     top_num = 10
     side_num = 20
-    gender = "male"
     params = {
         "top_num": top_num,
         "side_num": side_num,
-        "gender": gender
     }
     expected_len = top_num + 2 * side_num + 1
     num_users = 3 * expected_len
@@ -35,35 +33,7 @@ async def test_overall_volume_standard(delete_users):
     try:
         conn = await setup_connection()
 
-        user_data = []
-        for i in range(num_users):
-            email = str(uuid4())
-            username = str(uuid4())
-            user_id = await conn.fetchval(
-                """
-                insert into users
-                (email, password, username, first_name, last_name, gender)
-                values
-                ($1, $2, $3, $4, $5, $6)
-                returning id
-                """, email, str(uuid4()), username, str(uuid4()), str(uuid4()), gender
-            )
-            user_data.append({
-                "user_id": user_id,
-                "email": email,
-                "token": generate_token(email, user_id, minutes=5),
-                "username": username
-            })
-
-            await conn.execute(
-                """
-                insert into volume_leaderboard
-                (user_id, volume, last_updated)
-                values
-                ($1, $2, $3)
-                """, user_id, i, datetime.now(tz=timezone.utc).replace(tzinfo=None)
-            )
-        user_data.reverse()
+        user_data = await insert_users(conn, num_users)
 
         # ranked first
         response = client.get(
@@ -218,35 +188,21 @@ async def test_overall_volume_standard(delete_users):
 async def test_overall_volume_empty(delete_users):
     try:
         conn = await setup_connection()
-        
-        email = str(uuid4())
-        user_id = await conn.fetchval(
+
+        user_data = await insert_users(conn, 1)
+        await conn.execute(
             """
-            insert into users
-            (email, password, username, first_name, last_name, gender)
-            values
-            ($1, $2, $3, $4, $5, $6)
-            returning id
-            """, email, str(uuid4()), str(uuid4()), str(uuid4()), str(uuid4()), 'male'
-        )
-        token = generate_token(email, user_id, minutes=5)
-        response = client.get(
-            "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(token),
-            params={
-                "top_num": 10,
-                "side_num": 20,
-                "gender": "male"
-            },
+            delete
+            from volume_leaderboard
+            """
         )
 
         response = client.get(
             "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(token),
+            headers=getHeaders(user_data[0]["token"]),
             params={
                 "top_num": 10,
                 "side_num": 20,
-                "gender": "male"
             },
         )
         with pytest.raises(Exception):
@@ -258,12 +214,12 @@ async def test_overall_volume_empty(delete_users):
             (user_id, volume, last_updated)
             values
             ($1, $2, $3)
-            """, user_id, 0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+            """, user_data[0]["user_id"], 0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
         )
 
         response = client.get(
             "/stats/leaderboards/overall/volume", 
-            headers=getHeaders(token),
+            headers=getHeaders(user_data[0]["token"]),
             params={
                 "top_num": 10,
                 "side_num": 20,
@@ -287,7 +243,6 @@ async def test_overall_volume_small(delete_users):
     params = {
         "top_num": top_num,
         "side_num": side_num,
-                "gender": "male"
     }
     # expected_len = top_num + 2 * side_num + 1
 
@@ -295,38 +250,9 @@ async def test_overall_volume_small(delete_users):
         conn = await setup_connection()
 
         for num_users in range(1, 12):
-            print('num users ', num_users)
-            user_data = []
-            for i in range(num_users):
-                email = str(uuid4())
-                username = str(uuid4())
-                user_id = await conn.fetchval(
-                    """
-                    insert into users
-                    (email, password, username, first_name, last_name, gender)
-                    values
-                    ($1, $2, $3, $4, $5, $6)
-                    returning id
-                    """, email, str(uuid4()), username, str(uuid4()), str(uuid4()), 'male'
-                )
-                user_data.append({
-                    "user_id": user_id,
-                    "email": email,
-                    "token": generate_token(email, user_id, minutes=5),
-                    "username": username
-                })
-                await conn.execute(
-                    """
-                    insert into volume_leaderboard
-                    (user_id, volume, last_updated)
-                    values
-                    ($1, $2, $3)
-                    """, user_id, i, datetime.now(tz=timezone.utc).replace(tzinfo=None)
-                )
-            user_data.reverse()
+            user_data = await insert_users(conn, num_users)
 
             for user_idx in range(num_users):
-                print('user idx ', user_idx)
                 response = client.get(
                     "/stats/leaderboards/overall/volume", 
                     headers=getHeaders(user_data[user_idx]["token"]),
@@ -357,3 +283,34 @@ def getHeaders(auth_token):
     return {
         "Authorization": f"Bearer {auth_token}"
     }
+
+async def insert_users(conn, num_users):
+    user_data = []
+    for i in range(num_users):
+        email = str(uuid4())
+        username = str(uuid4())
+        user_id = await conn.fetchval(
+            """
+            insert into users
+            (email, password, username, first_name, last_name, gender, date_of_birth)
+            values
+            ($1, $2, $3, $4, $5, $6, $7)
+            returning id
+            """, email, str(uuid4()), username, str(uuid4()), str(uuid4()), 'male', date(2001, 9, 11) + timedelta(days=i)
+        )
+        await conn.execute(
+            """
+            insert into volume_leaderboard
+            (user_id, volume, last_updated)
+            values
+            ($1, $2, $3)
+            """, user_id, i, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+        )
+        user_data.append({
+            "user_id": user_id,
+            "email": email,
+            "token": generate_token(email, user_id, minutes=5),
+            "username": username
+        })
+    user_data.reverse()
+    return user_data

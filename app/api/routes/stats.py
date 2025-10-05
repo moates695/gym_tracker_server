@@ -386,36 +386,64 @@ async def getExerciseGroups(conn, exercise_id):
 
 # todo add filters for gender, current age
 @router.get("/stats/leaderboards/overall/volume")
-async def stats_leaderboards_overall_volume(top_num: int, side_num: int, gender: str, credentials: dict = Depends(verify_token)):
+async def stats_leaderboards_overall_volume(
+    top_num: int, 
+    side_num: int, 
+    gender: str = None, 
+    lower_age_limit: int = None,
+    upper_age_limit: int = None,
+    credentials: dict = Depends(verify_token)
+):
     try:
         conn = await setup_connection()
 
+        if gender is None:
+            gender_list = ['male', 'female', 'other']
+        else:
+            gender_list = [gender]
+
+        if lower_age_limit is None:
+            lower_age = -1
+
+        if upper_age_limit is None:
+            upper_age = float(math.inf)
+
+        await conn.execute(
+            """
+            create temp table filtered as
+            select 
+                l.*,
+                (DATE_PART('day', NOW() - date_of_birth) / 365.25)::float as age
+            from volume_leaderboard l
+            inner join users u
+            on l.user_id = u.id
+            where u.gender = any($1)
+            and (DATE_PART('day', NOW() - date_of_birth) / 365.25)::float between $2 and $3 
+            """, gender_list, lower_age, upper_age
+        )
+
+        await conn.execute(
+            """
+            create temp table numbered as
+            select 
+                f.*,
+                row_number() over (order by volume desc) as row_num,
+                rank() over (order by volume desc) as rank_num
+            from filtered f
+            """
+        )
+
         user_row_num = await conn.fetchval(
             """
-            with filtered as (
-                select l.*
-                from volume_leaderboard l
-                inner join users u
-                on l.user_id = u.id
-                where u.gender = $2
-            ),
-            numbered as (
-                select
-                    *,
-                    row_number() over (order by volume desc) as row_num
-                from filtered
-            )
             select n.row_num
             from numbered n
-            inner join volume_leaderboard l
-            on n.user_id = l.user_id
-            where l.user_id = $1
-            """, credentials["user_id"], gender
+            where n.user_id = $1
+            """, credentials["user_id"]
         )
         num_rows = await conn.fetchval(
             """
             select count(*)
-            from volume_leaderboard
+            from numbered
             """
         )
 
@@ -462,13 +490,10 @@ async def stats_leaderboards_overall_volume(top_num: int, side_num: int, gender:
 async def fetch_top_rows(conn, num):
     return await conn.fetch(
         """
-        select 
-            l.*,
-            rank() over (order by volume desc) rank_num,
-            u.username
-        from volume_leaderboard l
+        select n.*, u.username
+        from numbered n
         inner join users u
-        on l.user_id = u.id
+        on n.user_id = u.id
         order by volume desc
         limit $1
         """, num
@@ -477,13 +502,6 @@ async def fetch_top_rows(conn, num):
 async def fetch_rows_between(conn, lower, upper):
     return await conn.fetch(
         """
-        with numbered as (
-            select
-                *,
-                row_number() over (order by volume desc) as row_num,
-                rank() over (order by volume desc) as rank_num
-            from volume_leaderboard
-        )
         select n.*, u.username
         from numbered n
         inner join users u
