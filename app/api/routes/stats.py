@@ -448,11 +448,7 @@ async def stats_leaderboards_overall_volume(
             from numbered
             """
         )
-
-        print(user_row_num)
-        print(num_rows)
-        print(top_num)
-        print(side_num)
+        
         user_ids = []
         if user_row_num <= top_num + side_num + 1:
             rows = await fetch_top_rows(conn, column, top_num + 2 * side_num + 1)

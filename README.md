@@ -135,5 +135,8 @@ Body weight exercises are designated a ratio of body weight that they use. We us
 - create a database purely for testing, that can be torn down at will (pytest db), include read only tests for other environments
 - in leaderboards page, highlight friends in leaderboard (if visible)
 - in leaderboards, show friends ranks and maybe also on graph (if many friends may select some to view?)
+- leaderboard ranks (based on top percentage, do this per leaderboard per metric or use a weighting)
+- do a heatmap based on muscle ranking, maybe volume total, or volume per week?
+- on favourite workouts page, use colour highlight on each row to show comparitive difference between exercise and chosen metric
 
 ## Assumptions
