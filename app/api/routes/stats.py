@@ -463,13 +463,14 @@ async def stats_leaderboards_overall_volume(
 
         leaderboard = []
         for row in rows:
-            if row["user_id"] in user_ids: continue
+            if str(row["user_id"]) in user_ids: continue
             leaderboard.append({
+                "user_id": str(row["user_id"]),
                 "username": row["username"],
                 "value": row[column],
                 "rank": row["rank_num"],
             })
-            user_ids.append(row["user_id"])
+            user_ids.append(str(row["user_id"]))
 
         if len(leaderboard) <= top_num + 1 or leaderboard[top_num - 1]["rank"] + 1 == leaderboard[top_num]["rank"]:
             fracture = None
