@@ -564,10 +564,9 @@ async def stats_leaderboards_overall_volume_rand(top_num, side_num, credentials)
 
     num_rows = top_num + 2 * side_num + 1
     # user_idx = random.randint(0, num_values - 1)
-    
-    # if random.random() < 0.5:   
-    user_value = None     
-    if 0:        
+
+    user_value = None         
+    if random.random() < 0.5:   
         user_idx = random.randint(0, top_num - 1)
         del user_ids[user_idx]
         all_data[user_idx]["user_id"] = credentials["user_id"]
