@@ -10,6 +10,8 @@ import random
 import json
 from copy import deepcopy
 import math
+from uuid import uuid4
+import numpy as np
 
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
@@ -387,6 +389,7 @@ async def getExerciseGroups(conn, exercise_id):
 # todo tests for gender and age fields (could make test the filtered views, then assume output is correct)
 @router.get("/stats/leaderboards/overall")
 async def stats_leaderboards_overall_volume(
+    use_real: bool,
     table: Literal['volume','sets','reps'],
     top_num: int, 
     side_num: int, 
@@ -395,6 +398,11 @@ async def stats_leaderboards_overall_volume(
     upper_age_limit: int = None,
     credentials: dict = Depends(verify_token)
 ):
+    if use_real:
+        return await stats_leaderboards_overall_volume_real(table, top_num, side_num, gender, lower_age_limit, upper_age_limit, credentials)
+    return await stats_leaderboards_overall_volume_rand(top_num, side_num, credentials)
+    
+async def stats_leaderboards_overall_volume_real(table, top_num, side_num, gender, lower_age_limit, upper_age_limit, credentials):
     try:
         conn = await setup_connection()
 
@@ -451,13 +459,13 @@ async def stats_leaderboards_overall_volume(
         
         user_ids = []
         if user_row_num <= top_num + side_num + 1:
-            rows = await fetch_top_rows(conn, column, top_num + 2 * side_num + 1)
+            rows = await fetch_top_rows(conn, top_num + 2 * side_num + 1)
         elif user_row_num >= num_rows - side_num:
-            top_rows = await fetch_top_rows(conn, column, top_num)
+            top_rows = await fetch_top_rows(conn, top_num)
             side_rows = await fetch_rows_between(conn, num_rows - 2 * side_num, num_rows)
             rows = top_rows + side_rows
         else:
-            top_rows = await fetch_top_rows(conn, column, top_num)
+            top_rows = await fetch_top_rows(conn, top_num)
             side_rows = await fetch_rows_between(conn, user_row_num - side_num, user_row_num + side_num)
             rows = top_rows + side_rows
 
@@ -477,9 +485,27 @@ async def stats_leaderboards_overall_volume(
         else:
             fracture = top_num
 
+        user_rank = await conn.fetchval(
+            """
+            select n.rank_num
+            from numbered n
+            where n.user_id = $1
+            """, credentials["user_id"]
+        )
+        max_rank = await conn.fetchval(
+            """
+            select max(n.rank_num)
+            from numbered n
+            """
+        )
+
         return {
             "leaderboard": leaderboard,
-            "fracture": fracture
+            "fracture": fracture,
+            "user_rank": user_rank,
+            "max_rank": max_rank,
+            "friend_ids": [],
+            "rank_data": []
         }
 
     except HTTPException as e:
@@ -490,14 +516,14 @@ async def stats_leaderboards_overall_volume(
     finally:
         if conn: await conn.close()
 
-async def fetch_top_rows(conn, column, num):
+async def fetch_top_rows(conn, num):
     return await conn.fetch(
         f"""
         select n.*, u.username
         from numbered n
         inner join users u
         on n.user_id = u.id
-        order by {column} desc
+        order by n.row_num
         limit $1
         """, num
     )
@@ -513,6 +539,141 @@ async def fetch_rows_between(conn, lower, upper):
         order by n.row_num
         """, lower, upper
     )
+
+async def stats_leaderboards_overall_volume_rand(top_num, side_num, credentials):
+    leaderboard = []
+    fracture = None
+    friend_ids = []
+
+    # if random.random() < 0.5:
+
+    all_data = []
+    user_ids = []
+    num_values = 1000
+    for i in range(num_values):
+        user_id = str(uuid4())
+        all_data.append({
+            "user_id": user_id,
+            "username": str(uuid4())[:20],
+            "value": random.randint(0, 3000000),
+        })
+        user_ids.append(user_id)
+    all_data = sorted(all_data, key=lambda x: x["value"], reverse=True)
+    for i in range(len(all_data)):
+        all_data[i]["rank"] = i + 1
+
+    num_rows = top_num + 2 * side_num + 1
+    # user_idx = random.randint(0, num_values - 1)
+    
+    # if random.random() < 0.5:   
+    user_value = None     
+    if 0:        
+        user_idx = random.randint(0, top_num - 1)
+        del user_ids[user_idx]
+        all_data[user_idx]["user_id"] = credentials["user_id"]
+        all_data[user_idx]["username"] = "CURRENT USER"
+        user_value = all_data[user_idx]["value"]
+
+        leaderboard = all_data[:num_rows]
+
+    else:
+        start_idx = random.randint(top_num + 1, num_values - 1)
+        fracture = top_num
+        user_idx = random.randint(start_idx, start_idx + (2 * side_num))
+        del user_ids[user_idx]
+        all_data[user_idx]["user_id"] = credentials["user_id"]
+        all_data[user_idx]["username"] = "CURRENT USER"
+        user_value = all_data[user_idx]["value"]
+
+        top_leaderboard = all_data[:top_num]
+        remain_leaderboard = all_data[start_idx:start_idx+(2 * side_num + 1)]
+        leaderboard = top_leaderboard + remain_leaderboard
+
+    for i in range(len(leaderboard)):
+        if random.random() > 0.1: continue
+        elif leaderboard[i]["user_id"] == credentials["user_id"]: continue
+        leaderboard[i]["username"] = leaderboard[i]["username"] + "f"
+        friend_ids.append(leaderboard[i]["user_id"])
+    
+    for i in range(len(leaderboard)):
+        if leaderboard[i]["user_id"] != credentials["user_id"]: continue
+        user_rank = leaderboard[i]["rank"]
+
+    rank_data = []
+    for data in all_data:
+        temp = {
+            "value": data["value"]
+        }
+        if data["user_id"] == credentials["user_id"]: continue
+        rank_data.append(temp)
+    rank_data = sorted(rank_data, key=lambda x: x["value"])
+    rank_data = downsample(rank_data)
+    rank_data.append({
+        "value": user_value,
+        "showVerticalLine": True,
+    })
+    rank_data = sorted(rank_data, key=lambda x: x["value"])
+
+    return {
+        "leaderboard": leaderboard,
+        "fracture": fracture,
+        "user_rank": user_rank,
+        "max_rank": all_data[-1]["rank"],
+        "friend_ids": friend_ids,
+        "rank_data": rank_data
+    }
+
+def downsample(points, n=50):
+    idx = np.linspace(0, len(points) - 1, n, dtype=int)
+    return [points[i] for i in idx]
+
+    # num_rows = top_num + 2 * side_num + 1
+    # user_ids = []
+    # for i in range(num_rows):
+    #     user_id = str(uuid4())
+    #     leaderboard.append({
+    #         "user_id": user_id,
+    #         "username": str(uuid4())[:20],
+    #         "value": random.randint(0, 300000),
+    #         # "rank": i + 1,
+    #     })
+    #     user_ids.append(user_id)
+
+    # select_idx = random.randint(0, num_rows - 1)
+    # del user_ids[select_idx]
+    # leaderboard[select_idx]["user_id"] = credentials["user_id"]
+    # leaderboard[select_idx]["username"] = "CURRENT USER"
+    
+    # for i in range(num_rows):
+    #     if random.random() > 0.1: continue
+    #     elif leaderboard[i]["user_id"] == credentials["user_id"]: continue
+    #     leaderboard[i]["username"] = leaderboard[i]["username"] + "f"
+    #     friend_ids.append(leaderboard[i]["user_id"])
+
+    # leaderboard = sorted(leaderboard, key=lambda x: x["value"], reverse=True)
+    # for i in range(num_rows):
+    #     leaderboard[i]["rank"] = i + 1
+    #     if leaderboard[i]["user_id"] != credentials["user_id"]: continue
+    #     user_rank = leaderboard[i]["rank"]
+
+    # rank_data = []
+    # mean = 0
+    # stddev = 1
+    # n = 100
+    # for i in range(n):
+    #     x = mean + stddev * (6 * (i / (n - 1)) - 3)
+    #     y = math.exp(-0.5 * ((x - mean) / stddev) ** 2)
+    #     rank_data.append({"value": y * 100})
+    # rank_data[random.randint(0, n - 1)]["showVerticalLine"] = True
+
+    # return {
+    #     "leaderboard": leaderboard,
+    #     "fracture": fracture,
+    #     "user_rank": user_rank,
+    #     "max_rank": leaderboard[-1]["rank"],
+    #     "friend_ids": friend_ids,
+    #     "rank_data": rank_data
+    # }
 
 # for each exercise
 #   most volume, sets, reps

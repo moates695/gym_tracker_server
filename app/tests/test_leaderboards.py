@@ -22,6 +22,7 @@ async def test_overall_volume_standard(delete_users):
     top_num = 10
     side_num = 20
     params = {
+        "use_real": True,
         "top_num": top_num,
         "side_num": side_num,
     }
@@ -188,6 +189,7 @@ async def test_overall_volume_standard(delete_users):
 @pytest.mark.asyncio
 async def test_overall_volume_empty(delete_users):
     params={
+        "use_real": True,
         "top_num": 10,
         "side_num": 20,
         "gender": "male",
@@ -246,6 +248,7 @@ async def test_overall_volume_small(delete_users):
     top_num = 4
     side_num = 3
     params = {
+        "use_real": True,
         "top_num": top_num,
         "side_num": side_num,
     }
