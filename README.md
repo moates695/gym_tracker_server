@@ -138,5 +138,7 @@ Body weight exercises are designated a ratio of body weight that they use. We us
 - leaderboard ranks (based on top percentage, do this per leaderboard per metric or use a weighting)
 - do a heatmap based on muscle ranking, maybe volume total, or volume per week?
 - on favourite workouts page, use colour highlight on each row to show comparitive difference between exercise and chosen metric
+- use traceback on all exceptions
+- use transactions for async pg, and auto rollback on exception
 
 ## Assumptions

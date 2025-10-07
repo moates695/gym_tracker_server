@@ -9,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import random
 import json
 from copy import deepcopy
+import traceback
 
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
@@ -310,6 +311,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()

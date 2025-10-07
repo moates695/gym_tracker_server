@@ -2,7 +2,10 @@ import json
 import asyncio
 import os
 
+from ..api.middleware.database import *
 from ..api.middleware.database import setup_connection
+
+load_env_vars()
 
 async def main():
     if input(f"Update exercises in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
