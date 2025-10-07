@@ -150,5 +150,6 @@ try:
 except:
     await tx.rollback()
 ```
+- alter search filter to return exact first, then divideder line, then partial matches
 
 ## Assumptions

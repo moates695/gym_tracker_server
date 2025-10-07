@@ -107,10 +107,38 @@
     "weight_type": "calisthenic"
   },
   {
-    "name": "Overhead Shoulder Press",
+    "name": "Overhead Barbell Press",
     "targets": {
-      "shoulders": 10,
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "core/upper abs": 4,
+      "core/lower abs": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Arnold Press",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 8,
+      "shoulders/rear": 4,
       "arms/tricep": 5
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Overhead Dumbbell Press",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "core/upper abs": 4,
+      "core/lower abs": 4
     },
     "is_body_weight": false,
     "description": "",
@@ -124,6 +152,72 @@
     },
     "is_body_weight": false,
     "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "single arm, forward lean",
+        "targets": {
+          "shoulders/middle": 10,
+          "shoulders/rear": 7,
+          "back/traps": 3
+        }
+      },
+      {
+        "name": "single arm, backwards lean",
+        "targets": {
+          "shoulders/middle": 10,
+          "shoulders/front": 7,
+          "back/traps": 3
+        }
+      }
+    ]
+  },
+  {
+    "name": "Cable Lateral Raise",
+    "targets": {
+      "shoulders/middle": 10,
+      "shoulders/front": 6,
+      "shoulders/rear": 4,
+      "back/traps": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Shoulder Press Machine",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "back/traps": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Lateral Raise Machine",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "back/traps": 3
+    },
+    "is_body_weight": false,
+    "description": "standing, handles held like dumbbells",
+    "weight_type": "free"
+  },
+  {
+    "name": "Delt Raise Machine",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "back/traps": 3
+    },
+    "is_body_weight": false,
+    "description": "sitting, with pads on arms",
     "weight_type": "free"
   },
   {
