@@ -171,6 +171,7 @@ def test_login(delete_users):
     auth_token = response.json()["auth_token"]
     decode_token(auth_token)
     assert response.json()["user_data"] == {
+        "user_id": decode_token(auth_token)["user_id"],
         "email": valid_user["email"],
         "username": valid_user["username"],
         "first_name": valid_user["first_name"],
@@ -189,6 +190,7 @@ def test_login(delete_users):
     assert response.json()["account_state"] == "good"
     decode_token(response.json()["auth_token"])
     assert response.json()["user_data"] == {
+        "user_id": decode_token(auth_token)["user_id"],
         "email": valid_user["email"],
         "username": valid_user["username"],
         "first_name": valid_user["first_name"],
@@ -226,6 +228,7 @@ def test_sign_in(delete_users):
     assert response.json()["status"] == "signed-in"
     decode_token(response.json()["token"])
     assert response.json()["user_data"] == {
+        "user_id": decode_token(response.json()["token"])["user_id"],
         "email": valid_user["email"],
         "username": valid_user["username"],
         "first_name": valid_user["first_name"],

@@ -51,6 +51,8 @@ async def register(req: Register):
     
     try:
         conn = await setup_connection()
+        tx = conn.transaction()
+        await tx.start()
 
         error_result = {
             "status": "error",
@@ -150,6 +152,8 @@ async def register(req: Register):
         if req.send_email:
             await send_validation_email(req.email, user_id)
 
+        await tx.commit()
+
         return {
             "status": "success",
             "temp_token": generate_token(
@@ -161,11 +165,12 @@ async def register(req: Register):
         }
 
     except HTTPException as e:
+        await tx.rollback()
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
+        await tx.rollback()
         raise HTTPException(status_code=500)
-
     finally:
         if conn: await conn.close()
 
