@@ -136,7 +136,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                 """, credentials["user_id"], exercise.id
             )
             if current_exercise_totals is None:
-                current_exercise_totals = await conn.fetch(
+                current_exercise_totals = await conn.fetchrow(
                     """
                     insert into exercise_totals
                     (user_id, exercise_id, volume, num_sets, reps, counter)
@@ -145,7 +145,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                     returning *
                     """, credentials["user_id"], exercise.id
                 )
-
+            
             await conn.execute(
                 """
                 update exercise_totals
