@@ -42,6 +42,8 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         if len(req.exercises) == 0: return
 
         conn = await setup_connection()
+        tx = conn.transaction()
+        await tx.start()
 
         start_time = datetime.fromtimestamp(req.start_time / 1000, tz=timezone.utc)
         workout_id = await conn.fetchval(
@@ -307,10 +309,13 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
                 credentials["user_id"]
             )
 
+        await tx.commit()
     except HTTPException as e:
+        await tx.rollback()
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
+        await tx.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:

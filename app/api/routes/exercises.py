@@ -25,6 +25,8 @@ security = HTTPBearer()
 async def exercises_list_all(use_real: bool, credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
+        tx = conn.transaction()
+        await tx.start()
 
         exercise_rows = await conn.fetch(
             """
@@ -90,14 +92,17 @@ async def exercises_list_all(use_real: bool, credentials: dict = Depends(verify_
                     if random.random() < 0.5: continue
                     variation["is_custom"] = True
 
+        await tx.commit()
         return {
             "exercises": exercises
         }
 
     except HTTPException as e:
+        await tx.rollback()
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
+        await tx.rollback()
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
