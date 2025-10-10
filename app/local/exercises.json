@@ -52,6 +52,39 @@
     "weight_type": "free"
   },
   {
+    "name": "Dumbbell Hammer Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Preacher Curl Machine",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Bicep Curl Machine",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
     "name": "Pull Up",
     "targets": {
       "back/lats": 10,
@@ -270,7 +303,7 @@
     "weight_type": "free"
   },
   {
-    "name": "Bench Press",
+    "name": "Barbell Bench Press",
     "targets": {
       "chest": 10,
       "arms/tricep": 6,
@@ -627,6 +660,18 @@
     "weight_type": "free"
   },
   {
+    "name": "Incline Barbell Bench Press",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 8,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
     "name": "Dumbbell Fly",
     "targets": {
       "chest": 8,
@@ -862,5 +907,53 @@
     "is_body_weight": false,
     "description": "",
     "weight_type": "machine"
+  },
+  {
+    "name": "Hanging Knee Raise",
+    "targets": {
+      "core/lower abs": 10,
+      "core/upper abs": 10,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3
+    },
+    "ratio": {
+      "male": 0.4,
+      "female": 0.5
+    },
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "calisthenic"
+  },
+  {
+    "name": "Decline Sit Up",
+    "targets": {
+      "core/lower abs": 10,
+      "core/upper abs": 10
+    },
+    "ratio": {
+      "male": 0.6,
+      "female": 0.5
+    },
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "calisthenic"
+  },
+  {
+    "name": "Standing Ab Roller",
+    "targets": {
+      "core/lower abs": 10,
+      "core/upper abs": 10,
+      "core/obliques": 7,
+      "legs": 4,
+      "back": 4,
+      "arms": 4
+    },
+    "ratio": {
+      "male": 1,
+      "female": 1
+    },
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "calisthenic"
   }
 ]

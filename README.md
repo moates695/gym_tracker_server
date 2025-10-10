@@ -151,5 +151,9 @@ except:
     await tx.rollback()
 ```
 - alter search filter to return exact first, then divideder line, then partial matches
+- check if <StatusBar style='dark'/>, works on each page?
+- ERROR, cannot save workout (maybe out of date build)
+- error getting /stats/history, `'NoneType' object is not subscriptable`
+- when shown start screen options, ask for confirmation before starting new workout
 
 ## Assumptions
