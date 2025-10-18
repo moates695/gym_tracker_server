@@ -85,6 +85,48 @@
     "weight_type": "free"
   },
   {
+    "name": "Cable Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "flat bar, wide grip"
+      },
+      {
+        "name": "flat bar, medium grip"
+      },
+      {
+        "name": "flat bar, close grip"
+      },
+      {
+        "name": "ez-bar, wide grip"
+      },
+      {
+        "name": "ez-bar, medium grip"
+      },
+      {
+        "name": "ez-bar, close grip"
+      }
+    ]
+  },
+  {
+    "name": "Single Arm Cable Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
     "name": "Pull Up",
     "targets": {
       "back/lats": 10,
@@ -242,7 +284,7 @@
     "weight_type": "free"
   },
   {
-    "name": "Delt Raise Machine",
+    "name": "Delt Press Machine",
     "targets": {
       "shoulders/front": 10,
       "shoulders/middle": 10,
@@ -251,6 +293,59 @@
     },
     "is_body_weight": false,
     "description": "sitting, with pads on arms",
+    "weight_type": "free"
+  },
+  {
+    "name": "Front Dumbbell Raise",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 7
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "hammer"
+      },
+      {
+        "name": "horizontal"
+      }
+    ]
+  },
+  {
+    "name": "Rear Delt Dumbbell Raise",
+    "targets": {
+      "shoulders/rear": 10,
+      "back/exterior middle": 7,
+      "back/lats": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Rear Delt Dumbbell Fly",
+    "targets": {
+      "shoulders/rear": 10,
+      "back/exterior middle": 7,
+      "back/upper middle": 7,
+      "back/lats": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Barbell High Row",
+    "targets": {
+      "shoulders/rear": 10,
+      "back/exterior middle": 8,
+      "back/upper middle": 8,
+      "back/lats": 4
+    },
+    "is_body_weight": false,
+    "description": "",
     "weight_type": "free"
   },
   {

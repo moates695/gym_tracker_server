@@ -155,5 +155,6 @@ except:
 - ERROR, cannot save workout (maybe out of date build)
 - error getting /stats/history, `'NoneType' object is not subscriptable`
 - when shown start screen options, ask for confirmation before starting new workout
+- add API for users, they sign on with email password or 1 time code. Create routes for them to export data (will be GET only, no adding/updating/deleting data directly)
 
 ## Assumptions
