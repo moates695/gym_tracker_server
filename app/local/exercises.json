@@ -296,7 +296,7 @@
     "weight_type": "free"
   },
   {
-    "name": "Front Dumbbell Raise",
+    "name": "Front Delt Dumbbell Raise",
     "targets": {
       "shoulders/front": 10,
       "shoulders/middle": 7
@@ -322,7 +322,18 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "seated"
+      },
+      {
+        "name": "standing"
+      },
+      {
+        "name": "incline chest supported"
+      }
+    ]
   },
   {
     "name": "Rear Delt Dumbbell Fly",
@@ -334,7 +345,36 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "seated"
+      },
+      {
+        "name": "standing"
+      },
+      {
+        "name": "standing hammer"
+      },
+      {
+        "name": "incline chest supported"
+      },
+      {
+        "name": "incline chest supported hammer"
+      }
+    ]
+  },
+  {
+    "name": "Rear Delt Fly Machine",
+    "targets": {
+      "shoulders/rear": 10,
+      "back/exterior middle": 4,
+      "back/upper middle": 4,
+      "back/lats": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
   },
   {
     "name": "Barbell High Row",
@@ -370,6 +410,29 @@
     "ratio": 1,
     "description": "",
     "weight_type": "free"
+  },
+  {
+    "name": "Tricep Pushdown",
+    "targets": {
+      "arms/tricep": 10,
+      "chest": 4,
+      "shoulders": 3
+    },
+    "is_body_weight": true,
+    "ratio": 1,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "flat bar, wide grip"
+      },
+      {
+        "name": "flat bar, medium grip"
+      },
+      {
+        "name": "flat bar, close grip"
+      }
+    ]
   },
   {
     "name": "Russian Twist",
@@ -629,7 +692,12 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "single leg"
+      }
+    ]
   },
   {
     "name": "Seated Leg Curl",
@@ -638,7 +706,12 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "single leg"
+      }
+    ]
   },
   {
     "name": "Lying Leg Curl",
@@ -908,7 +981,7 @@
     ]
   },
   {
-    "name": "Cable Row Machine",
+    "name": "Seated Cable Row",
     "targets": {
       "back/lats": 10,
       "back/upper middle": 8,
@@ -919,7 +992,30 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "cable"
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "close hammer grip"
+      },
+      {
+        "name": "medium hammer grip"
+      },
+      {
+        "name": "wide hammer grip"
+      },
+      {
+        "name": "close flat bar"
+      },
+      {
+        "name": "medium flat bar"
+      },
+      {
+        "name": "wide flat bar"
+      },
+      {
+        "name": "underhand hammer grip"
+      }
+    ]
   },
   {
     "name": "Seated Row Machine",
@@ -933,7 +1029,15 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "high row"
+      },
+      {
+        "name": "low row"
+      }
+    ]
   },
   {
     "name": "High to Low Row Machine",
@@ -1050,5 +1154,77 @@
     "is_body_weight": true,
     "description": "",
     "weight_type": "calisthenic"
+  },
+  {
+    "name": "Resting Dummbell Forearm Curl",
+    "targets": {
+      "arms/exterior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Resting Reverse Dummbell Forearm Curl",
+    "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Sulek Forearm Curl",
+    "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Reverse Sulek Forearm Curl",
+    "targets": {
+      "arms/exterior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Standing Barbell Forearm Curl",
+    "targets": {
+      "arms/exterior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Standing Behind Barbell Forearm Curl",
+    "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Resting Barbell Forearm Curl",
+    "targets": {
+      "arms/exterior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Resting Reverse Barbell Forearm Curl",
+    "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   }
 ]
