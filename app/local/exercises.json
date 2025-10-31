@@ -52,6 +52,47 @@
     "weight_type": "free"
   },
   {
+    "name": "Barbell Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "EZ Bar Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Single Arm Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "standing, free"
+      },
+       {
+        "name": "seated, supported"
+      }
+    ]
+  },
+  {
     "name": "Dumbbell Hammer Curl",
     "targets": {
       "arms/bicep": 10,
@@ -284,7 +325,7 @@
     "weight_type": "free"
   },
   {
-    "name": "Delt Press Machine",
+    "name": "Delt Raise Machine",
     "targets": {
       "shoulders/front": 10,
       "shoulders/middle": 10,
@@ -410,6 +451,16 @@
     "ratio": 1,
     "description": "",
     "weight_type": "free"
+  },
+  {
+    "name": "Seated Tricep Pushdown Machine",
+    "targets": {
+      "arms/tricep": 10,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
   },
   {
     "name": "Tricep Pushdown",
@@ -634,7 +685,15 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "cable"
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "vertical back supported"
+      },
+      {
+        "name": "forward lean"
+      }
+    ]
   },
   {
     "name": "Cable Tricep Extension",
@@ -874,6 +933,28 @@
     "weight_type": "cable"
   },
   {
+    "name": "Independent Machine Chest Fly",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "low"
+      },
+      {
+        "name": "middle"
+      },
+      {
+        "name": "high"
+      }
+    ]
+  },
+  {
     "name": "Cable Chest Press",
     "targets": {
       "chest": 10,
@@ -905,6 +986,25 @@
     },
     "is_body_weight": false,
     "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "Hammer Strength"
+      }
+    ]
+  },
+  {
+    "name": "Seated Super Incline Chest Press",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 6,
+      "arms/tricep": 6,
+      "shoulders": 3,
+      "shoulders/front": 7,
+      "shoulders/middle": 6
+    },
+    "is_body_weight": false,
+    "description": "",
     "weight_type": "machine"
   },
   {
@@ -917,7 +1017,12 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "Hammer Strength"
+      }
+    ]
   },
   {
     "name": "Pec Fly Machine",
@@ -925,6 +1030,26 @@
       "chest": 10,
       "arms/tricep": 3,
       "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Hammer Pec Fly Machine",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Lat Pullover Machine",
+    "targets": {
+      "back/lats": 10
     },
     "is_body_weight": false,
     "description": "",
@@ -940,7 +1065,12 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "Hammer Strength"
+      }
+    ]
   },
   {
     "name": "Cable Lat Pulldown",
@@ -1018,7 +1148,7 @@
     ]
   },
   {
-    "name": "Seated Row Machine",
+    "name": "Seated Hammer Row Machine",
     "targets": {
       "back/lats": 10,
       "back/upper middle": 8,
@@ -1036,6 +1166,31 @@
       },
       {
         "name": "low row"
+      }
+    ]
+  },
+  {
+    "name": "Seated Row Machine",
+    "targets": {
+      "back/lats": 10,
+      "back/upper middle": 8,
+      "back/exterior middle": 8,
+      "arms/bicep": 5,
+      "shoulders/rear": 4,
+      "core/lower abs": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "hammer row"
+      },
+      {
+        "name": "low row"
+      },
+       {
+        "name": "high row"
       }
     ]
   },
@@ -1091,7 +1246,18 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "standing"
+      },
+      {
+        "name": "flat chest supported"
+      },
+      {
+        "name": "incline chest supported"
+      }
+    ]
   },
   {
     "name": "Single Arm Dumbbell Row",

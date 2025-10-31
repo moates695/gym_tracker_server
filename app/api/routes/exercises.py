@@ -428,19 +428,19 @@ def build_history(rows):
         prev_set_idx = 0 if len(graph["weight_per_set"]) == 0 else graph["weight_per_set"][-1]["x"] + 1
         for i in range(row["num_sets"]):
             graph["weight_per_set"].append({
-                "x": prev_set_idx + i,
+                "x": prev_set_idx + i + 1,
                 "y": row["weight"]
             })
 
             graph["volume_per_set"].append({
-                "x": prev_set_idx + i,
+                "x": prev_set_idx + i + 1,
                 "y": row["reps"] * row["weight"] * row["num_sets"]
             })
 
             prev_rep_idx = 0 if len(graph["weight_per_rep"]) == 0 else graph["weight_per_rep"][-1]["x"] + 1
             for j in range(row["reps"]):
                 graph["weight_per_rep"].append({
-                    "x": prev_rep_idx + j,
+                    "x": prev_rep_idx + j + 1,
                     "y": row["weight"]
                 })
         
