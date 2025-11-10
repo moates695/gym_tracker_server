@@ -134,14 +134,10 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
                 """, credentials["user_id"]
             )
 
-            temp = []
-            for row in rows:
-                temp.append({
-                    "value": row[data_map["column"]],
-                    "created_at": row["created_at"].timestamp()
-                })
-
-            history[key] = temp
+            history[key] = [{
+                "value": row[data_map["column"]],
+                "created_at": row["created_at"].timestamp()
+            } for row in rows]
 
         return {
             "data_history": history

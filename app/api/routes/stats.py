@@ -12,6 +12,7 @@ from copy import deepcopy
 import math
 from uuid import uuid4
 import numpy as np
+import redis
 
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
@@ -418,7 +419,21 @@ async def getExerciseGroups(conn, exercise_id):
 
     return [row["group_name"] for row in rows]
 
-# todo tests for gender and age fields (could make test the filtered views, then assume output is correct)
+@router.get("/stats/leaderboards/overall")
+async def stats_leaderboards_overall():
+    try:
+        conn = await setup_connection()
+
+        
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
 # @router.get("/stats/leaderboards/overall")
 # async def stats_leaderboards_overall_volume(
 #     table: Literal['volume','sets','reps'],
