@@ -19,8 +19,6 @@ client = TestClient(app)
 @pytest.mark.asyncio
 async def test_exercise_history_match(delete_users, create_user):
     auth_token = create_user
-    # decoded_auth_token = decode_token(auth_token)
-    # user_id = decoded_auth_token["user_id"]
 
     headers = {
         "Authorization": f"Bearer {auth_token}"
@@ -43,7 +41,6 @@ async def test_exercise_history_match(delete_users, create_user):
         assert len(exercise_ids) > 0
         for exercise_id in exercise_ids:
             response = client.get('/exercise/history', headers=headers, params={
-                'use_real': True,
                 "exercise_id": exercise_id
             })
             resp_json = response.json()
@@ -186,16 +183,16 @@ def check_history_match(history):
         
             for _ in range(table_row["sets"]):
                 weight_data = workout["graph"]["weight_per_set"][set_idx]
-                assert weight_data["x"] == set_idx
+                assert weight_data["x"] == set_idx + 1
                 assert weight_data["y"] == table_row["weight"]
 
                 volume_data = workout["graph"]["volume_per_set"][set_idx]
-                assert volume_data["x"] == set_idx
+                assert volume_data["x"] == set_idx + 1
                 assert volume_data["y"] == table_row["reps"] * table_row["weight"] * table_row["sets"]
 
                 for _ in range(table_row["reps"]):
                     rep_data = workout["graph"]["weight_per_rep"][rep_idx]
-                    assert rep_data["x"] == rep_idx
+                    assert rep_data["x"] == rep_idx + 1
                     assert rep_data["y"] == table_row["weight"]
                     rep_idx += 1
                 
@@ -252,7 +249,6 @@ async def test_exercise_history_data(delete_users, create_user):
 
         for exercise_id, set_data_list in exercises.items():
             response = client.get('/exercise/history', headers=headers, params={
-                "use_real": True,
                 "exercise_id": exercise_id
             })
             resp_json = response.json()

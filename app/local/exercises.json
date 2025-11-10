@@ -1304,6 +1304,16 @@
     "weight_type": "calisthenic"
   },
   {
+    "name": "Ab Crunch Machine",
+    "targets": {
+      "core/lower abs": 10,
+      "core/upper abs": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
     "name": "Standing Ab Roller",
     "targets": {
       "core/lower abs": 10,

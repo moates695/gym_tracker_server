@@ -389,7 +389,6 @@ async def getExerciseGroups(conn, exercise_id):
 # todo tests for gender and age fields (could make test the filtered views, then assume output is correct)
 @router.get("/stats/leaderboards/overall")
 async def stats_leaderboards_overall_volume(
-    use_real: bool,
     table: Literal['volume','sets','reps'],
     top_num: int, 
     side_num: int, 
@@ -398,11 +397,6 @@ async def stats_leaderboards_overall_volume(
     upper_age_limit: int = None,
     credentials: dict = Depends(verify_token)
 ):
-    if use_real:
-        return await stats_leaderboards_overall_volume_real(table, top_num, side_num, gender, lower_age_limit, upper_age_limit, credentials)
-    return await stats_leaderboards_overall_volume_rand(top_num, side_num, credentials)
-    
-async def stats_leaderboards_overall_volume_real(table, top_num, side_num, gender, lower_age_limit, upper_age_limit, credentials):
     try:
         conn = await setup_connection()
 
@@ -540,91 +534,9 @@ async def fetch_rows_between(conn, lower, upper):
         """, lower, upper
     )
 
-async def stats_leaderboards_overall_volume_rand(top_num, side_num, credentials):
-    leaderboard = []
-    fracture = None
-    friend_ids = []
-
-    # if random.random() < 0.5:
-
-    all_data = []
-    user_ids = []
-    num_values = 1000
-    for i in range(num_values):
-        user_id = str(uuid4())
-        all_data.append({
-            "user_id": user_id,
-            "username": str(uuid4())[:20],
-            "value": random.randint(0, 3000000),
-        })
-        user_ids.append(user_id)
-    all_data = sorted(all_data, key=lambda x: x["value"], reverse=True)
-    for i in range(len(all_data)):
-        all_data[i]["rank"] = i + 1
-
-    num_rows = top_num + 2 * side_num + 1
-    # user_idx = random.randint(0, num_values - 1)
-
-    user_value = None         
-    if random.random() < 0.5:   
-        user_idx = random.randint(0, top_num - 1)
-        del user_ids[user_idx]
-        all_data[user_idx]["user_id"] = credentials["user_id"]
-        all_data[user_idx]["username"] = "CURRENT USER"
-        user_value = all_data[user_idx]["value"]
-
-        leaderboard = all_data[:num_rows]
-
-    else:
-        start_idx = random.randint(top_num + 1, num_values - 1)
-        fracture = top_num
-        user_idx = random.randint(start_idx, start_idx + (2 * side_num))
-        del user_ids[user_idx]
-        all_data[user_idx]["user_id"] = credentials["user_id"]
-        all_data[user_idx]["username"] = "CURRENT USER"
-        user_value = all_data[user_idx]["value"]
-
-        top_leaderboard = all_data[:top_num]
-        remain_leaderboard = all_data[start_idx:start_idx+(2 * side_num + 1)]
-        leaderboard = top_leaderboard + remain_leaderboard
-
-    for i in range(len(leaderboard)):
-        if random.random() > 0.1: continue
-        elif leaderboard[i]["user_id"] == credentials["user_id"]: continue
-        leaderboard[i]["username"] = leaderboard[i]["username"] + "f"
-        friend_ids.append(leaderboard[i]["user_id"])
-    
-    for i in range(len(leaderboard)):
-        if leaderboard[i]["user_id"] != credentials["user_id"]: continue
-        user_rank = leaderboard[i]["rank"]
-
-    rank_data = []
-    for data in all_data:
-        temp = {
-            "value": data["value"]
-        }
-        if data["user_id"] == credentials["user_id"]: continue
-        rank_data.append(temp)
-    rank_data = sorted(rank_data, key=lambda x: x["value"])
-    rank_data = downsample(rank_data)
-    rank_data.append({
-        "value": user_value,
-        "showVerticalLine": True,
-    })
-    rank_data = sorted(rank_data, key=lambda x: x["value"])
-
-    return {
-        "leaderboard": leaderboard,
-        "fracture": fracture,
-        "user_rank": user_rank,
-        "max_rank": all_data[-1]["rank"],
-        "friend_ids": friend_ids,
-        "rank_data": rank_data
-    }
-
-def downsample(points, n=50):
-    idx = np.linspace(0, len(points) - 1, n, dtype=int)
-    return [points[i] for i in idx]
+# def downsample(points, n=50):
+#     idx = np.linspace(0, len(points) - 1, n, dtype=int)
+#     return [points[i] for i in idx]
 
     # num_rows = top_num + 2 * side_num + 1
     # user_ids = []

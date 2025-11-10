@@ -22,7 +22,6 @@ async def test_workout_overview_stats(delete_users, create_user):
         "Authorization": f"Bearer {auth_token}"
     }
     params = {
-        "use_real": True
     }
 
     try:
