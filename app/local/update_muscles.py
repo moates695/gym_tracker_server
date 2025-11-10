@@ -3,6 +3,7 @@ import asyncio
 import os
 
 from ..api.middleware.database import setup_connection
+from existing_users_db import check_totals
 
 async def main():
     if input(f"Update muscles in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
@@ -11,6 +12,7 @@ async def main():
         muscles_json = json.load(file)
 
     await update(muscles_json)
+    await check_totals()
 
 async def update(muscles_json: dict):
     try:

@@ -98,56 +98,21 @@ async def register(req: Register):
                 """, user_id, req_json[key]
             )
 
-        await conn.execute(
-            """
-            insert into workout_totals
-            values
-            ($1, 0.0, 0, 0, 0.0, 0, 0)
-            """, user_id
-        )
+        await new_workout_totals(conn, user_id)
+        await new_muscle_totals(conn, user_id)
+        await new_exercise_totals(conn, user_id)
 
-        for key in ["group", "target"]:
-            id_rows = await conn.fetch(
-                f"""
-                select id
-                from muscle_{key}s
-                """
-            )
-            for id_row in id_rows:
-                await conn.execute(
-                    f"""
-                    insert into workout_muscle_{key}_totals
-                    values
-                    ($1, $2, 0.0, 0, 0, 0)
-                    """, user_id, id_row["id"]
-                )
-
-        exercise_id_rows = await conn.fetch(
-            """
-            select id
-            from exercises
-            """
-        )
-        for exercise_id_row in exercise_id_rows:
-            await conn.execute(
-                """
-                insert into exercise_totals
-                (user_id, exercise_id, volume, num_sets, reps, counter)
-                values
-                ($1, $2, 0.0, 0, 0, 0)
-                """, user_id, exercise_id_row["id"]
-            )
-
-        for table in ["volume", "sets", "reps"]:
-            column = table if table != "sets" else "num_sets"
-            await conn.execute(
-                f"""
-                insert into {table}_leaderboard
-                (user_id, {column}, last_updated)
-                values
-                ($1, $2, $3)
-                """, user_id, 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
-            )
+        # todo re-check with new leaderboard setup
+        # for table in ["volume", "sets", "reps"]:
+        #     column = table if table != "sets" else "num_sets"
+        #     await conn.execute(
+        #         f"""
+        #         insert into {table}_leaderboard
+        #         (user_id, {column}, last_updated)
+        #         values
+        #         ($1, $2, $3)
+        #         """, user_id, 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
+        #     )
 
         if req.send_email:
             await send_validation_email(req.email, user_id)
@@ -173,6 +138,51 @@ async def register(req: Register):
         raise HTTPException(status_code=500)
     finally:
         if conn: await conn.close()
+
+async def new_workout_totals(conn, user_id):
+    await conn.execute(
+        """
+        insert into workout_totals
+        (user_id, volume, num_sets, reps, duration, num_workouts, num_exercises)
+        values
+        ($1, 0.0, 0, 0, 0.0, 0, 0)
+        """, user_id
+    )
+
+async def new_muscle_totals(conn, user_id):
+    for key in ["group", "target"]:
+        id_rows = await conn.fetch(
+            f"""
+            select id
+            from muscle_{key}s
+            """
+        )
+        for id_row in id_rows:
+            await conn.execute(
+                f"""
+                insert into workout_muscle_{key}_totals
+                (user_id, muscle_{key}_id, volume, num_sets, reps, counter)
+                values
+                ($1, $2, 0.0, 0, 0, 0)
+                """, user_id, id_row["id"]
+            )
+
+async def new_exercise_totals(conn, user_id):
+    exercise_id_rows = await conn.fetch(
+        """
+        select id
+        from exercises
+        """
+    )
+    for exercise_id_row in exercise_id_rows:
+        await conn.execute(
+            """
+            insert into exercise_totals
+            (user_id, exercise_id, volume, num_sets, reps, counter)
+            values
+            ($1, $2, 0.0, 0, 0, 0)
+            """, user_id, exercise_id_row["id"]
+        )
 
 @router.post("/register/validate/resend")
 async def resend_validation_email(credentials: dict = Depends(verify_temp_token)):

@@ -9,7 +9,9 @@ load_env_vars()
 
 async def main():
     if input(f"Insert existing user data in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
+    await check_totals()
 
+async def check_totals():
     try:
         conn = await setup_connection()
 

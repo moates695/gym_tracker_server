@@ -4,6 +4,7 @@ import os
 
 from ..api.middleware.database import *
 from ..api.middleware.database import setup_connection
+from .existing_users_db import check_totals
 
 load_env_vars()
 
@@ -14,6 +15,7 @@ async def main():
         exercises = json.load(file)
 
     await update(exercises)
+    await check_totals()
 
 async def update(exercises):
     try:
