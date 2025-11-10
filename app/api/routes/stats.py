@@ -14,7 +14,7 @@ from uuid import uuid4
 import numpy as np
 import redis
 
-from app.api.middleware.database import setup_connection
+from app.api.middleware.database import setup_connection, redis_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
 from app.api.middleware.misc import *
@@ -423,7 +423,8 @@ async def getExerciseGroups(conn, exercise_id):
 async def stats_leaderboards_overall():
     try:
         conn = await setup_connection()
-
+        r = await redis_connection()
+        
         
 
     except HTTPException as e:

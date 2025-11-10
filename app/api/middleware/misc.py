@@ -70,7 +70,8 @@ user_data_tables_map = {
     
 def load_env_vars():
     if os.getenv("ENVIRONMENT") == "prod": return
-    os.environ.clear()
-    load_dotenv(dotenv_path="app/envs/.env", override=True)
+    elif os.getenv("ENVIRONMENT") is None:
+        os.environ.clear()
+        load_dotenv(dotenv_path="app/envs/.env", override=True)
     load_dotenv(dotenv_path=f"app/envs/{os.environ['ENVIRONMENT']}.env", override=True)
    

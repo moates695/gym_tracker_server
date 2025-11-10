@@ -3,7 +3,7 @@ import asyncio
 import os
 
 from ..api.middleware.database import setup_connection
-from existing_users_db import check_totals
+from .existing_users_db import check_totals
 
 async def main():
     if input(f"Update muscles in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return

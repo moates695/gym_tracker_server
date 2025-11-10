@@ -2,7 +2,7 @@ import os
 import asyncpg
 import asyncio
 from dotenv import load_dotenv
-import redis
+from redis import asyncio as aioredis
 
 from .misc import load_env_vars
 
@@ -26,10 +26,10 @@ async def setup_connection() -> asyncpg.connection.Connection:
     
 async def redis_connection():
     try:
-        return redis.Redis(
-            host=os.environ["REDIS_HOST"],
-            password=os.environ["REDIS_PASSWORD"],
-            port=int(os.environ["REDIS_PORT"]),
+        redis_url = f"redis://:{os.environ['REDIS_PASSWORD']}@{os.environ['REDIS_HOST']}:{os.environ['REDIS_PORT']}"
+        return await aioredis.from_url(
+            redis_url,
+            encoding='utf-8',
             decode_responses=True
         )
     except Exception as e:
