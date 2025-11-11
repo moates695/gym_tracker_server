@@ -73,7 +73,7 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         await update_workout_totals(conn, user_id, totals, req)
         await update_muscle_totals(conn, user_id, group_totals, target_totals)
         await update_previous_stats(conn, workout_id, totals, group_totals, target_totals, req)
-        await update_leaderboards(conn, user_id, totals)
+        await update_leaderboards(conn, user_id, totals, req)
 
         await tx.commit()
     except HTTPException as e:
@@ -339,7 +339,7 @@ async def update_leaderboards(conn, user_id, totals, req: WorkoutSave):
     )
 
     if current is None:
-        current = await conn.fetch(
+        current = await conn.fetchrow(
             """
             insert into overall_leaderboard
             (user_id, volume, num_sets, reps, num_exercises, num_workouts, duration_mins)
@@ -360,21 +360,21 @@ async def update_leaderboards(conn, user_id, totals, req: WorkoutSave):
         """
         update overall_leaderboard
         set
-            volume = $volume,
-            num_sets = $num_sets,
-            reps = $reps,
-            num_exercises = $num_exercises,
-            num_workouts = $num_workouts,
-            duration_mins = $duration_mins
-        where user_id = $user_id
+            volume = $1,
+            num_sets = $2,
+            reps = $3,
+            num_exercises = $4,
+            num_workouts = $5,
+            duration_mins = $6
+        where user_id = $7
         """,
-        volume=volume,
-        num_sets=num_sets,
-        reps=reps,
-        num_exercises=num_exercises,
-        num_workouts=num_workouts,
-        duration_mins=duration_mins,
-        user_id=user_id,
+        volume,
+        num_sets,
+        reps,
+        num_exercises,
+        num_workouts,
+        duration_mins,
+        user_id,
     )
 
     # todo send to redis

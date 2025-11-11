@@ -6,26 +6,21 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 import pytest_asyncio
 import pytest
 from fastapi.testclient import TestClient
+from dotenv import load_dotenv 
 
-from app.api.middleware.database import setup_connection, load_env_vars
+from app.api.middleware.database import setup_connection
 from ..main import app
 from ..tests.test_register import valid_user
 
-load_env_vars()
+load_dotenv(dotenv_path="app/envs/pytest.env", override=True)
 
-def pytest_configure(config):
-    if os.getenv('ENVIRONMENT') != 'prod': return
-    pytest.exit("Tests cannot run in production environment", returncode=1)
-
-@pytest.fixture(scope="session", autouse=True)
-def patch_env():
-    old_val = os.environ.get("ENVIRONMENT")
-    os.environ["ENVIRONMENT"] = "pytest"
-    yield
-    os.environ["ENVIRONMENT"] = old_val
+@pytest.fixture(autouse=True)
+def check_env():
+    if os.environ["ENVIRONMENT"] == "pytest": return
+    raise Exception(f"curr env '{os.environ['ENVIRONMENT']}', can only delete users in env 'pytest'")
 
 @pytest_asyncio.fixture(scope="function")
-async def delete_users():
+async def delete_users(check_env):
     await _delete_users()
     yield
     await _delete_users()
@@ -47,7 +42,7 @@ async def _delete_users():
         if conn: await conn.close()
 
 @pytest.fixture
-def create_user():
+def create_user(check_env):
     client = TestClient(app)
 
     response = client.post("/register", json=valid_user)
@@ -64,5 +59,4 @@ def create_user():
     })
     assert response.status_code == 200
     return response.json()["auth_token"]
-
 
