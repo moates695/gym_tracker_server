@@ -14,7 +14,7 @@ async def main():
     try:
         conn = await setup_connection()
 
-        user_id = 'a8bf1a23-33f0-4b52-9d9b-7bfde7eea36a'
+        user_id = '7a83d775-1f52-4ede-9493-0aac96012cda'
         token = generate_token('moates695@gmail.com', user_id, minutes=5)
         headers = {
             "Authorization": f"Bearer {token}"

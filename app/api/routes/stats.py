@@ -420,12 +420,41 @@ async def getExerciseGroups(conn, exercise_id):
     return [row["group_name"] for row in rows]
 
 @router.get("/stats/leaderboards/overall")
-async def stats_leaderboards_overall():
+async def stats_leaderboards_overall(
+    top_num: int,
+    side_num: int,
+    credentials: dict = Depends(verify_token)
+):
     try:
         conn = await setup_connection()
         r = await redis_connection()
         
-        
+        user_id = credentials["user_id"]
+
+        # do for overall first, then others too
+        count = await r.zcard("overall_volume")
+        max_rank = count - 1
+        user_rank = await r.zrevrank("overall_volume", user_id)
+        if user_rank <= top_num + side_num:
+            fracture = None
+            top = await r.zrevrange("overall_volume", 0, top_num + 2 * side_num + 1, withscores=True)
+            leaderboard = []
+            for i, t in enumerate(top):
+                leaderboard.append({
+                    "user_id": t[0],
+                    "username": "",
+                    "rank": i,
+                    "value": t[1]
+                })
+
+        return {
+            "fracture": fracture,
+            "leaderboard": leaderboard,
+            "user_rank": user_rank,
+            "max_rank": max_rank,
+            "friend_ids": [],
+            "rank_data": []
+        }
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
