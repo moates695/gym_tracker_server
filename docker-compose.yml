@@ -3,8 +3,8 @@ services:
     image: gymjunkie-server:latest 
     container_name: server
     build: .
-    environment:
-      - REDIS_HOST=redis://redis:6379
+    env_file:
+      - ${ENV_PATH}
     volumes:
       - ./app:/server/app
     ports: 

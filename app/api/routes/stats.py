@@ -432,9 +432,50 @@ async def stats_leaderboards_overall(
         user_id = credentials["user_id"]
 
         # do for overall first, then others too
+
+        exists = await r.exists("overall_volume")
+        if not exists:
+            raise Exception("zset does not exist")
+
+        user_rank = await r.zrevrank("overall_volume", user_id)
+        if user_rank is None:
+            exists = await conn.fetchval(
+                """
+                select exists (
+                    select 1
+                    from users
+                    where id = $1
+                )
+                """, user_id
+            )
+            if not exists:
+                raise Exception("user does not exist")
+            
+            volume = await conn.fetchval(
+                """
+                select volume
+                from overall_leaderboard
+                where user_id = $1
+                """, user_id
+            )
+            if volume is None:
+                volume = await conn.fetchval(
+                    """
+                    insert into overall_leaderboard
+                    (user_id, volume, num_sets, reps, num_exercises, num_workouts, duration_mins)
+                    values
+                    ($1, $2, $3, $4, $5, $6, $7)
+                    returning volume
+                    """, user_id, 0.0, 0, 0, 0, 0, 0
+                )
+            
+            await r.zadd("overall_volume", {
+                user_id, volume
+            }) 
+
         count = await r.zcard("overall_volume")
         max_rank = count - 1
-        user_rank = await r.zrevrank("overall_volume", user_id)
+
         if user_rank <= top_num + side_num:
             fracture = None
             top = await r.zrevrange("overall_volume", 0, top_num + 2 * side_num + 1, withscores=True)

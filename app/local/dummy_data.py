@@ -2,6 +2,7 @@ import json
 import asyncio
 import os
 from fastapi.testclient import TestClient
+from dotenv import load_dotenv
 
 from ..main import app
 from ..api.middleware.database import setup_connection
@@ -9,6 +10,8 @@ from ..tests.test_workout_save import build_workouts, save_workouts
 from ..api.middleware.auth_token import generate_token
 
 client = TestClient(app)
+
+load_dotenv(override=True)
 
 async def main():
     try:

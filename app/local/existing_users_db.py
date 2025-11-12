@@ -1,11 +1,13 @@
 import asyncio
 import json
 from datetime import datetime, timezone
+from dotenv import load_dotenv
 
 from ..api.middleware.misc import load_env_vars 
 from ..api.middleware.database import *
 
-load_env_vars()
+# load_env_vars()
+load_dotenv(override=True)
 
 async def main():
     if input(f"Insert existing user data in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return

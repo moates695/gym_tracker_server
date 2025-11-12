@@ -26,4 +26,4 @@ def get_env_value(is_temp):
     return os.getenv("SECRET_KEY" if not is_temp else "TEMP_SECRET_KEY")  
 
 if __name__ == "__main__":
-   print(generate_token('moates695@gmail.com', 'a8bf1a23-33f0-4b52-9d9b-7bfde7eea36a', days=1))
+   print(generate_token('moates695@gmail.com', '7a83d775-1f52-4ede-9493-0aac96012cda', days=1))
