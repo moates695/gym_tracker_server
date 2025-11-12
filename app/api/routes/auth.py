@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from functools import partial
+import asyncio
 
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
