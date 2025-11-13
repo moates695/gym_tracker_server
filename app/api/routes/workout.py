@@ -34,6 +34,7 @@ class WorkoutSave(BaseModel):
     start_time: int #? timestamp ms
     duration: int #? ms
 
+# todo update redis with new leaderboard data
 #? bodyweight determined on the client
 @router.post("/workout/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
@@ -226,7 +227,7 @@ async def update_workout_totals(conn, user_id, totals, req):
     )
 
     if current_totals == None:
-        current_totals = await conn.fetch(
+        current_totals = await conn.fetchrow(
             """
             insert into workout_totals
             (user_id, volume, num_sets, reps, duration, num_workouts, num_exercises)
@@ -271,10 +272,10 @@ async def update_muscle_totals(conn, user_id, group_totals, target_totals):
             )
 
             if current_muscle_totals == None:
-                current_muscle_totals = await conn.fetch(
+                current_muscle_totals = await conn.fetchrow(
                     f"""
                     insert into workout_muscle_{key}_totals
-                    (user_id, volume, num_sets, reps, counter)
+                    (user_id, muscle_{key}_id, volume, num_sets, reps, counter)
                     values
                     ($1, $2, 0.0, 0, 0, 0)
                     returning *

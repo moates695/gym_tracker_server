@@ -22,9 +22,25 @@ async def main():
         conn = await setup_connection()
 
         user_id = '31fbaa9c-a0f2-45f5-835b-aa2d80d68892'
+        user_email = 'moates695@gmail.com'
         user_map = {
-            user_id: generate_token('moates695@gmail.com', user_id, minutes=15)
+            user_id: generate_token(user_email, user_id, minutes=15)
         }
+
+        tables = [
+            'overall_leaderboard',
+            'workout_totals',
+            'workout_muscle_group_totals',
+            'workout_muscle_target_totals'
+        ]
+        for table in tables:
+            await conn.execute(
+                f"""
+                delete
+                from {table}
+                where user_id = $1
+                """, user_id
+            )
 
         dummy_domain = "@dummydomain.com"
         await conn.execute(
@@ -35,56 +51,74 @@ async def main():
             """, dummy_domain
         )
 
+        await conn.execute(
+            """
+            delete 
+            from workouts w
+            using users u
+            where w.user_id = u.id
+            and (
+                u.email like '%' || $1
+                or 
+                u.email = $2
+            )
+            """, dummy_domain, user_email
+        )
+
         server_base = os.environ['SERVER_ADDRESS']
 
-        for _ in range(10, 20):
-            temp_email = f"{str(uuid4())}{dummy_domain}"
-            response = requests.post(
-                f"{server_base}/register",
-                json={
-                    "email": temp_email,
-                    "password": "Password1!",
-                    "username": str(uuid4())[:20],
-                    "first_name": "",
-                    "last_name": "",
-                    "gender": random.choice(["male", "female", "other"]),
-                    "height": random.randint(130, 210),
-                    "weight": random.randint(50, 130),
-                    "goal_status": random.choice(["bulking", "cutting", "maintaining"]),
-                    "ped_status": random.choice(["natural", "juicing", "silent"]),
-                    "date_of_birth": pick_date(),
-                    "send_email": False,
-                }
-            )
-            response.raise_for_status()
-            resp_json = response.json()
-            if resp_json["status"] != "success": 
-                raise Exception("register not successful")
-            temp_user_id = resp_json["user_id"]
-            temp_token = generate_token(temp_email, temp_user_id, minutes=15, is_temp=True)
+        for _ in range(random.randint(20, 30)):
+            try:
+                temp_email = f"{str(uuid4())}{dummy_domain}"
+                response = requests.post(
+                    f"{server_base}/register",
+                    json={
+                        "email": temp_email,
+                        "password": "Password1!",
+                        "username": str(uuid4())[:20],
+                        "first_name": "",
+                        "last_name": "",
+                        "gender": random.choice(["male", "female", "other"]),
+                        "height": random.randint(130, 210),
+                        "weight": random.randint(50, 130),
+                        "goal_status": random.choice(["bulking", "cutting", "maintaining"]),
+                        "ped_status": random.choice(["natural", "juicing", "silent"]),
+                        "date_of_birth": pick_date(),
+                        "send_email": False,
+                    }
+                )
+                response.raise_for_status()
+                resp_json = response.json()
+                if resp_json["status"] != "success": 
+                    raise Exception("register not successful")
+                temp_user_id = resp_json["user_id"]
+                temp_token = generate_token(temp_email, temp_user_id, minutes=15, is_temp=True)
 
-            response = requests.get(
-                f"{server_base}/register/validate/receive",
-                params={
-                    "token": temp_token
-                }
-            )
-            response.raise_for_status()
+                response = requests.get(
+                    f"{server_base}/register/validate/receive",
+                    params={
+                        "token": temp_token
+                    }
+                )
+                response.raise_for_status()
+                
+                response = requests.get(
+                    f"{server_base}/register/validate/check",
+                    headers=get_headers(temp_token)
+                )
+                response.raise_for_status()
+                resp_json = response.json()
+                if resp_json["account_state"] != "good":
+                    raise Exception("account state not good")
+
+                user_map[temp_user_id] = resp_json["auth_token"]
             
-            response = requests.get(
-                f"{server_base}/register/validate/check",
-                headers=get_headers(temp_token)
-            )
-            response.raise_for_status()
-            resp_json = response.json()
-            if resp_json["account_state"] != "good":
-                raise Exception("account state not good")
-            # temp_auth_token = resp_json["auth_token"]
-
-            user_map[temp_user_id] = resp_json["auth_token"]
+            except Exception as e:
+                print(e)
+                continue
 
         for user_id, token in user_map.items():
-            workouts = await build_workouts(conn, 10, 50)
+            workouts = await build_workouts(conn, 10, 20)
             await save_workouts(workouts, headers={
                 "Authorization": f"Bearer {token}"
             }, skip_fail=True)

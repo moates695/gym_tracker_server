@@ -519,10 +519,17 @@ async def zset_leaderboard(conn, r, user_id, key, top_num, side_num):
         side_ranks = await leaderboard_items(conn, sides, user_rank - side_num)
         leaderboard = top_ranks + side_ranks
 
+    # rank_data = []
+    # for i in range(0, 50):
+    #     rank_data.append({
+    #         "value": i
+    #     })
+
     rank_data = []
-    for i in range(0, 50):
+    for item in await r.zrange(key, 0, -1, withscores=True):
         rank_data.append({
-            "value": i
+            "value": item[1],
+            "showVerticalLine": True if item[0] == user_id else False
         })
 
     return {
