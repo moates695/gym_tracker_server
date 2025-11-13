@@ -332,10 +332,14 @@ async def check_workout_muscle_group_stats(conn, user_id, workouts):
             for int_key in ["num_sets", "reps"]:
                 assert muscle_stats[key][int_key] == db_stats[key][int_key]
 
-async def save_workouts(workouts, headers):
+async def save_workouts(workouts, headers, skip_fail=False):
     for workout in workouts:
-        response = client.post("/workout/save", json=workout, headers=headers)
-        assert response.status_code == 200
+        try:
+            response = client.post("/workout/save", json=workout, headers=headers)
+            assert response.status_code == 200
+        except Exception as e:
+            if skip_fail: continue
+            raise e
 
 # todo: test empty save
 # todo: test invalid saves

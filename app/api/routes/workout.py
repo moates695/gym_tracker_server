@@ -37,10 +37,10 @@ class WorkoutSave(BaseModel):
 #? bodyweight determined on the client
 @router.post("/workout/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
+    conn = tx = None
     try:
         user_id = credentials["user_id"]
 
-        conn = None
         if len(req.exercises) == 0: return
 
         conn = await setup_connection()
@@ -76,12 +76,13 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         await update_leaderboards(conn, user_id, totals, req)
 
         await tx.commit()
+
     except HTTPException as e:
-        await tx.rollback()
+        if tx: await tx.rollback()
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
-        await tx.rollback()
+        if tx: await tx.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:

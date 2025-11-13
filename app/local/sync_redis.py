@@ -15,14 +15,13 @@ async def main():
     
     conn = await setup_connection()
 
-    await r.delete("volume_leaderboard")
     rows = await conn.fetch(
         """
         select *
         from overall_leaderboard
         """
     )
-
+    
     overall_map = {
         "overall_volume": "volume",
         "overall_sets": "num_sets",
@@ -32,26 +31,14 @@ async def main():
         "overall_duration": "duration_mins",
     }
 
+    for key in overall_map.keys():
+        await r.delete(key)
+
     for row in rows:
         for zset, col in overall_map.items():
             await r.zadd(zset, {
                 str(row["user_id"]): row[col]
             })
-    
-    # await r.zadd("leaderboard", {
-    #     "user1": 501, 
-    #     "user2": 25,
-    #     "user3": 850,
-    #     "user4": 123,
-    #     "user5": 607,
-    # })
-    # top3 = await r.zrevrange("leaderboard", 0, 2, withscores=True)
-    # print(top3)
-
-    # all_entries = await r.zrange("leaderboard", 0, -1)
-    # print(all_entries)
-
-    # print(await r.zrange("none", 0, -1))
 
 if __name__ == "__main__":
     asyncio.run(main())

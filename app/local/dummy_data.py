@@ -3,6 +3,10 @@ import asyncio
 import os
 from fastapi.testclient import TestClient
 from dotenv import load_dotenv
+from uuid import uuid4
+import requests
+import random
+from datetime import datetime, timedelta
 
 from ..main import app
 from ..api.middleware.database import setup_connection
@@ -17,27 +21,91 @@ async def main():
     try:
         conn = await setup_connection()
 
-        user_id = '7a83d775-1f52-4ede-9493-0aac96012cda'
-        token = generate_token('moates695@gmail.com', user_id, minutes=5)
-        headers = {
-            "Authorization": f"Bearer {token}"
+        user_id = '31fbaa9c-a0f2-45f5-835b-aa2d80d68892'
+        user_map = {
+            user_id: generate_token('moates695@gmail.com', user_id, minutes=15)
         }
 
+        dummy_domain = "@dummydomain.com"
         await conn.execute(
             """
             delete
-            from workouts
-            where user_id = $1
-            """, user_id
+            from users
+            where email like '%' || $1
+            """, dummy_domain
         )
 
-        workouts = await build_workouts(conn, 100, 200)
-        await save_workouts(workouts, headers=headers)
+        server_base = os.environ['SERVER_ADDRESS']
+
+        for _ in range(10, 20):
+            temp_email = f"{str(uuid4())}{dummy_domain}"
+            response = requests.post(
+                f"{server_base}/register",
+                json={
+                    "email": temp_email,
+                    "password": "Password1!",
+                    "username": str(uuid4())[:20],
+                    "first_name": "",
+                    "last_name": "",
+                    "gender": random.choice(["male", "female", "other"]),
+                    "height": random.randint(130, 210),
+                    "weight": random.randint(50, 130),
+                    "goal_status": random.choice(["bulking", "cutting", "maintaining"]),
+                    "ped_status": random.choice(["natural", "juicing", "silent"]),
+                    "date_of_birth": pick_date(),
+                    "send_email": False,
+                }
+            )
+            response.raise_for_status()
+            resp_json = response.json()
+            if resp_json["status"] != "success": 
+                raise Exception("register not successful")
+            temp_user_id = resp_json["user_id"]
+            temp_token = generate_token(temp_email, temp_user_id, minutes=15, is_temp=True)
+
+            response = requests.get(
+                f"{server_base}/register/validate/receive",
+                params={
+                    "token": temp_token
+                }
+            )
+            response.raise_for_status()
+            
+            response = requests.get(
+                f"{server_base}/register/validate/check",
+                headers=get_headers(temp_token)
+            )
+            response.raise_for_status()
+            resp_json = response.json()
+            if resp_json["account_state"] != "good":
+                raise Exception("account state not good")
+            # temp_auth_token = resp_json["auth_token"]
+
+            user_map[temp_user_id] = resp_json["auth_token"]
+
+        for user_id, token in user_map.items():
+            workouts = await build_workouts(conn, 10, 50)
+            await save_workouts(workouts, headers={
+                "Authorization": f"Bearer {token}"
+            }, skip_fail=True)
 
     except Exception as e:
         raise e
     finally:
         if conn: await conn.close()
+
+def get_headers(token: str):
+    return {
+        "Authorization": f"Bearer {token}"
+    }
+
+def pick_date():
+    start_date = datetime(1970, 1, 1)
+    end_date = datetime(2009, 12, 31)
+    delta_days = (end_date - start_date).days
+    random_days = random.randint(0, delta_days)
+    random_date = start_date + timedelta(days=random_days)
+    return  random_date.strftime("%Y-%m-%d")
 
 if __name__ == "__main__":
     asyncio.run(main())

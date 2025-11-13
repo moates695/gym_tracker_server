@@ -30,7 +30,7 @@ def date_to_timestamp_ms(date):
 
 email_field = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 password_field = Field(min_length=8, max_length=36)
-name_field = Field(min_length=1, max_length=255)
+name_field = Field(min_length=0, max_length=255)
 gender_literal = Literal["male", "female", "other"]
 height_field = Field(ge=0, le=500)
 weight_field = Field(ge=0, le=500)

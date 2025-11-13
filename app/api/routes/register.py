@@ -49,6 +49,7 @@ class Register(BaseModel):
 async def register(req: Register):
     req_json = json.loads(req.model_dump_json())
     
+    conn = tx = None
     try:
         conn = await setup_connection()
         tx = conn.transaction()
@@ -102,7 +103,7 @@ async def register(req: Register):
         await new_muscle_totals(conn, user_id)
         await new_exercise_totals(conn, user_id)
 
-        # todo re-check with new leaderboard setup
+        # todo re-do with new leaderboard setup
         # for table in ["volume", "sets", "reps"]:
         #     column = table if table != "sets" else "num_sets"
         #     await conn.execute(
@@ -119,6 +120,7 @@ async def register(req: Register):
 
         await tx.commit()
 
+        # todo: dont return temp_token, can be used to sign in without access to email
         return {
             "status": "success",
             "temp_token": generate_token(
@@ -126,15 +128,16 @@ async def register(req: Register):
                 user_id,
                 minutes=15,
                 is_temp=True
-            )
+            ),
+            "user_id": user_id
         }
 
     except HTTPException as e:
-        await tx.rollback()
+        if tx: await tx.rollback()
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
-        await tx.rollback()
+        if tx: await tx.rollback()
         raise HTTPException(status_code=500)
     finally:
         if conn: await conn.close()
@@ -184,6 +187,7 @@ async def new_exercise_totals(conn, user_id):
             """, user_id, exercise_id_row["id"]
         )
 
+# todo dont use temp token here, use user login details instead (user_id then lookup email?)
 @router.post("/register/validate/resend")
 async def resend_validation_email(credentials: dict = Depends(verify_temp_token)):
     try:

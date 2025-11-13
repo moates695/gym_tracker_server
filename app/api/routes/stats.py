@@ -431,70 +431,21 @@ async def stats_leaderboards_overall(
         
         user_id = credentials["user_id"]
 
-        # do for overall first, then others too
+        overall_keys = [
+            "overall_volume",
+            "overall_sets",
+            "overall_reps",
+            "overall_exercises",
+            "overall_workouts",
+            "overall_duration",
+        ]
 
-        exists = await r.exists("overall_volume")
-        if not exists:
-            raise Exception("zset does not exist")
-
-        user_rank = await r.zrevrank("overall_volume", user_id)
-        if user_rank is None:
-            exists = await conn.fetchval(
-                """
-                select exists (
-                    select 1
-                    from users
-                    where id = $1
-                )
-                """, user_id
-            )
-            if not exists:
-                raise Exception("user does not exist")
-            
-            volume = await conn.fetchval(
-                """
-                select volume
-                from overall_leaderboard
-                where user_id = $1
-                """, user_id
-            )
-            if volume is None:
-                volume = await conn.fetchval(
-                    """
-                    insert into overall_leaderboard
-                    (user_id, volume, num_sets, reps, num_exercises, num_workouts, duration_mins)
-                    values
-                    ($1, $2, $3, $4, $5, $6, $7)
-                    returning volume
-                    """, user_id, 0.0, 0, 0, 0, 0, 0
-                )
-            
-            await r.zadd("overall_volume", {
-                user_id, volume
-            }) 
-
-        count = await r.zcard("overall_volume")
-        max_rank = count - 1
-
-        if user_rank <= top_num + side_num:
-            fracture = None
-            top = await r.zrevrange("overall_volume", 0, top_num + 2 * side_num + 1, withscores=True)
-            leaderboard = []
-            for i, t in enumerate(top):
-                leaderboard.append({
-                    "user_id": t[0],
-                    "username": "",
-                    "rank": i,
-                    "value": t[1]
-                })
+        data = {}
+        for key in overall_keys:
+            data[key] = await zset_leaderboard(conn, r, user_id, key, top_num, side_num)
 
         return {
-            "fracture": fracture,
-            "leaderboard": leaderboard,
-            "user_rank": user_rank,
-            "max_rank": max_rank,
-            "friend_ids": [],
-            "rank_data": []
+            "leaderboards": data
         }
 
     except HTTPException as e:
@@ -504,6 +455,98 @@ async def stats_leaderboards_overall(
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+async def zset_leaderboard(conn, r, user_id, key, top_num, side_num):
+    exists = await r.exists(key)
+    if not exists:
+        raise Exception("zset does not exist")
+
+    user_rank = await r.zrevrank(key, user_id)
+    if user_rank is None:
+        exists = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from users
+                where id = $1
+            )
+            """, user_id
+        )
+        if not exists:
+            raise Exception(f"user '{user_id}' does not exist")
+        
+        volume = await conn.fetchval(
+            """
+            select volume
+            from overall_leaderboard
+            where user_id = $1
+            """, user_id
+        )
+        if volume is None:
+            volume = await conn.fetchval(
+                """
+                insert into overall_leaderboard
+                (user_id, volume, num_sets, reps, num_exercises, num_workouts, duration_mins)
+                values
+                ($1, $2, $3, $4, $5, $6, $7)
+                returning volume
+                """, user_id, 0.0, 0, 0, 0, 0, 0
+            )
+        
+        await r.zadd(key, {
+            user_id, volume
+        }) 
+
+    count = await r.zcard(key)
+    max_rank = count - 1
+
+    if user_rank <= top_num + side_num:
+        fracture = None
+        top = await r.zrevrange(key, 0, top_num + 2 * side_num, withscores=True)
+        leaderboard = await leaderboard_items(conn, top, 0)
+    elif user_rank >= count - side_num - 1:
+        fracture = top_num
+        top = await r.zrevrange(key, 0, top_num - 1, withscores=True)
+        top_ranks =  await leaderboard_items(conn, top, 0)
+        sides = await r.zrevrange(key, max_rank - 2 * side_num, max_rank, withscores=True)
+        side_ranks = await leaderboard_items(conn, sides, user_rank - side_num)
+        leaderboard = top_ranks + side_ranks
+    else:
+        fracture = top_num
+        top = await r.zrevrange(key, 0, top_num - 1, withscores=True)
+        top_ranks =  await leaderboard_items(conn, top, 0)
+        sides = await r.zrevrange(key, user_rank - side_num, user_rank + side_num, withscores=True)
+        side_ranks = await leaderboard_items(conn, sides, user_rank - side_num)
+        leaderboard = top_ranks + side_ranks
+
+    return {
+        "fracture": fracture,
+        "leaderboard": leaderboard,
+        "user_rank": user_rank,
+        "max_rank": max_rank,
+        "friend_ids": [],
+        "rank_data": []
+    }
+
+
+async def leaderboard_items(conn, items, start_rank):
+    leaderboard = []
+    for i, items in enumerate(items):
+        username = await conn.fetchval(
+            """
+            select username
+            from users
+            where id = $1
+            """, items[0]
+        ),
+        leaderboard.append({
+            "user_id": items[0],
+            "username": username if username else "",
+            "rank": i + start_rank,
+            "value": items[1]
+        })
+    return leaderboard
+
 
 # @router.get("/stats/leaderboards/overall")
 # async def stats_leaderboards_overall_volume(
