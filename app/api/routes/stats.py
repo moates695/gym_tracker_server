@@ -519,13 +519,19 @@ async def zset_leaderboard(conn, r, user_id, key, top_num, side_num):
         side_ranks = await leaderboard_items(conn, sides, user_rank - side_num)
         leaderboard = top_ranks + side_ranks
 
+    rank_data = []
+    for i in range(0, 50):
+        rank_data.append({
+            "value": i
+        })
+
     return {
         "fracture": fracture,
         "leaderboard": leaderboard,
         "user_rank": user_rank,
         "max_rank": max_rank,
         "friend_ids": [],
-        "rank_data": []
+        "rank_data": rank_data
     }
 
 
