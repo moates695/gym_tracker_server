@@ -11,6 +11,7 @@ import os
 import jwt
 from datetime import datetime, timedelta, timezone, date
 import bcrypt
+import traceback
 
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
@@ -102,19 +103,7 @@ async def register(req: Register):
         await new_workout_totals(conn, user_id)
         await new_muscle_totals(conn, user_id)
         await new_exercise_totals(conn, user_id)
-
-        # todo re-do with new leaderboard setup
-        # for table in ["volume", "sets", "reps"]:
-        #     column = table if table != "sets" else "num_sets"
-        #     await conn.execute(
-        #         f"""
-        #         insert into {table}_leaderboard
-        #         (user_id, {column}, last_updated)
-        #         values
-        #         ($1, $2, $3)
-        #         """, user_id, 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
-        #     )
-
+        
         if req.send_email:
             await send_validation_email(req.email, user_id)
 
@@ -137,6 +126,7 @@ async def register(req: Register):
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
         print(e)
+        traceback.print_exc()
         if tx: await tx.rollback()
         raise HTTPException(status_code=500)
     finally:
@@ -149,7 +139,7 @@ async def new_workout_totals(conn, user_id):
         (user_id, volume, num_sets, reps, duration, num_workouts, num_exercises)
         values
         ($1, 0.0, 0, 0, 0.0, 0, 0)
-        return *
+        returning *
         """, user_id
     )
 

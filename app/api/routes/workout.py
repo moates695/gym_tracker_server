@@ -74,7 +74,9 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         await update_workout_totals(conn, user_id, totals, req)
         await update_muscle_totals(conn, user_id, group_totals, target_totals)
         await update_previous_stats(conn, workout_id, totals, group_totals, target_totals, req)
-        await update_leaderboards(conn, user_id, totals, req)
+        await update_overall_leaderboard(conn, user_id, totals, req)
+        
+
 
         await tx.commit()
 
@@ -331,7 +333,7 @@ async def update_previous_stats(conn, workout_id, totals, group_totals, target_t
             """, workout_id, target_id, target_total["volume"], target_total["num_sets"], target_total["reps"]
         )
 
-async def update_leaderboards(conn, user_id, totals, req: WorkoutSave):
+async def update_overall_leaderboard(conn, user_id, totals, req: WorkoutSave):
     current = await conn.fetchrow(
         """
         select *

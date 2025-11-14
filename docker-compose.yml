@@ -1,18 +1,19 @@
+name: backend-${ENV_NAME}
 services:
   server:
     image: gymjunkie-server:latest 
-    container_name: server
+    container_name: server-${ENV_NAME}
     build: .
     env_file:
-      - ${ENV_PATH}
+      - app/envs/${ENV_NAME}.env
     volumes:
       - ./app:/server/app
     ports: 
-      - "8000:8000"
+      - "${SERVER_PORT}:${SERVER_PORT}"
   redis: 
     image: redis
-    container_name: redis
+    container_name: redis-${ENV_NAME}
     command: ["redis-server", "--requirepass", "password"]
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:${REDIS_PORT}"
     restart: unless-stopped

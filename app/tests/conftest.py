@@ -12,15 +12,14 @@ from app.api.middleware.database import setup_connection
 from ..main import app
 from ..tests.test_register import valid_user
 
-load_dotenv(dotenv_path="app/envs/pytest.env", override=True)
+load_dotenv(override=True)
 
-@pytest.fixture(autouse=True)
-def check_env():
-    if os.environ["ENVIRONMENT"] == "pytest": return
-    raise Exception(f"curr env '{os.environ['ENVIRONMENT']}', can only delete users in env 'pytest'")
+def pytest_configure(config):
+    if os.getenv("ENVIRONMENT") == "pytest": return
+    pytest.exit("Tests can only run when ENVIRONMENT=pytest", returncode=1)
 
 @pytest_asyncio.fixture(scope="function")
-async def delete_users(check_env):
+async def delete_users():
     await _delete_users()
     yield
     await _delete_users()
@@ -42,7 +41,7 @@ async def _delete_users():
         if conn: await conn.close()
 
 @pytest.fixture
-def create_user(check_env):
+def create_user():
     client = TestClient(app)
 
     response = client.post("/register", json=valid_user)
