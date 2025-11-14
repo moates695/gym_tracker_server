@@ -19,7 +19,7 @@ from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
 from app.api.middleware.misc import *
 from app.api.routes.muscles import get_muscle_maps
-from app.api.routes.register import new_workout_totals
+from app.api.routes.register import new_muscle_totals, new_workout_totals
 
 router = APIRouter()
 security = HTTPBearer()
@@ -38,15 +38,7 @@ async def stats_workout_totals(credentials: dict = Depends(verify_token)):
         )
 
         if row is None:
-            await new_workout_totals(conn, credentials["user_id"])
-            row = {
-                "volume": 0,
-                "num_sets": 0,
-                "reps": 0,
-                "duration": 0,
-                "num_workouts": 0,
-                "num_exercises": 0,
-            }
+            row = await new_workout_totals(conn, credentials["user_id"])
 
         return {
             "totals": {
@@ -284,23 +276,21 @@ async def stats_history_workout_replay(conn, workout_row):
 
     return replay
 
+# todo: fix Nonetype not subscriptable
 @router.get("/stats/distributions")
 async def stats_distributions(credentials: dict = Depends(verify_token)):
+    user_id = credentials["user_id"]
     try:
         conn = await setup_connection()
 
         distributions = {}
         muscle_maps = await get_muscle_maps()
-        
-        group_rows = await conn.fetch(
-            """
-            select t.*, m.name
-            from workout_muscle_group_totals t
-            inner join muscle_groups m
-            on t.muscle_group_id = m.id
-            where t.user_id = $1
-            """, credentials["user_id"]
-        )
+
+        group_rows = await fetch_workout_muscle_group_rows(conn, user_id)
+
+        if group_rows is None:
+            await new_muscle_totals(conn, user_id)
+            group_rows = await fetch_workout_muscle_group_rows(conn, user_id)
 
         for group_row in group_rows:
             targets = {}
@@ -313,8 +303,26 @@ async def stats_distributions(credentials: dict = Depends(verify_token)):
                     on t.muscle_target_id = m.id
                     where t.user_id = $1
                     and m.name = $2
-                    """, credentials["user_id"], target_name
+                    """, user_id, target_name
                 )
+                if target_row is None:
+                    target_id = await conn.fetchval(
+                        """
+                        select id
+                        from muscle_targets
+                        where name = $1
+                        """, target_name
+                    )
+                    target_row = await conn.fetchrow(
+                        """
+                        insert into workout_muscle_target_totals
+                        (user_id, muscle_target_id, volume, num_sets, reps, counter)
+                        values
+                        ($1, $2, 0.0, 0, 0, 0)
+                        returning *
+                        """, user_id, target_id
+                    )
+
                 targets[target_name] = {
                     "volume": target_row["volume"],
                     "num_sets": target_row["num_sets"],
@@ -342,6 +350,17 @@ async def stats_distributions(credentials: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+async def fetch_workout_muscle_group_rows(conn, user_id):
+    return await conn.fetch(
+        """
+        select t.*, m.name
+        from workout_muscle_group_totals t
+        inner join muscle_groups m
+        on t.muscle_group_id = m.id
+        where t.user_id = $1
+        """, user_id
+    )
 
 @router.get("/stats/favourites")
 async def stats_favourites(credentials: dict = Depends(verify_token)):
@@ -423,6 +442,7 @@ async def getExerciseGroups(conn, exercise_id):
 async def stats_leaderboards_overall(
     top_num: int,
     side_num: int,
+    num_rank_points: int,
     credentials: dict = Depends(verify_token)
 ):
     try:
@@ -442,7 +462,7 @@ async def stats_leaderboards_overall(
 
         data = {}
         for key in overall_keys:
-            data[key] = await zset_leaderboard(conn, r, user_id, key, top_num, side_num)
+            data[key] = await zset_leaderboard(conn, r, user_id, key, top_num, side_num, num_rank_points)
 
         return {
             "leaderboards": data
@@ -456,7 +476,7 @@ async def stats_leaderboards_overall(
     finally:
         if conn: await conn.close()
 
-async def zset_leaderboard(conn, r, user_id, key, top_num, side_num):
+async def zset_leaderboard(conn, r, user_id, key, top_num, side_num, num_rank_points):
     exists = await r.exists(key)
     if not exists:
         raise Exception("zset does not exist")
@@ -519,18 +539,29 @@ async def zset_leaderboard(conn, r, user_id, key, top_num, side_num):
         side_ranks = await leaderboard_items(conn, sides, user_rank - side_num)
         leaderboard = top_ranks + side_ranks
 
-    # rank_data = []
-    # for i in range(0, 50):
-    #     rank_data.append({
-    #         "value": i
-    #     })
-
     rank_data = []
+    user_value = None
     for item in await r.zrange(key, 0, -1, withscores=True):
         rank_data.append({
+            "user_id": item[0],
             "value": item[1],
             "showVerticalLine": True if item[0] == user_id else False
         })
+        if item[0] == user_id:
+            user_value = item[1]
+
+    if len(rank_data) > num_rank_points:
+        rank_data = random.sample(rank_data, 50)
+        for item in rank_data:
+            if item["user_id"] != user_id: continue
+            break
+        else:
+            rank_data.append({
+                "user_id": user_id,
+                "value": user_value,
+                "showVerticalLine": True
+            })
+            rank_data = sorted(rank_data, lambda e: e["value"])
 
     return {
         "fracture": fracture,

@@ -143,12 +143,13 @@ async def register(req: Register):
         if conn: await conn.close()
 
 async def new_workout_totals(conn, user_id):
-    await conn.execute(
+    return await conn.fetchrow(
         """
         insert into workout_totals
         (user_id, volume, num_sets, reps, duration, num_workouts, num_exercises)
         values
         ($1, 0.0, 0, 0, 0.0, 0, 0)
+        return *
         """, user_id
     )
 
