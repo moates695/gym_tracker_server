@@ -1,7 +1,7 @@
 import random
 from datetime import datetime, timezone
 from typing import Literal
-from pydantic import Field
+from pydantic import Field, get_args
 from dotenv import load_dotenv
 import os
 
@@ -69,9 +69,10 @@ user_data_tables_map = {
 }
     
 def load_env_vars():
-    # if os.getenv("ENVIRONMENT") == "prod": return
-    # elif os.getenv("ENVIRONMENT") is None:
-    #     os.environ.clear()
-    #     load_dotenv(dotenv_path="app/envs/.env", override=True)
-    # load_dotenv(dotenv_path=f"app/envs/{os.environ['ENVIRONMENT']}.env", override=True)
    load_dotenv(override=True)
+
+overall_leaderboard_literal = Literal["volume","sets","reps","exercises","workouts","duration"]
+overall_leaderboard_metrics = list(get_args(overall_leaderboard_literal))
+overall_leaderboard_str = "overall:{metric}:leaderboard"
+
+exercise_leaderboard_str = "exercise:{exercise_id}:{metric}:leaderboard"

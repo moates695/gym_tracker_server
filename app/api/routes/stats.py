@@ -452,12 +452,12 @@ async def stats_leaderboards_overall(
         user_id = credentials["user_id"]
 
         overall_keys = [
-            "overall_volume",
-            "overall_sets",
-            "overall_reps",
-            "overall_exercises",
-            "overall_workouts",
-            "overall_duration",
+            "overall:volume:leaderboard",
+            "overall:sets:leaderboard",
+            "overall:reps:leaderboard",
+            "overall:exercises:leaderboard",
+            "overall:workouts:leaderboard",
+            "overall:duration:leaderboard",
         ]
 
         data = {}
@@ -467,6 +467,26 @@ async def stats_leaderboards_overall(
         return {
             "leaderboards": data
         }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
+@router.get("/stats/leaderboards/overall/{metric}")
+async def stats_leaderboards_overall(
+    top_num: int,
+    side_num: int,
+    num_rank_points: int,
+    metric: overall_leaderboard_literal,
+    credentials: dict = Depends(verify_token)
+):
+    try:
+        conn = await setup_connection()
+        r = await redis_connection()
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})

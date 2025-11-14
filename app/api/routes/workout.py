@@ -60,23 +60,23 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         )
 
         totals = {
-            "volume": 0,
-            "num_sets": 0,
-            "reps": 0,
+            "workout": {
+                "volume": 0,
+                "num_sets": 0,
+                "reps": 0,
+            },
+            "group": {},
+            "target": {}
         }
-        group_totals = {}
-        target_totals = {}
 
         for i, exercise in enumerate(req.exercises):
             await save_exercise(conn, workout_id, exercise, i)
-            await process_exercise(conn, user_id, exercise, totals, group_totals, target_totals)
+            await process_exercise(conn, user_id, exercise, totals)
 
         await update_workout_totals(conn, user_id, totals, req)
-        await update_muscle_totals(conn, user_id, group_totals, target_totals)
-        await update_previous_stats(conn, workout_id, totals, group_totals, target_totals, req)
+        await update_muscle_totals(conn, user_id, totals)
+        await update_previous_stats(conn, workout_id, totals, req)
         await update_overall_leaderboard(conn, user_id, totals, req)
-        
-
 
         await tx.commit()
 
@@ -116,7 +116,7 @@ async def save_set_data(conn, workout_exercise_id, set_data: SetData, index):
         """, workout_exercise_id, index, set_data.reps, set_data.weight, set_data.num_sets, set_data.set_class
     )
 
-async def process_exercise(conn, user_id, exercise: Exercise, totals, group_totals, target_totals):
+async def process_exercise(conn, user_id, exercise: Exercise, totals):
     group_rows = await conn.fetch(
         """
         select distinct on (group_id) ratio, group_id
@@ -141,13 +141,13 @@ async def process_exercise(conn, user_id, exercise: Exercise, totals, group_tota
     }
 
     for set_data in exercise.set_data:
-        process_exercise_sets(set_data, totals, exercise_totals, group_rows, group_totals, target_rows, target_totals)
+        process_exercise_sets(set_data, totals, exercise_totals, group_rows, target_rows)
 
     for group_row in group_rows:
-        group_totals[group_row["group_id"]]["counter"] += 1
+        totals["group"][group_row["group_id"]]["counter"] += 1
 
     for target_row in target_rows:
-        target_totals[target_row["target_id"]]["counter"] += 1
+        totals["target"][target_row["target_id"]]["counter"] += 1
 
     current_exercise_totals = await conn.fetchrow(
         """
@@ -187,7 +187,9 @@ async def process_exercise(conn, user_id, exercise: Exercise, totals, group_tota
         exercise.id
     )
 
-def process_exercise_sets(set_data, totals, exercise_totals, group_rows, group_totals, target_rows, target_totals):
+    await update_exercise_leaderboards(conn, user_id, exercise, exercise_totals)
+
+def process_exercise_sets(set_data, totals, exercise_totals, group_rows, target_rows):
     empty_totals = {
         "volume": 0,
         "num_sets": 0,
@@ -197,27 +199,27 @@ def process_exercise_sets(set_data, totals, exercise_totals, group_rows, group_t
 
     volume = set_data.reps * set_data.weight * set_data.num_sets
 
-    totals["volume"] += volume
-    totals["num_sets"] += set_data.num_sets
-    totals["reps"] += set_data.reps
+    totals["workout"]["volume"] += volume
+    totals["workout"]["num_sets"] += set_data.num_sets
+    totals["workout"]["reps"] += set_data.reps
 
     exercise_totals["volume"] += volume
     exercise_totals["num_sets"] += set_data.num_sets
     exercise_totals["reps"] += set_data.reps
 
     for group_row in group_rows:
-        if group_row["group_id"] not in group_totals:
-            group_totals[group_row["group_id"]] = deepcopy(empty_totals)
-        group_totals[group_row["group_id"]]["volume"] += (group_row["ratio"] / 10) * volume
-        group_totals[group_row["group_id"]]["num_sets"] += set_data.num_sets
-        group_totals[group_row["group_id"]]["reps"] += set_data.reps
+        if group_row["group_id"] not in totals["group"]:
+            totals["group"][group_row["group_id"]] = deepcopy(empty_totals)
+        totals["group"][group_row["group_id"]]["volume"] += (group_row["ratio"] / 10) * volume
+        totals["group"][group_row["group_id"]]["num_sets"] += set_data.num_sets
+        totals["group"][group_row["group_id"]]["reps"] += set_data.reps
 
     for target_row in target_rows:
-        if target_row["target_id"] not in target_totals:
-            target_totals[target_row["target_id"]] = deepcopy(empty_totals)
-        target_totals[target_row["target_id"]]["volume"] += (target_row["ratio"] / 10) * volume
-        target_totals[target_row["target_id"]]["num_sets"] += set_data.num_sets
-        target_totals[target_row["target_id"]]["reps"] += set_data.reps
+        if target_row["target_id"] not in totals["target"]:
+            totals["target"][target_row["target_id"]] = deepcopy(empty_totals)
+        totals["target"][target_row["target_id"]]["volume"] += (target_row["ratio"] / 10) * volume
+        totals["target"][target_row["target_id"]]["num_sets"] += set_data.num_sets
+        totals["target"][target_row["target_id"]]["reps"] += set_data.reps
 
 async def update_workout_totals(conn, user_id, totals, req):
     current_totals = await conn.fetchrow(
@@ -251,18 +253,18 @@ async def update_workout_totals(conn, user_id, totals, req):
             num_exercises = $6
         where user_id = $7
         """, 
-        current_totals["volume"] + totals["volume"],
-        current_totals["num_sets"] + totals["num_sets"],
-        current_totals["reps"] + totals["reps"],
+        current_totals["volume"] + totals["workout"]["volume"],
+        current_totals["num_sets"] + totals["workout"]["num_sets"],
+        current_totals["reps"] + totals["workout"]["reps"],
         current_totals["duration"] + req.duration / 1000,
         current_totals["num_workouts"] + 1,
         current_totals["num_exercises"] + len(req.exercises),
         user_id
     )
 
-async def update_muscle_totals(conn, user_id, group_totals, target_totals):
+async def update_muscle_totals(conn, user_id, totals):
     for key in ["group", "target"]:
-        muscle_totals = group_totals if key == "group" else target_totals
+        muscle_totals = totals["group"] if key == "group" else totals["target"]
         for muscle_id, muscle_total in muscle_totals.items():
             current_muscle_totals = await conn.fetchrow(
                 f"""
@@ -303,17 +305,17 @@ async def update_muscle_totals(conn, user_id, group_totals, target_totals):
                 muscle_id
             )
 
-async def update_previous_stats(conn, workout_id, totals, group_totals, target_totals, req: WorkoutSave):
+async def update_previous_stats(conn, workout_id, totals, req: WorkoutSave):
     await conn.execute(
         """
         insert into previous_workout_stats
         (workout_id, volume, num_sets, reps, num_exercises)
         values
         ($1, $2, $3, $4, $5)
-        """, workout_id, totals["volume"], totals["num_sets"], totals["reps"], len(req.exercises)
+        """, workout_id, totals["workout"]["volume"], totals["workout"]["num_sets"], totals["workout"]["reps"], len(req.exercises)
     )
 
-    for group_id, group_total in group_totals.items():
+    for group_id, group_total in totals["group"].items():
         await conn.execute(
             """
             insert into previous_workout_muscle_group_stats
@@ -323,7 +325,7 @@ async def update_previous_stats(conn, workout_id, totals, group_totals, target_t
             """, workout_id, group_id, group_total["volume"], group_total["num_sets"], group_total["reps"]
         )
 
-    for target_id, target_total in target_totals.items():
+    for target_id, target_total in totals["target"].items():
         await conn.execute(
             """
             insert into previous_workout_muscle_target_stats
@@ -353,9 +355,9 @@ async def update_overall_leaderboard(conn, user_id, totals, req: WorkoutSave):
             """, user_id, 0.0, 0, 0, 0, 0, 0
         )
 
-    volume = current["volume"] + totals["volume"]
-    num_sets = current["num_sets"] + totals["num_sets"]
-    reps = current["reps"] + totals["reps"]
+    volume = current["volume"] + totals["workout"]["volume"]
+    num_sets = current["num_sets"] + totals["workout"]["num_sets"]
+    reps = current["reps"] + totals["workout"]["reps"]
     num_exercises = current["num_exercises"] + len(req.exercises)
     num_workouts = current["num_workouts"] + 1
     duration_mins = current["duration_mins"] + req.duration / 1000 / 60
@@ -369,7 +371,8 @@ async def update_overall_leaderboard(conn, user_id, totals, req: WorkoutSave):
             reps = $3,
             num_exercises = $4,
             num_workouts = $5,
-            duration_mins = $6
+            duration_mins = $6,
+            last_updated = now() at time zone 'utc'
         where user_id = $7
         """,
         volume,
@@ -381,18 +384,83 @@ async def update_overall_leaderboard(conn, user_id, totals, req: WorkoutSave):
         user_id,
     )
 
-    # todo send to redis
+    r = await redis_connection()
+
+    data_map = {
+        "overall:volume:leaderboard": volume,
+        "overall:sets:leaderboard": num_sets,
+        "overall:reps:leaderboard": reps,
+        "overall:exercises:leaderboard": num_exercises,
+        "overall:workouts:leaderboard": num_workouts,
+        "overall:duration:leaderboard": duration_mins,
+    }
+    for key, value in data_map.items():
+        await r.zadd(key, {
+            user_id: value
+        })
+
+    # todo add to user specific leaderboard catagories (gender, weight, etc)
+
+async def update_exercise_leaderboards(conn, user_id, exercise: Exercise, exercise_totals):
+    current = await conn.fetchrow(
+        """
+        select *
+        from exercises_leaderboard
+        where user_id = $1
+        and exercise_id = $2
+        """, user_id, exercise.id
+    )
+
+    if current is None:
+        current = await conn.fetchrow(
+            """
+            insert into exercises_leaderboard
+            (user_id, exercise_id, volume, num_sets, reps, num_workouts)
+            values
+            ($1, $2, $3, $4, $5, $6)
+            returning *
+            """, user_id, exercise.id, 0.0, 0, 0, 0
+        )
+
+    volume = current["volume"] + exercise_totals["volume"]
+    num_sets = current["num_sets"] + exercise_totals["num_sets"]
+    reps = current["reps"] + exercise_totals["reps"]
+    num_workouts = current["num_workouts"] + 1
+
+    await conn.execute(
+        """
+        update exercises_leaderboard
+        set
+            volume = $1,
+            num_sets = $2,
+            reps = $3,
+            num_workouts = $4,
+            last_updated = now() at time zone 'utc'
+        where user_id = $5
+        """,
+        volume,
+        num_sets,
+        reps,
+        num_workouts,
+        user_id,
+    )
 
     r = await redis_connection()
 
-    await r.zadd("overall_volume", {user_id: volume})
-    await r.zadd("overall_sets", {user_id: num_sets})
-    await r.zadd("overall_reps", {user_id: reps})
-    await r.zadd("overall_exercises", {user_id: num_exercises})
-    await r.zadd("overall_workouts", {user_id: num_workouts})
-    await r.zadd("overall_duration", {user_id: duration_mins})
-
-    # todo add to user specific leaderboard catagories (gender, weight, etc)
+    metrics = {
+        "volume": volume, 
+        "sets": num_sets, 
+        "reps": reps, 
+        "workouts": num_workouts
+    }
+    for metric, value in metrics.items():
+        leaderboard = exercise_leaderboard_str.format(
+            exercise_id=exercise.id, 
+            metric=metric
+        )
+        await r.zadd(leaderboard, {
+            user_id: value
+        })
 
 @router.get("/workout/overview/stats")
 async def workout_overview_stats(credentials: dict = Depends(verify_token)):
