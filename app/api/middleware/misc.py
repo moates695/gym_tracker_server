@@ -1,7 +1,7 @@
 import random
 from datetime import datetime, timezone
-from typing import Literal
-from pydantic import Field, get_args
+from typing import Literal, get_args
+from pydantic import Field
 from dotenv import load_dotenv
 import os
 
@@ -73,6 +73,8 @@ def load_env_vars():
 
 overall_leaderboard_literal = Literal["volume","sets","reps","exercises","workouts","duration"]
 overall_leaderboard_metrics = list(get_args(overall_leaderboard_literal))
-overall_leaderboard_str = "overall:{metric}:leaderboard"
+def overall_leaderboard_str(metric):
+    return f"overall:{metric}:leaderboard"
 
-exercise_leaderboard_str = "exercise:{exercise_id}:{metric}:leaderboard"
+def exercise_leaderboard_str(exercise_id, metric):
+    return f"exercise:{exercise_id}:{metric}:leaderboard"

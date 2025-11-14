@@ -438,45 +438,45 @@ async def getExerciseGroups(conn, exercise_id):
 
     return [row["group_name"] for row in rows]
 
-@router.get("/stats/leaderboards/overall")
-async def stats_leaderboards_overall(
-    top_num: int,
-    side_num: int,
-    num_rank_points: int,
-    credentials: dict = Depends(verify_token)
-):
-    try:
-        conn = await setup_connection()
-        r = await redis_connection()
+# @router.get("/stats/leaderboards/overall")
+# async def stats_leaderboards_overall(
+#     top_num: int,
+#     side_num: int,
+#     num_rank_points: int,
+#     credentials: dict = Depends(verify_token)
+# ):
+#     try:
+#         conn = await setup_connection()
+#         r = await redis_connection()
         
-        user_id = credentials["user_id"]
+#         user_id = credentials["user_id"]
 
-        overall_keys = [
-            "overall:volume:leaderboard",
-            "overall:sets:leaderboard",
-            "overall:reps:leaderboard",
-            "overall:exercises:leaderboard",
-            "overall:workouts:leaderboard",
-            "overall:duration:leaderboard",
-        ]
+#         data = {}
+#         for metric in overall_leaderboard_metrics:
+#             key = overall_leaderboard_str(metric)
+#             data[key] = await zset_leaderboard(
+#                 conn, 
+#                 r, 
+#                 user_id, 
+#                 key, 
+#                 top_num, 
+#                 side_num, 
+#                 num_rank_points
+#             )
 
-        data = {}
-        for key in overall_keys:
-            data[key] = await zset_leaderboard(conn, r, user_id, key, top_num, side_num, num_rank_points)
+#         return {
+#             "leaderboards": data
+#         }
 
-        return {
-            "leaderboards": data
-        }
+#     except HTTPException as e:
+#         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+#     except Exception as e:
+#         print(e)
+#         raise HTTPException(status_code=500, detail="Uncaught exception")
+#     finally:
+#         if conn: await conn.close()
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
-    finally:
-        if conn: await conn.close()
-
-@router.get("/stats/leaderboards/overall/{metric}")
+@router.get("/stats/leaderboard/overall/{metric}")
 async def stats_leaderboards_overall(
     top_num: int,
     side_num: int,
@@ -487,6 +487,17 @@ async def stats_leaderboards_overall(
     try:
         conn = await setup_connection()
         r = await redis_connection()
+
+        return {
+            "leaderboard": await zset_leaderboard(
+                conn, 
+                r, 
+                credentials["user_id"], 
+                overall_leaderboard_str(metric), 
+                top_num, 
+                side_num, 
+                num_rank_points)
+        }
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
