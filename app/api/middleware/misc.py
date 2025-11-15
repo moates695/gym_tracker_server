@@ -76,5 +76,7 @@ overall_leaderboard_metrics = list(get_args(overall_leaderboard_literal))
 def overall_leaderboard_str(metric):
     return f"overall:{metric}:leaderboard"
 
+exercise_leaderboard_literal = Literal["volume","sets","reps","workouts"]
+exercise_leaderboard_metrics = list(get_args(exercise_leaderboard_literal))
 def exercise_leaderboard_str(exercise_id, metric):
     return f"exercise:{exercise_id}:{metric}:leaderboard"

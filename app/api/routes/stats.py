@@ -18,6 +18,7 @@ from app.api.middleware.database import setup_connection, redis_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
 from app.api.middleware.misc import *
+from app.api.routes.exercises import fetch_base_exercise_rows, fetch_variation_rows
 from app.api.routes.muscles import get_muscle_maps
 from app.api.routes.register import new_muscle_totals, new_workout_totals
 
@@ -496,7 +497,72 @@ async def stats_leaderboards_overall(
                 overall_leaderboard_str(metric), 
                 top_num, 
                 side_num, 
-                num_rank_points)
+                num_rank_points
+            )
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
+@router.get("/stats/exercises-meta")
+async def stats_exercises(credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+
+        user_id = credentials["user_id"]
+        exercises = {}
+        exercise_rows = await fetch_base_exercise_rows(conn, user_id)
+        for exercise_row in exercise_rows:
+            variation_rows = await fetch_variation_rows(conn, user_id, exercise_row["id"])
+            variations = {
+                variation_row["id"]: variation_row["name"]
+                for variation_row in variation_rows
+            } 
+            exercises[exercise_row["id"]] = {
+                "name": exercise_row["name"],
+                "variations": variations
+            }
+
+        return {
+            "exercises": exercises
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
+@router.get("/stats/leaderboard/exercise/{exercise_id}/{metric}")
+async def stats_leaderboards_overall(
+    top_num: int,
+    side_num: int,
+    num_rank_points: int,
+    exercise_id: str,
+    metric: exercise_leaderboard_literal,
+    credentials: dict = Depends(verify_token)
+):
+    try:
+        conn = await setup_connection()
+        r = await redis_connection()
+
+        return {
+            "leaderboard": await zset_leaderboard(
+                conn, 
+                r, 
+                credentials["user_id"], 
+                exercise_leaderboard_str(exercise_id, metric), 
+                top_num, 
+                side_num, 
+                num_rank_points
+            )
         }
 
     except HTTPException as e:

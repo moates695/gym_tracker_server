@@ -25,32 +25,13 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
         # tx = conn.transaction()
         # await tx.start()
 
-        exercise_rows = await conn.fetch(
-            """
-            select *, (user_id = $1) as is_custom
-            from exercises
-            where (
-                user_id is null
-                or user_id = $1
-            )
-            and parent_id is null;
-            """, credentials["user_id"]
-        )
+        user_id = credentials["user_id"]
+        exercise_rows = await fetch_base_exercise_rows(conn, user_id)
 
         exercises = []
         for exercise_row in exercise_rows:
             exercise_id = str(exercise_row["id"])
-            variation_rows = await conn.fetch(
-                """
-                select *, (user_id = $1) as is_custom
-                from exercises
-                where (
-                    user_id is null
-                    or user_id = $1
-                )
-                and parent_id = $2;
-                """, credentials["user_id"], exercise_row["id"]
-            )
+            variation_rows = await fetch_variation_rows(conn, user_id, exercise_row["id"])
 
             variations = []
             for variation_row in variation_rows:
@@ -62,7 +43,7 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
                     "description": variation_row["description"],
                     "weight_type": variation_row["weight_type"],
                     "is_custom": variation_row["is_custom"],
-                    "frequency": await fetch_exercise_frequency(conn, variation_row["id"], credentials["user_id"]),
+                    "frequency": await fetch_exercise_frequency(conn, variation_row["id"], user_id),
                 })
 
             exercises.append({
@@ -73,7 +54,7 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
                 "description": exercise_row["description"],
                 "weight_type": exercise_row["weight_type"],
                 "is_custom": exercise_row["is_custom"],
-                "frequency": await fetch_exercise_frequency(conn, exercise_row["id"], credentials["user_id"]),
+                "frequency": await fetch_exercise_frequency(conn, exercise_row["id"], user_id),
                 "variations": variations
             })
             if exercise_row["is_body_weight"]:
@@ -95,6 +76,34 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+async def fetch_base_exercise_rows(conn, user_id):
+    return await conn.fetch(
+        """
+        select *, (user_id = $1) as is_custom
+        from exercises
+        where (
+            user_id is null
+            or user_id = $1
+        )
+        and parent_id is null
+        order by name
+        """, user_id
+    )
+
+async def fetch_variation_rows(conn, user_id, parent_id):
+    return await conn.fetch(
+        """
+        select *, (user_id = $1) as is_custom
+        from exercises
+        where (
+            user_id is null
+            or user_id = $1
+        )
+        and parent_id = $2
+        order by name
+        """, user_id, parent_id
+    )
 
 async def fetch_exercise_muscle_data(conn, exercise_row):
     muscle_group_rows = await conn.fetch(
