@@ -1,7 +1,7 @@
 import os
-from app.api.middleware.misc import load_env_vars
+from dotenv import load_dotenv
 
-load_env_vars()
+load_dotenv(override=True)
 
 from fastapi import FastAPI
 

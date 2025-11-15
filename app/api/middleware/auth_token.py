@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta, timezone
 import jwt
 import os
+from dotenv import load_dotenv
 
-from .misc import load_env_vars
-
-load_env_vars()
+load_dotenv(override=True)
 
 def generate_token(email, user_id, days=0, minutes=0, is_temp=False):
     utc_now = datetime.now(timezone.utc)

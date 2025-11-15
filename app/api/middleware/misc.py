@@ -67,9 +67,6 @@ user_data_tables_map = {
         "column": 'ped_status',
     }
 }
-    
-def load_env_vars():
-   load_dotenv(override=True)
  
 overall_leaderboard_literal = Literal["volume", "sets", "reps", "exercises", "workouts", "duration"]
 overall_leaderboard_metrics = list(get_args(overall_leaderboard_literal))

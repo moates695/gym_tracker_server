@@ -7,7 +7,6 @@ from ..api.middleware.database import *
 from ..api.middleware.database import setup_connection
 from .existing_users_db import check_totals
 
-load_env_vars()
 load_dotenv(override=True)
 
 async def main():

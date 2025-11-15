@@ -4,11 +4,10 @@ import asyncio
 from dotenv import load_dotenv
 from redis import asyncio as aioredis
 
-from .misc import load_env_vars
+load_dotenv(override=True)
 
 async def setup_connection() -> asyncpg.connection.Connection:
     try:
-        load_env_vars()
         return await asyncpg.connect(**{
             "database": os.getenv("DATABASE"),
             "user": os.getenv("DB_USER"),
