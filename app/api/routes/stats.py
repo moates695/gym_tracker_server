@@ -604,14 +604,33 @@ async def leaderboard_data(conn, r, user_id, zset, top_num, side_num, num_rank_p
         side_ranks = await leaderboard_items(conn, sides, user_rank - side_num)
         leaderboard = top_ranks + side_ranks
 
+    adjusted_user_rank = user_rank + 1 if user_rank != None else None
     return {
         "fracture": fracture,
         "leaderboard": leaderboard,
-        "user_rank": user_rank,
-        "max_rank": max_rank,
+        "user_rank": adjusted_user_rank,
+        "max_rank": max_rank + 1,
         "friend_ids": [],
         "rank_data": await fetch_rank_data(r, user_id, zset, num_rank_points)
     }
+
+async def leaderboard_items(conn, items, start_rank):
+    leaderboard = []
+    for i, items in enumerate(items):
+        username = await conn.fetchval(
+            """
+            select username
+            from users
+            where id = $1
+            """, items[0]
+        ),
+        leaderboard.append({
+            "user_id": items[0],
+            "username": username if username else "",
+            "rank": i + start_rank,
+            "value": items[1]
+        })
+    return leaderboard
 
 async def fetch_rank_data(r, user_id, zset, num_rank_points):
     rank_data = []
@@ -642,237 +661,3 @@ async def fetch_rank_data(r, user_id, zset, num_rank_points):
         rank_data = sorted(rank_data, lambda e: e["value"])
 
     return rank_data
-
-async def leaderboard_items(conn, items, start_rank):
-    leaderboard = []
-    for i, items in enumerate(items):
-        username = await conn.fetchval(
-            """
-            select username
-            from users
-            where id = $1
-            """, items[0]
-        ),
-        leaderboard.append({
-            "user_id": items[0],
-            "username": username if username else "",
-            "rank": i + start_rank,
-            "value": items[1]
-        })
-    return leaderboard
-
-
-# @router.get("/stats/leaderboards/overall")
-# async def stats_leaderboards_overall_volume(
-#     table: Literal['volume','sets','reps'],
-#     top_num: int, 
-#     side_num: int, 
-#     gender: str = None, 
-#     lower_age_limit: int = None,
-#     upper_age_limit: int = None,
-#     credentials: dict = Depends(verify_token)
-# ):
-#     try:
-#         conn = await setup_connection()
-
-#         if gender is None:
-#             gender_list = ['male', 'female', 'other']
-#         else:
-#             gender_list = [gender]
-
-#         if lower_age_limit is None:
-#             lower_age = -1
-
-#         if upper_age_limit is None:
-#             upper_age = float(math.inf)
-
-#         await conn.execute(
-#             f"""
-#             create temp table filtered as
-#             select 
-#                 l.*,
-#                 (DATE_PART('day', NOW() - date_of_birth) / 365.25)::float as age
-#             from {table}_leaderboard l
-#             inner join users u
-#             on l.user_id = u.id
-#             where u.gender = any($1)
-#             and (DATE_PART('day', NOW() - date_of_birth) / 365.25)::float between $2 and $3 
-#             """, gender_list, lower_age, upper_age
-#         )
-
-#         column = table if table != 'sets' else "num_sets"
-#         await conn.execute(
-#             f"""
-#             create temp table numbered as
-#             select 
-#                 f.*,
-#                 row_number() over (order by {column} desc) as row_num,
-#                 rank() over (order by {column} desc) as rank_num
-#             from filtered f
-#             """
-#         )
-
-#         user_row_num = await conn.fetchval(
-#             """
-#             select n.row_num
-#             from numbered n
-#             where n.user_id = $1
-#             """, credentials["user_id"]
-#         )
-#         num_rows = await conn.fetchval(
-#             """
-#             select count(*)
-#             from numbered
-#             """
-#         )
-        
-#         user_ids = []
-#         if user_row_num <= top_num + side_num + 1:
-#             rows = await fetch_top_rows(conn, top_num + 2 * side_num + 1)
-#         elif user_row_num >= num_rows - side_num:
-#             top_rows = await fetch_top_rows(conn, top_num)
-#             side_rows = await fetch_rows_between(conn, num_rows - 2 * side_num, num_rows)
-#             rows = top_rows + side_rows
-#         else:
-#             top_rows = await fetch_top_rows(conn, top_num)
-#             side_rows = await fetch_rows_between(conn, user_row_num - side_num, user_row_num + side_num)
-#             rows = top_rows + side_rows
-
-#         leaderboard = []
-#         for row in rows:
-#             if str(row["user_id"]) in user_ids: continue
-#             leaderboard.append({
-#                 "user_id": str(row["user_id"]),
-#                 "username": row["username"],
-#                 "value": row[column],
-#                 "rank": row["rank_num"],
-#             })
-#             user_ids.append(str(row["user_id"]))
-
-#         if len(leaderboard) <= top_num + 1 or leaderboard[top_num - 1]["rank"] + 1 == leaderboard[top_num]["rank"]:
-#             fracture = None
-#         else:
-#             fracture = top_num
-
-#         user_rank = await conn.fetchval(
-#             """
-#             select n.rank_num
-#             from numbered n
-#             where n.user_id = $1
-#             """, credentials["user_id"]
-#         )
-#         max_rank = await conn.fetchval(
-#             """
-#             select max(n.rank_num)
-#             from numbered n
-#             """
-#         )
-
-#         return {
-#             "leaderboard": leaderboard,
-#             "fracture": fracture,
-#             "user_rank": user_rank,
-#             "max_rank": max_rank,
-#             "friend_ids": [],
-#             "rank_data": []
-#         }
-
-#     except HTTPException as e:
-#         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
-#     except Exception as e:
-#         print(e)
-#         raise HTTPException(status_code=500, detail="Uncaught exception")
-#     finally:
-#         if conn: await conn.close()
-
-# async def fetch_top_rows(conn, num):
-#     return await conn.fetch(
-#         f"""
-#         select n.*, u.username
-#         from numbered n
-#         inner join users u
-#         on n.user_id = u.id
-#         order by n.row_num
-#         limit $1
-#         """, num
-#     )
-
-# async def fetch_rows_between(conn, lower, upper):
-#     return await conn.fetch(
-#         f"""
-#         select n.*, u.username
-#         from numbered n
-#         inner join users u
-#         on n.user_id = u.id
-#         where n.row_num between $1 and $2
-#         order by n.row_num
-#         """, lower, upper
-#     )
-
-# def downsample(points, n=50):
-#     idx = np.linspace(0, len(points) - 1, n, dtype=int)
-#     return [points[i] for i in idx]
-
-    # num_rows = top_num + 2 * side_num + 1
-    # user_ids = []
-    # for i in range(num_rows):
-    #     user_id = str(uuid4())
-    #     leaderboard.append({
-    #         "user_id": user_id,
-    #         "username": str(uuid4())[:20],
-    #         "value": random.randint(0, 300000),
-    #         # "rank": i + 1,
-    #     })
-    #     user_ids.append(user_id)
-
-    # select_idx = random.randint(0, num_rows - 1)
-    # del user_ids[select_idx]
-    # leaderboard[select_idx]["user_id"] = credentials["user_id"]
-    # leaderboard[select_idx]["username"] = "CURRENT USER"
-    
-    # for i in range(num_rows):
-    #     if random.random() > 0.1: continue
-    #     elif leaderboard[i]["user_id"] == credentials["user_id"]: continue
-    #     leaderboard[i]["username"] = leaderboard[i]["username"] + "f"
-    #     friend_ids.append(leaderboard[i]["user_id"])
-
-    # leaderboard = sorted(leaderboard, key=lambda x: x["value"], reverse=True)
-    # for i in range(num_rows):
-    #     leaderboard[i]["rank"] = i + 1
-    #     if leaderboard[i]["user_id"] != credentials["user_id"]: continue
-    #     user_rank = leaderboard[i]["rank"]
-
-    # rank_data = []
-    # mean = 0
-    # stddev = 1
-    # n = 100
-    # for i in range(n):
-    #     x = mean + stddev * (6 * (i / (n - 1)) - 3)
-    #     y = math.exp(-0.5 * ((x - mean) / stddev) ** 2)
-    #     rank_data.append({"value": y * 100})
-    # rank_data[random.randint(0, n - 1)]["showVerticalLine"] = True
-
-    # return {
-    #     "leaderboard": leaderboard,
-    #     "fracture": fracture,
-    #     "user_rank": user_rank,
-    #     "max_rank": leaderboard[-1]["rank"],
-    #     "friend_ids": friend_ids,
-    #     "rank_data": rank_data
-    # }
-
-# for each exercise
-#   most volume, sets, reps
-#       filter gender, age
-#   n rep max
-#       filter by gender, age at time of lift, weight at time of lift, height at time of lift
-
-# give top percentage and total rank based on filters
-
-# age, height filter should be a range
-# show global leaderboards and then versus friends
-
-# on FE show a bell curve based on chosen stats?
-
-#! use insert on conflict for updates?
-#! refresh materialised views (or may need to drop because of filtering)
