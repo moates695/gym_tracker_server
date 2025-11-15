@@ -552,6 +552,7 @@ async def stats_leaderboards_overall(
     try:
         conn = await setup_connection()
         r = await redis_connection()
+        print('here512')
 
         return {
             "leaderboard": await zset_leaderboard(
@@ -573,6 +574,7 @@ async def stats_leaderboards_overall(
     finally:
         if conn: await conn.close()
 
+# todo add user rank for exercises leaderboard
 async def zset_leaderboard(conn, r, user_id, key, top_num, side_num, num_rank_points):
     exists = await r.exists(key)
     if not exists:
@@ -611,8 +613,11 @@ async def zset_leaderboard(conn, r, user_id, key, top_num, side_num, num_rank_po
             )
         
         await r.zadd(key, {
-            user_id, volume
+            user_id: volume
         }) 
+        user_rank = await r.zrevrank(key, user_id)
+
+    print(user_rank)
 
     count = await r.zcard(key)
     max_rank = count - 1
