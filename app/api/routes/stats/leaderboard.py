@@ -25,7 +25,7 @@ async def stats_leaderboards_overall(
         r = await redis_connection()
 
         user_id = credentials["user_id"]
-        zset = overall_leaderboard_zset(metric)
+        zset = overall_zset_name(metric)
         if not await zset_exists(r, zset):
             await resync_overall_zset(conn, r, zset, metric)
 
@@ -109,7 +109,7 @@ async def stats_leaderboards_overall(
         r = await redis_connection()
 
         user_id = credentials["user_id"]
-        zset = exercise_leaderboard_zset(exercise_id, metric)
+        zset = exercise_zset_name(exercise_id, metric)
         if not await zset_exists(r, zset):
             await resync_exercise_zset(conn, r, zset, exercise_id, metric)
 
@@ -200,7 +200,7 @@ async def leaderboard_items(conn, items, start_rank):
         leaderboard.append({
             "user_id": items[0],
             "username": username if username else "",
-            "rank": i + start_rank,
+            "rank": i + start_rank + 1,
             "value": items[1]
         })
     return leaderboard
