@@ -70,13 +70,27 @@ user_data_tables_map = {
     
 def load_env_vars():
    load_dotenv(override=True)
-
-overall_leaderboard_literal = Literal["volume","sets","reps","exercises","workouts","duration"]
+ 
+overall_leaderboard_literal = Literal["volume", "sets", "reps", "exercises", "workouts", "duration"]
 overall_leaderboard_metrics = list(get_args(overall_leaderboard_literal))
-def overall_leaderboard_str(metric):
+overall_column_map = {
+    "volume": "volume",
+    "sets": "num_sets",
+    "reps": "reps",
+    "exercises": "num_exercises",
+    "workouts": "num_workouts",
+    "duration": "duration_mins",
+}
+def overall_leaderboard_zset(metric):
     return f"overall:{metric}:leaderboard"
 
-exercise_leaderboard_literal = Literal["volume","sets","reps","workouts"]
+exercise_leaderboard_literal = Literal["volume", "sets", "reps", "workouts"]
 exercise_leaderboard_metrics = list(get_args(exercise_leaderboard_literal))
-def exercise_leaderboard_str(exercise_id, metric):
+exercise_column_map = {
+    "volume": "volume",
+    "sets": "num_sets",
+    "reps": "reps",
+    "workouts": "num_workouts",
+}
+def exercise_leaderboard_zset(exercise_id, metric):
     return f"exercise:{exercise_id}:{metric}:leaderboard"

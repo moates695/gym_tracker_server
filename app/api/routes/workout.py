@@ -454,7 +454,7 @@ async def update_exercise_leaderboards(conn, user_id, exercise: Exercise, exerci
         "workouts": num_workouts
     }
     for metric, value in metrics.items():
-        leaderboard = exercise_leaderboard_str.format(
+        leaderboard = exercise_leaderboard_zset.format(
             exercise_id=exercise.id, 
             metric=metric
         )

@@ -439,44 +439,6 @@ async def getExerciseGroups(conn, exercise_id):
 
     return [row["group_name"] for row in rows]
 
-# @router.get("/stats/leaderboards/overall")
-# async def stats_leaderboards_overall(
-#     top_num: int,
-#     side_num: int,
-#     num_rank_points: int,
-#     credentials: dict = Depends(verify_token)
-# ):
-#     try:
-#         conn = await setup_connection()
-#         r = await redis_connection()
-        
-#         user_id = credentials["user_id"]
-
-#         data = {}
-#         for metric in overall_leaderboard_metrics:
-#             key = overall_leaderboard_str(metric)
-#             data[key] = await zset_leaderboard(
-#                 conn, 
-#                 r, 
-#                 user_id, 
-#                 key, 
-#                 top_num, 
-#                 side_num, 
-#                 num_rank_points
-#             )
-
-#         return {
-#             "leaderboards": data
-#         }
-
-#     except HTTPException as e:
-#         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
-#     except Exception as e:
-#         print(e)
-#         raise HTTPException(status_code=500, detail="Uncaught exception")
-#     finally:
-#         if conn: await conn.close()
-
 @router.get("/stats/leaderboard/overall/{metric}")
 async def stats_leaderboards_overall(
     top_num: int,
@@ -489,12 +451,17 @@ async def stats_leaderboards_overall(
         conn = await setup_connection()
         r = await redis_connection()
 
+        user_id = credentials["user_id"]
+        zset = overall_leaderboard_zset(metric)
+        if not zset_exists(r, zset):
+            await resync_overall_zset(conn, r, zset, metric)
+
         return {
-            "leaderboard": await zset_leaderboard(
+            "leaderboard": await leaderboard_data(
                 conn, 
                 r, 
-                credentials["user_id"], 
-                overall_leaderboard_str(metric), 
+                user_id, 
+                zset, 
                 top_num, 
                 side_num, 
                 num_rank_points
@@ -508,6 +475,21 @@ async def stats_leaderboards_overall(
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+async def resync_overall_zset(conn, r, zset, metric):
+    await r.delete(zset)
+    
+    column = overall_column_map[metric]
+    rows = await conn.fetch(
+        """
+        select user_id, $1
+        from overall_leaderboard
+        """, column
+    )
+    for row in rows:
+        await r.zadd(zset, {
+            row["user_id"]: row[column]
+        })
 
 @router.get("/stats/exercises-meta")
 async def stats_exercises(credentials: dict = Depends(verify_token)):
@@ -552,14 +534,18 @@ async def stats_leaderboards_overall(
     try:
         conn = await setup_connection()
         r = await redis_connection()
-        print('here512')
+
+        user_id = credentials["user_id"]
+        zset = exercise_leaderboard_zset(exercise_id, metric)
+        if not zset_exists(r, zset):
+            await resync_exercise_zset(conn, r, zset, exercise_id, metric)
 
         return {
-            "leaderboard": await zset_leaderboard(
+            "leaderboard": await leaderboard_data(
                 conn, 
                 r, 
-                credentials["user_id"], 
-                exercise_leaderboard_str(exercise_id, metric), 
+                user_id, 
+                zset, 
                 top_num, 
                 side_num, 
                 num_rank_points
@@ -574,76 +560,63 @@ async def stats_leaderboards_overall(
     finally:
         if conn: await conn.close()
 
-# todo add user rank for exercises leaderboard
-async def zset_leaderboard(conn, r, user_id, key, top_num, side_num, num_rank_points):
-    exists = await r.exists(key)
-    if not exists:
-        raise Exception("zset does not exist")
+async def resync_exercise_zset(conn, r, zset, exercise_id, metric):
+    await r.delete(zset)
+    
+    column = exercise_column_map[metric]
+    rows = await conn.fetch(
+        """
+        select user_id, $1
+        from exercise_leaderboard
+        where exercise_id = $2
+        """, column, exercise_id
+    )
+    for row in rows:
+        await r.zadd(zset, {
+            row["user_id"]: row[column]
+        })
 
-    user_rank = await r.zrevrank(key, user_id)
-    if user_rank is None:
-        exists = await conn.fetchval(
-            """
-            select exists (
-                select 1
-                from users
-                where id = $1
-            )
-            """, user_id
-        )
-        if not exists:
-            raise Exception(f"user '{user_id}' does not exist")
-        
-        volume = await conn.fetchval(
-            """
-            select volume
-            from overall_leaderboard
-            where user_id = $1
-            """, user_id
-        )
-        if volume is None:
-            volume = await conn.fetchval(
-                """
-                insert into overall_leaderboard
-                (user_id, volume, num_sets, reps, num_exercises, num_workouts, duration_mins)
-                values
-                ($1, $2, $3, $4, $5, $6, $7)
-                returning volume
-                """, user_id, 0.0, 0, 0, 0, 0, 0
-            )
-        
-        await r.zadd(key, {
-            user_id: volume
-        }) 
-        user_rank = await r.zrevrank(key, user_id)
+async def zset_exists(r, zset_key) -> bool:
+    return await r.exists(zset_key)
 
-    print(user_rank)
-
-    count = await r.zcard(key)
+async def leaderboard_data(conn, r, user_id, zset, top_num, side_num, num_rank_points):
+    count = await r.zcard(zset)
     max_rank = count - 1
 
-    if user_rank <= top_num + side_num:
+    user_rank = await r.zrevrank(zset, user_id)
+
+    if user_rank == None or user_rank <= top_num + side_num:
         fracture = None
-        top = await r.zrevrange(key, 0, top_num + 2 * side_num, withscores=True)
+        top = await r.zrevrange(zset, 0, top_num + 2 * side_num, withscores=True)
         leaderboard = await leaderboard_items(conn, top, 0)
     elif user_rank >= count - side_num - 1:
         fracture = top_num
-        top = await r.zrevrange(key, 0, top_num - 1, withscores=True)
+        top = await r.zrevrange(zset, 0, top_num - 1, withscores=True)
         top_ranks =  await leaderboard_items(conn, top, 0)
-        sides = await r.zrevrange(key, max_rank - 2 * side_num, max_rank, withscores=True)
+        sides = await r.zrevrange(zset, max_rank - 2 * side_num, max_rank, withscores=True)
         side_ranks = await leaderboard_items(conn, sides, user_rank - side_num)
         leaderboard = top_ranks + side_ranks
     else:
         fracture = top_num
-        top = await r.zrevrange(key, 0, top_num - 1, withscores=True)
+        top = await r.zrevrange(zset, 0, top_num - 1, withscores=True)
         top_ranks =  await leaderboard_items(conn, top, 0)
-        sides = await r.zrevrange(key, user_rank - side_num, user_rank + side_num, withscores=True)
+        sides = await r.zrevrange(zset, user_rank - side_num, user_rank + side_num, withscores=True)
         side_ranks = await leaderboard_items(conn, sides, user_rank - side_num)
         leaderboard = top_ranks + side_ranks
 
+    return {
+        "fracture": fracture,
+        "leaderboard": leaderboard,
+        "user_rank": user_rank,
+        "max_rank": max_rank,
+        "friend_ids": [],
+        "rank_data": await fetch_rank_data(r, user_id, zset, num_rank_points)
+    }
+
+async def fetch_rank_data(r, user_id, zset, num_rank_points):
     rank_data = []
     user_value = None
-    for item in await r.zrange(key, 0, -1, withscores=True):
+    for item in await r.zrange(zset, 0, -1, withscores=True):
         rank_data.append({
             "user_id": item[0],
             "value": item[1],
@@ -652,28 +625,23 @@ async def zset_leaderboard(conn, r, user_id, key, top_num, side_num, num_rank_po
         if item[0] == user_id:
             user_value = item[1]
 
-    if len(rank_data) > num_rank_points:
-        rank_data = random.sample(rank_data, 50)
-        for item in rank_data:
-            if item["user_id"] != user_id: continue
-            break
-        else:
-            rank_data.append({
-                "user_id": user_id,
-                "value": user_value,
-                "showVerticalLine": True
-            })
-            rank_data = sorted(rank_data, lambda e: e["value"])
+    if len(rank_data) <= num_rank_points: return rank_data
 
-    return {
-        "fracture": fracture,
-        "leaderboard": leaderboard,
-        "user_rank": user_rank,
-        "max_rank": max_rank,
-        "friend_ids": [],
-        "rank_data": rank_data
-    }
+    rank_data = random.sample(rank_data, 50)
+    if user_value is None: return rank_data
 
+    for item in rank_data:
+        if item["user_id"] != user_id: continue
+        break
+    else:
+        rank_data.append({
+            "user_id": user_id,
+            "value": user_value,
+            "showVerticalLine": True
+        })
+        rank_data = sorted(rank_data, lambda e: e["value"])
+
+    return rank_data
 
 async def leaderboard_items(conn, items, start_rank):
     leaderboard = []
