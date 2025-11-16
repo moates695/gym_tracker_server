@@ -1,15 +1,21 @@
 import json
 import asyncio
+import os
+from dotenv import load_dotenv
 
 from ..api.middleware.database import setup_connection
+from .existing_users_db import check_totals
+
+load_dotenv(override=True)
 
 async def main():
-    if input("Run update muscles? [y/n] ").lower() != 'y': return
+    if input(f"Update muscles in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
 
     with open("app/local/muscles.json", "r") as file:
         muscles_json = json.load(file)
 
     await update(muscles_json)
+    await check_totals()
 
 async def update(muscles_json: dict):
     try:

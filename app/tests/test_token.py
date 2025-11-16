@@ -4,9 +4,9 @@ import os
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
 
-from ..api.middleware.token import generate_token, decode_token
+from ..api.middleware.auth_token import generate_token, decode_token
 
-def test_generate_token(delete_test_users):
+def test_generate_token(delete_users):
     email = "test@pytest.com"
     user_id = str(uuid4())
     days = 2

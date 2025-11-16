@@ -5,7 +5,7 @@ import os
 from uuid import uuid4
 
 from ..main import app
-from ..api.middleware.token import decode_token, generate_token
+from ..api.middleware.auth_token import decode_token, generate_token
 
 client = TestClient(app)
 
@@ -20,17 +20,18 @@ valid_user = {
     "weight": 98,
     "goal_status": "cutting",
     "ped_status": 'natural',
+    "date_of_birth": "2001-09-11",
     "send_email": False
 }
 
-def test_valid_register(delete_test_users):
+def test_valid_register(delete_users):
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
     assert "auth_token" not in response.json().keys()
     temp_token = response.json()["temp_token"]
     decode_token(temp_token, is_temp=True)
 
-def test_email_taken(delete_test_users):
+def test_email_taken(delete_users):
     user = valid_user.copy()
 
     response = client.post("/register", json=user)
@@ -43,7 +44,7 @@ def test_email_taken(delete_test_users):
     assert response.json()["status"] == "error"
     assert response.json()["fields"] == ["email"]
 
-def test_username_taken(delete_test_users):
+def test_username_taken(delete_users):
     user = valid_user.copy()
 
     response = client.post("/register", json=user)
@@ -56,7 +57,7 @@ def test_username_taken(delete_test_users):
     assert response.json()["status"] == "error"
     assert response.json()["fields"] == ["username"]
 
-def test_validate(delete_test_users):
+def test_validate(delete_users):
     response = client.post("/register", json=valid_user)
     assert response.json()["status"] == "success"
     temp_token = response.json()["temp_token"]
@@ -71,7 +72,7 @@ def test_validate(delete_test_users):
     response = client.get("/register/validate/receive", params=params)
     assert response.status_code == 400
 
-def test_validate_past_expiry(delete_test_users):
+def test_validate_past_expiry(delete_users):
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
     temp_token = response.json()["temp_token"]
@@ -91,7 +92,7 @@ def test_validate_past_expiry(delete_test_users):
     response = client.get("/register/validate/receive", params=params)
     assert response.status_code == 401
 
-def test_username_exists(delete_test_users):
+def test_username_exists(delete_users):
     response = client.get("/register/check/username", params={
         "username": valid_user["username"]
     })
@@ -113,7 +114,7 @@ def test_username_exists(delete_test_users):
     assert response.status_code == 200
     assert response.json()["taken"] == True
 
-def test_is_validated(delete_test_users):
+def test_is_validated(delete_users):
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
     temp_token = response.json()["temp_token"]
@@ -152,7 +153,7 @@ def test_is_validated(delete_test_users):
     assert response.json()["auth_token"] == None
     assert response.json()["user_data"] == None
 
-def test_login(delete_test_users):
+def test_login(delete_users):
     response = client.post("/register", json=valid_user)
     assert response.status_code == 200
     temp_token = response.json()["temp_token"]
@@ -170,6 +171,9 @@ def test_login(delete_test_users):
     auth_token = response.json()["auth_token"]
     decode_token(auth_token)
     assert response.json()["user_data"] == {
+        "user_id": decode_token(auth_token)["user_id"],
+        "email": valid_user["email"],
+        "username": valid_user["username"],
         "first_name": valid_user["first_name"],
         "last_name": valid_user["last_name"],
         "gender": valid_user["gender"],
@@ -186,6 +190,9 @@ def test_login(delete_test_users):
     assert response.json()["account_state"] == "good"
     decode_token(response.json()["auth_token"])
     assert response.json()["user_data"] == {
+        "user_id": decode_token(auth_token)["user_id"],
+        "email": valid_user["email"],
+        "username": valid_user["username"],
         "first_name": valid_user["first_name"],
         "last_name": valid_user["last_name"],
         "gender": valid_user["gender"],
@@ -195,7 +202,7 @@ def test_login(delete_test_users):
         "weight": valid_user["weight"],
     }
 
-def test_sign_in(delete_test_users):
+def test_sign_in(delete_users):
     user = valid_user.copy()
 
     response = client.post("/register", json=valid_user)
@@ -221,6 +228,9 @@ def test_sign_in(delete_test_users):
     assert response.json()["status"] == "signed-in"
     decode_token(response.json()["token"])
     assert response.json()["user_data"] == {
+        "user_id": decode_token(response.json()["token"])["user_id"],
+        "email": valid_user["email"],
+        "username": valid_user["username"],
         "first_name": valid_user["first_name"],
         "last_name": valid_user["last_name"],
         "gender": valid_user["gender"],

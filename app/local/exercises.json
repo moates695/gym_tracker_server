@@ -1,14 +1,44 @@
 [
   {
-    "name": "Push-Up",
+    "name": "Push Up",
     "targets": {
       "chest": 8,
       "arms/tricep": 6,
       "shoulders": 4
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.69,
+      "female": 0.66
+    },
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic",
+    "variations": [
+      {
+        "name": "wide",
+        "targets": {
+          "chest": 10,
+          "arms/tricep": 4,
+          "shoulders": 4
+        }
+      },
+      {
+        "name": "regular",
+        "targets": {
+          "chest": 8,
+          "arms/tricep": 8,
+          "shoulders": 4
+        }
+      },
+      {
+        "name": "close",
+        "targets": {
+          "chest": 7,
+          "arms/tricep": 10,
+          "shoulders": 4
+        }
+      }
+    ]
   },
   {
     "name": "Dumbbell Bicep Curl",
@@ -22,26 +52,149 @@
     "weight_type": "free"
   },
   {
-    "name": "Pull-Up",
+    "name": "Barbell Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "EZ Bar Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Single Arm Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "standing, free"
+      },
+       {
+        "name": "seated, supported"
+      }
+    ]
+  },
+  {
+    "name": "Dumbbell Hammer Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Preacher Curl Machine",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Bicep Curl Machine",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Cable Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "flat bar, wide grip"
+      },
+      {
+        "name": "flat bar, medium grip"
+      },
+      {
+        "name": "flat bar, close grip"
+      },
+      {
+        "name": "ez-bar, wide grip"
+      },
+      {
+        "name": "ez-bar, medium grip"
+      },
+      {
+        "name": "ez-bar, close grip"
+      }
+    ]
+  },
+  {
+    "name": "Single Arm Cable Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Pull Up",
     "targets": {
       "back/lats": 10,
       "arms/bicep": 6,
       "arms/exterior forearm": 3
     },
     "is_body_weight": true,
+    "ratio": 1,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic",
+    "variations": [
+      {
+        "name": "wide grip"
+      }
+    ]
   },
   {
-    "name": "Barbell Squat",
+    "name": "Chin Up",
     "targets": {
-      "legs/quads": 10,
-      "legs/glutes": 8,
-      "legs/hamstrings": 6
+      "back/lats": 8,
+      "arms/bicep": 8,
+      "arms/exterior forearm": 3
     },
-    "is_body_weight": false,
+    "is_body_weight": true,
+    "ratio": 1,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Deadlift",
@@ -62,14 +215,46 @@
       "back/erectors": 3
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.69,
+      "female": 0.66
+    },
+    "description": "",
+    "weight_type": "calisthenic"
+  },
+  {
+    "name": "Overhead Barbell Press",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "core/upper abs": 4,
+      "core/lower abs": 4
+    },
+    "is_body_weight": false,
     "description": "",
     "weight_type": "free"
   },
   {
-    "name": "Overhead Shoulder Press",
+    "name": "Arnold Press",
     "targets": {
-      "shoulders": 10,
+      "shoulders/front": 10,
+      "shoulders/middle": 8,
+      "shoulders/rear": 4,
       "arms/tricep": 5
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Overhead Dumbbell Press",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "core/upper abs": 4,
+      "core/lower abs": 4
     },
     "is_body_weight": false,
     "description": "",
@@ -80,6 +265,165 @@
     "targets": {
       "shoulders": 10,
       "back/traps": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "single arm, forward lean",
+        "targets": {
+          "shoulders/middle": 10,
+          "shoulders/rear": 7,
+          "back/traps": 3
+        }
+      },
+      {
+        "name": "single arm, backwards lean",
+        "targets": {
+          "shoulders/middle": 10,
+          "shoulders/front": 7,
+          "back/traps": 3
+        }
+      }
+    ]
+  },
+  {
+    "name": "Cable Lateral Raise",
+    "targets": {
+      "shoulders/middle": 10,
+      "shoulders/front": 6,
+      "shoulders/rear": 4,
+      "back/traps": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Shoulder Press Machine",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "back/traps": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Lateral Raise Machine",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "back/traps": 3
+    },
+    "is_body_weight": false,
+    "description": "standing, handles held like dumbbells",
+    "weight_type": "free"
+  },
+  {
+    "name": "Delt Raise Machine",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 10,
+      "arms/tricep": 6,
+      "back/traps": 3
+    },
+    "is_body_weight": false,
+    "description": "sitting, with pads on arms",
+    "weight_type": "free"
+  },
+  {
+    "name": "Front Delt Dumbbell Raise",
+    "targets": {
+      "shoulders/front": 10,
+      "shoulders/middle": 7
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "hammer"
+      },
+      {
+        "name": "horizontal"
+      }
+    ]
+  },
+  {
+    "name": "Rear Delt Dumbbell Raise",
+    "targets": {
+      "shoulders/rear": 10,
+      "back/exterior middle": 7,
+      "back/lats": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "seated"
+      },
+      {
+        "name": "standing"
+      },
+      {
+        "name": "incline chest supported"
+      }
+    ]
+  },
+  {
+    "name": "Rear Delt Dumbbell Fly",
+    "targets": {
+      "shoulders/rear": 10,
+      "back/exterior middle": 7,
+      "back/upper middle": 7,
+      "back/lats": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "seated"
+      },
+      {
+        "name": "standing"
+      },
+      {
+        "name": "standing hammer"
+      },
+      {
+        "name": "incline chest supported"
+      },
+      {
+        "name": "incline chest supported hammer"
+      }
+    ]
+  },
+  {
+    "name": "Rear Delt Fly Machine",
+    "targets": {
+      "shoulders/rear": 10,
+      "back/exterior middle": 4,
+      "back/upper middle": 4,
+      "back/lats": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Barbell High Row",
+    "targets": {
+      "shoulders/rear": 10,
+      "back/exterior middle": 8,
+      "back/upper middle": 8,
+      "back/lats": 4
     },
     "is_body_weight": false,
     "description": "",
@@ -104,8 +448,42 @@
       "shoulders": 3
     },
     "is_body_weight": true,
+    "ratio": 1,
     "description": "",
     "weight_type": "free"
+  },
+  {
+    "name": "Seated Tricep Pushdown Machine",
+    "targets": {
+      "arms/tricep": 10,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Tricep Pushdown",
+    "targets": {
+      "arms/tricep": 10,
+      "chest": 4,
+      "shoulders": 3
+    },
+    "is_body_weight": true,
+    "ratio": 1,
+    "description": "",
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "flat bar, wide grip"
+      },
+      {
+        "name": "flat bar, medium grip"
+      },
+      {
+        "name": "flat bar, close grip"
+      }
+    ]
   },
   {
     "name": "Russian Twist",
@@ -114,8 +492,12 @@
       "core": 6
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.6,
+      "female": 0.65
+    },
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Lunge",
@@ -125,19 +507,33 @@
       "legs/hamstrings": 6
     },
     "is_body_weight": true,
+    "ratio": 1,
     "description": "",
     "weight_type": "free"
   },
   {
-    "name": "Bench Press",
+    "name": "Barbell Bench Press",
     "targets": {
       "chest": 10,
       "arms/tricep": 6,
-      "shoulders": 6
+      "shoulders": 3
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "wide grip"
+      },
+      {
+        "name": "close grip",
+        "targets": {
+          "chest": 9,
+          "arms/tricep": 8,
+          "shoulders": 3
+        }
+      }
+    ]
   },
   {
     "name": "Mountain Climber",
@@ -147,16 +543,22 @@
       "legs/quads": 5
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.4,
+      "female": 0.5
+    },
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
-    "name": "Bent-Over Row",
+    "name": "Bent Over Row",
     "targets": {
-      "back/lats": 9,
+      "back/lats": 10,
       "back/traps": 6,
-      "back/exterior middle": 8,
-      "back/upper middle": 7,
+      "back/exterior middle": 10,
+      "back/upper middle": 9,
+      "back/erectors": 7,
+      "core": 3,
       "arms/bicep": 4
     },
     "is_body_weight": false,
@@ -171,6 +573,10 @@
       "back/erectors": 9
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.6,
+      "female": 0.5
+    },
     "description": "",
     "weight_type": "free"
   },
@@ -182,8 +588,9 @@
       "core": 3
     },
     "is_body_weight": true,
+    "ratio": 0.35,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Burpee",
@@ -194,8 +601,9 @@
       "shoulders": 3
     },
     "is_body_weight": true,
+    "ratio": 1,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Seated Calf Raise",
@@ -209,11 +617,15 @@
   {
     "name": "Hanging Leg Raise",
     "targets": {
-      "core": 4
+      "core": 10
     },
     "is_body_weight": true,
+    "ratio": {
+      "male": 0.4,
+      "female": 0.5
+    },
     "description": "",
-    "weight_type": "free"
+    "weight_type": "calisthenic"
   },
   {
     "name": "Face Pull",
@@ -236,5 +648,759 @@
     "is_body_weight": false,
     "description": "",
     "weight_type": "cable"
+  },
+  {
+    "name": "Single Arm Cable Tricep Extension",
+    "targets": {
+      "arms/tricep": 10,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3,
+      "shoulders": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "hammer grip",
+        "description": ""
+      },
+      {
+        "name": "flat grip",
+        "description": ""
+      },
+      {
+        "name": "underhand flat grip",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "name": "Flared Cable Tricep Extension",
+    "targets": {
+      "arms/tricep": 10,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3,
+      "shoulders": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "vertical back supported"
+      },
+      {
+        "name": "forward lean"
+      }
+    ]
+  },
+  {
+    "name": "Cable Tricep Extension",
+    "targets": {
+      "arms/tricep": 9,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3,
+      "shoulders": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "flat bar, wide grip",
+        "targets": {
+
+        },
+        "description": ""
+      },
+      {
+        "name": "flat bar, medium grip",
+        "targets": {
+
+        },
+        "description": ""
+      },
+      {
+        "name": "flat bar, close grip",
+        "targets": {
+
+        },
+        "description": ""
+      },
+      {
+        "name": "angled bar, close grip",
+        "targets": {
+
+        },
+        "description": ""
+      },
+      {
+        "name": "angled bar, medium grip",
+        "targets": {
+
+        },
+        "description": ""
+      }
+    ]
+  },
+  {
+    "name": "Leg Extension",
+    "targets": {
+      "legs/quads": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "single leg"
+      }
+    ]
+  },
+  {
+    "name": "Seated Leg Curl",
+    "targets": {
+      "legs/hamstrings": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "single leg"
+      }
+    ]
+  },
+  {
+    "name": "Lying Leg Curl",
+    "targets": {
+      "legs/hamstrings": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Seated Calf Raise",
+    "targets": {
+      "legs/calves": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Standing Calf Raise Machine",
+    "targets": {
+      "legs/calves": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Dumbbell Standing Calf Raise",
+    "targets": {
+      "legs/calves": 10,
+      "core": 2,
+      "shoulders": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Barbell Squat",
+    "targets": {
+      "legs/quads": 9,
+      "legs/glutes": 8,
+      "legs/hamstrings": 6,
+      "back/erectors": 5,
+      "core": 5,
+      "legs/calves": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Dumbbell Bulgarian Split Squats",
+    "targets": {
+      "legs/quads": 8,
+      "legs/glutes": 7,
+      "legs/hamstrings": 5,
+      "core": 4,
+      "legs/calves": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Smith Machine Bulgarian Split Squats",
+    "targets": {
+      "legs/quads": 9,
+      "legs/glutes": 8,
+      "legs/hamstrings": 4,
+      "core": 2,
+      "legs/calves": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Barbell Bulgarian Split Squats",
+    "targets": {
+      "legs/quads": 9,
+      "legs/glutes": 8,
+      "legs/hamstrings": 5,
+      "core": 5,
+      "legs/calves": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Dumbbell Bench Press",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Incline Dumbbell Bench Press",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 8,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Incline Barbell Bench Press",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 8,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Dumbbell Fly",
+    "targets": {
+      "chest": 8,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Incline Dumbbell Fly",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 8,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Cable Chest Fly",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Independent Machine Chest Fly",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "low"
+      },
+      {
+        "name": "middle"
+      },
+      {
+        "name": "high"
+      }
+    ]
+  },
+  {
+    "name": "Cable Chest Press",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Seated Chest Press",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Seated Incline Chest Press",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 8,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "Hammer Strength"
+      }
+    ]
+  },
+  {
+    "name": "Seated Super Incline Chest Press",
+    "targets": {
+      "chest/upper": 10,
+      "chest/lower": 6,
+      "arms/tricep": 6,
+      "shoulders": 3,
+      "shoulders/front": 7,
+      "shoulders/middle": 6
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Seated Decline Chest Press",
+    "targets": {
+      "chest/upper": 8,
+      "chest/lower": 10,
+      "arms/tricep": 6,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "Hammer Strength"
+      }
+    ]
+  },
+  {
+    "name": "Pec Fly Machine",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Hammer Pec Fly Machine",
+    "targets": {
+      "chest": 10,
+      "arms/tricep": 3,
+      "shoulders": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Lat Pullover Machine",
+    "targets": {
+      "back/lats": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Lat Pulldown Machine",
+    "targets": {
+      "back/lats": 10,
+      "arms/bicep": 2,
+      "back/exterior middle": 5,
+      "back/upper middle": 5
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "Hammer Strength"
+      }
+    ]
+  },
+  {
+    "name": "Cable Lat Pulldown",
+    "targets": {
+      "back/lats": 10,
+      "arms/bicep": 2,
+      "back/exterior middle": 5,
+      "back/upper middle": 5
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "wide grip"
+      },
+      {
+        "name": "regular grip"
+      },
+      {
+        "name": "underhand regular grip"
+      },
+      {
+        "name": "underhand close grip"
+      },
+      {
+        "name": "wide hammer grip"
+      },
+      {
+        "name": "regular hammer grip"
+      },
+      {
+        "name": "close hammer grip"
+      },
+      {
+        "name": "underhand hammer grip"
+      }
+    ]
+  },
+  {
+    "name": "Seated Cable Row",
+    "targets": {
+      "back/lats": 10,
+      "back/upper middle": 8,
+      "back/exterior middle": 8,
+      "arms/bicep": 5,
+      "shoulders/rear": 4,
+      "core/lower abs": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable",
+    "variations": [
+      {
+        "name": "close hammer grip"
+      },
+      {
+        "name": "medium hammer grip"
+      },
+      {
+        "name": "wide hammer grip"
+      },
+      {
+        "name": "close flat bar"
+      },
+      {
+        "name": "medium flat bar"
+      },
+      {
+        "name": "wide flat bar"
+      },
+      {
+        "name": "underhand hammer grip"
+      }
+    ]
+  },
+  {
+    "name": "Seated Hammer Row Machine",
+    "targets": {
+      "back/lats": 10,
+      "back/upper middle": 8,
+      "back/exterior middle": 8,
+      "arms/bicep": 5,
+      "shoulders/rear": 4,
+      "core/lower abs": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "high row"
+      },
+      {
+        "name": "low row"
+      }
+    ]
+  },
+  {
+    "name": "Seated Row Machine",
+    "targets": {
+      "back/lats": 10,
+      "back/upper middle": 8,
+      "back/exterior middle": 8,
+      "arms/bicep": 5,
+      "shoulders/rear": 4,
+      "core/lower abs": 3
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "hammer row"
+      },
+      {
+        "name": "low row"
+      },
+       {
+        "name": "high row"
+      }
+    ]
+  },
+  {
+    "name": "High to Low Row Machine",
+    "targets": {
+      "back/lats": 10,
+      "back/erectors": 6,
+      "shoulders/rear": 6,
+      "arms/bicep": 4,
+      "core/obliques": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "T Bar Row",
+    "targets": {
+      "back/lats": 10,
+      "back/upper middle": 10,
+      "back/exterior middle": 10,
+      "back/traps": 7,
+      "arms/bicep": 5,
+      "shoulders/rear": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "high row",
+        "targets": {
+          "back/traps": 10,
+          "back/upper middle": 10,
+          "back/exterior middle": 10,
+          "shoulders/rear": 7,
+          "arms/bicep": 4,
+          "back/lats": 4
+        }
+      }
+    ]
+  },
+  {
+    "name": "Dumbbell Row",
+    "targets": {
+      "arms/bicep": 10,
+      "back/lats": 10,
+      "back/upper middle": 10,
+      "back/exterior middle": 10,
+      "shoulders/rear": 4,
+      "core/lower abs": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "standing"
+      },
+      {
+        "name": "flat chest supported"
+      },
+      {
+        "name": "incline chest supported"
+      }
+    ]
+  },
+  {
+    "name": "Single Arm Dumbbell Row",
+    "targets": {
+      "back/lats": 10,
+      "back/upper middle": 10,
+      "back/exterior middle": 10,
+      "arms/bicep": 5,
+      "shoulders/rear": 4,
+      "core/obliques": 4
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Hanging Knee Raise",
+    "targets": {
+      "core/lower abs": 10,
+      "core/upper abs": 10,
+      "arms/exterior forearm": 3,
+      "arms/interior forearm": 3
+    },
+    "ratio": {
+      "male": 0.4,
+      "female": 0.5
+    },
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "calisthenic"
+  },
+  {
+    "name": "Decline Sit Up",
+    "targets": {
+      "core/lower abs": 10,
+      "core/upper abs": 10
+    },
+    "ratio": {
+      "male": 0.6,
+      "female": 0.5
+    },
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "calisthenic"
+  },
+  {
+    "name": "Ab Crunch Machine",
+    "targets": {
+      "core/lower abs": 10,
+      "core/upper abs": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine"
+  },
+  {
+    "name": "Standing Ab Roller",
+    "targets": {
+      "core/lower abs": 10,
+      "core/upper abs": 10,
+      "core/obliques": 7,
+      "legs": 4,
+      "back": 4,
+      "arms": 4
+    },
+    "ratio": {
+      "male": 1,
+      "female": 1
+    },
+    "is_body_weight": true,
+    "description": "",
+    "weight_type": "calisthenic"
+  },
+  {
+    "name": "Resting Dummbell Forearm Curl",
+    "targets": {
+      "arms/exterior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Resting Reverse Dummbell Forearm Curl",
+    "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Sulek Forearm Curl",
+    "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Reverse Sulek Forearm Curl",
+    "targets": {
+      "arms/exterior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "cable"
+  },
+  {
+    "name": "Standing Barbell Forearm Curl",
+    "targets": {
+      "arms/exterior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Standing Behind Barbell Forearm Curl",
+    "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Resting Barbell Forearm Curl",
+    "targets": {
+      "arms/exterior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Resting Reverse Barbell Forearm Curl",
+    "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
   }
 ]
