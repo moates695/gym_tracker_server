@@ -6,7 +6,7 @@ from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
 from app.api.middleware.misc import *
-from app.api.routes.register import new_workout_totals
+from app.api.routes.register.register import new_workout_totals
 
 router = APIRouter()
 security = HTTPBearer()
@@ -32,7 +32,7 @@ async def stats_workout_totals(credentials: dict = Depends(verify_token)):
                 "volume": row["volume"],
                 "num_sets": row["num_sets"],
                 "reps": row["reps"],
-                "duration": row["duration"],
+                "duration": row["duration"] / 60,
                 "num_workouts": row["num_workouts"],
                 "num_exercises": row["num_exercises"],
             }

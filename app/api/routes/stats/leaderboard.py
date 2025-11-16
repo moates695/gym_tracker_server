@@ -7,7 +7,7 @@ from app.api.middleware.database import setup_connection, redis_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
 from app.api.middleware.misc import *
-from app.api.routes.exercises import fetch_base_exercise_rows, fetch_variation_rows
+from app.api.routes.exercises.list_all import fetch_base_exercise_rows, fetch_variation_rows
 
 router = APIRouter()
 security = HTTPBearer()

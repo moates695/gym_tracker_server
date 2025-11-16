@@ -7,7 +7,7 @@ from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
 from app.api.middleware.misc import *
 from app.api.routes.muscles import get_muscle_maps
-from app.api.routes.register import new_muscle_totals
+from app.api.routes.register.register import new_muscle_totals
 
 router = APIRouter()
 security = HTTPBearer()
