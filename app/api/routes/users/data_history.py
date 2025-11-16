@@ -10,7 +10,7 @@ from app.api.middleware.misc import *
 
 router = APIRouter()
 
-@router.get("/users/data/get/history")
+@router.get("/data/get/history")
 async def users_data_get_history(credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()

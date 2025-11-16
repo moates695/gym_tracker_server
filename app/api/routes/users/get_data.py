@@ -10,7 +10,7 @@ from app.api.middleware.misc import *
 
 router = APIRouter()
 
-@router.get("/users/data/get")
+@router.get("/data/get")
 async def users_data(credentials: dict = Depends(verify_token)):
     try:
         return {

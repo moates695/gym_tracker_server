@@ -19,7 +19,7 @@ class Update(BaseModel):
     goal_status: Optional[goal_status_literal] = None
     ped_status: Optional[ped_status_literal] = None
 
-@router.put("/users/data/update")
+@router.put("/data/update")
 async def users_weight(req: Update, credentials: dict = Depends(verify_token)):
     req_json = json.loads(req.model_dump_json())
 

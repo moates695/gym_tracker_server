@@ -5,7 +5,7 @@ from app.api.routes.users import get_data
 from app.api.routes.users import update_data
 
 
-router = APIRouter(prefix="/register")
+router = APIRouter(prefix="/users")
 
 router.include_router(data_history.router)
 router.include_router(get_data.router)
