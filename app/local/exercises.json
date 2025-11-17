@@ -245,7 +245,15 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "free"
+    "weight_type": "free",
+    "variations": [
+      {
+        "name": "sitting"
+      },
+      {
+        "name": "standing"
+      }
+    ]
   },
   {
     "name": "Overhead Dumbbell Press",
@@ -612,7 +620,12 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "Hammer Strength"
+      }
+    ]
   },
   {
     "name": "Hanging Leg Raise",
@@ -760,6 +773,26 @@
   },
   {
     "name": "Seated Leg Curl",
+    "targets": {
+      "legs/hamstrings": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "sulek mode"
+      },
+      {
+        "name": "single leg"
+      },
+      {
+        "name": "single leg, sulek mode"
+      }
+    ]
+  },
+  {
+    "name": "Kneeling Leg Curl",
     "targets": {
       "legs/hamstrings": 10
     },
@@ -1208,7 +1241,7 @@
     "weight_type": "machine"
   },
   {
-    "name": "T Bar Row",
+    "name": "Lever Row",
     "targets": {
       "back/lats": 10,
       "back/upper middle": 10,
@@ -1222,7 +1255,7 @@
     "weight_type": "machine",
     "variations": [
       {
-        "name": "high row",
+        "name": "high",
         "targets": {
           "back/traps": 10,
           "back/upper middle": 10,
@@ -1230,6 +1263,17 @@
           "shoulders/rear": 7,
           "arms/bicep": 4,
           "back/lats": 4
+        }
+      },
+      {
+        "name": "regular",
+        "targets": {
+          "back/traps": 8,
+          "back/upper middle": 10,
+          "back/exterior middle": 10,
+          "shoulders/rear": 7,
+          "arms/bicep": 4,
+          "back/lats": 7
         }
       }
     ]
@@ -1311,7 +1355,17 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "obliques",
+        "targets": {
+          "core/lower abs": 8,
+          "core/upper abs": 8,
+          "core/obliques": 10
+        }
+      }
+    ]
   },
   {
     "name": "Standing Ab Roller",
@@ -1332,18 +1386,18 @@
     "weight_type": "calisthenic"
   },
   {
-    "name": "Resting Dummbell Forearm Curl",
+    "name": "Resting Dumbbell Forearm Curl",
     "targets": {
-      "arms/exterior forearm": 10
+      "arms/interior forearm": 10
     },
     "is_body_weight": false,
     "description": "",
     "weight_type": "free"
   },
   {
-    "name": "Resting Reverse Dummbell Forearm Curl",
+    "name": "Resting Reverse Dumbbell Forearm Curl",
     "targets": {
-      "arms/interior forearm": 10
+      "arms/exterior forearm": 10
     },
     "is_body_weight": false,
     "description": "",
@@ -1370,6 +1424,15 @@
   {
     "name": "Standing Barbell Forearm Curl",
     "targets": {
+      "arms/interior forearm": 10
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Standing Reverse Barbell Forearm Curl",
+    "targets": {
       "arms/exterior forearm": 10
     },
     "is_body_weight": false,
@@ -1388,7 +1451,7 @@
   {
     "name": "Resting Barbell Forearm Curl",
     "targets": {
-      "arms/exterior forearm": 10
+      "arms/interior forearm": 10
     },
     "is_body_weight": false,
     "description": "",
@@ -1397,7 +1460,7 @@
   {
     "name": "Resting Reverse Barbell Forearm Curl",
     "targets": {
-      "arms/interior forearm": 10
+      "arms/exterior forearm": 10
     },
     "is_body_weight": false,
     "description": "",

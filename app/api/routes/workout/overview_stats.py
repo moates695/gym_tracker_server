@@ -8,7 +8,7 @@ from app.api.middleware.misc import *
 
 router = APIRouter()
 
-@router.get("/workout/overview/stats")
+@router.get("/overview/stats")
 async def workout_overview_stats(credentials: dict = Depends(verify_token)):
     workouts = []
 

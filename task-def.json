@@ -1,0 +1,23 @@
+{
+  "family": "gym-junkie-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::822961100047:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "gym-junkie",
+      "image": "822961100047.dkr.ecr.ap-southeast-2.amazonaws.com/gym-junkie:latest",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true
+    }
+  ]
+}
