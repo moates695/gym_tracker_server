@@ -107,7 +107,6 @@ async def register(req: Register):
 
         await tx.commit()
 
-        # todo: dont return temp_token, can be used to sign in without access to email
         return {
             "status": "success",
             "temp_token": generate_token(

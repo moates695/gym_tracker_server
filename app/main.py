@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 from app.api.routes.register import router as register_router
 from app.api.routes import auth
@@ -14,6 +15,10 @@ from app.api.routes.exercises import router as exercises_router
 from app.api.routes.stats import router as stats_router
 
 app = FastAPI(title="Gym Tracker API")
+
+@app.get("/")
+async def root():
+    return JSONResponse(content={"message": "OK"}, status_code=200)
 
 app.include_router(register_router.router)
 app.include_router(auth.router)

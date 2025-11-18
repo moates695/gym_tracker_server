@@ -32,7 +32,7 @@ async def resend_validation_email(credentials: dict = Depends(verify_temp_token)
     return {}
 
 async def send_validation_email(email: str, user_id: str):
-    token = generate_token(email, user_id, minutes=15, is_temp=True)
+    token = generate_token(email, user_id, minutes=15)
     link = f"{os.getenv('SERVER_ADDRESS')}/register/validate/receive?token={token}"
 
     msg = EmailMessage()
@@ -51,7 +51,7 @@ async def validate_user(token: str):
         conn = await setup_connection()
 
         try:
-            decoded = decode_token(token, is_temp=True)
+            decoded = decode_token(token)
         except Exception as e:
             raise HTTPException(status_code=401)
         
