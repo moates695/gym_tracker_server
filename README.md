@@ -161,4 +161,12 @@ except:
 - on FE, load in fonts before putting user on main screen
 - BE to FE, probably shouldn't return a temp token to the FE, as then users can bypass email verification by sending the temp token straight to the API. Temp token should be sent to the email only?
 
+- BUILD LAMBDA with ENVFILE and provenance false
+
 ## Assumptions
+
+### AWS sheninigans
+
+#### Lambda Containers
+
+When building set `--provenance=false`, otherwise image is "source image... is not supported"

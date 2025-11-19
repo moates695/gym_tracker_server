@@ -17,3 +17,15 @@ services:
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
     restart: unless-stopped
+  sync-redis:
+    image: gymjunkie-sync-redis:latest
+    container_name: sync-redis-${ENV_NAME}
+    build:
+      context: ./lambda
+      dockerfile: sync-redis/Dockerfile
+    env_file:
+      - app/envs/${ENV_NAME}.env
+    volumes:
+      - ./lambda/sync-redis/app.py:/var/task/app.py
+    ports:
+      - "${LAMBDA_SYNC_REDIS_PORT}:8080"

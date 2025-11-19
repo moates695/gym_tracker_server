@@ -5,16 +5,20 @@ if [ $# -ne 1 ]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 ENV_NAME=$1
-ENV_PATH=app/envs/${ENV_NAME}.env
+ENV_PATH="$SCRIPT_DIR/app/envs/${ENV_NAME}.env"
 
 if [ ! -f $ENV_PATH ]; then
-  echo "Error: app/envs/${ENV_NAME}.env not found"
+  echo "Error: $ENV_PATH not found"
   exit 1
 fi
 
 set -a
 source $ENV_PATH
 set +a
+
+# lambda/sync_shared.sh
 
 ENV_NAME=$ENV_NAME docker-compose up -d --build 
