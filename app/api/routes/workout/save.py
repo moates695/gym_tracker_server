@@ -30,7 +30,7 @@ class WorkoutSave(BaseModel):
 
 # todo update redis with new leaderboard data
 #? bodyweight determined on the client
-@router.post("/workout/save") 
+@router.post("/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
     conn = tx = None
     try:
