@@ -71,7 +71,7 @@ async def main():
             try:
                 temp_email = f"{str(uuid4())}{dummy_domain}"
                 response = requests.post(
-                    f"{server_base}/register",
+                    f"{server_base}/register/new",
                     json={
                         "email": temp_email,
                         "password": "Password1!",
@@ -92,12 +92,13 @@ async def main():
                 if resp_json["status"] != "success": 
                     raise Exception("register not successful")
                 temp_user_id = resp_json["user_id"]
+                auth_token = generate_token(temp_email, temp_user_id, minutes=15)
                 temp_token = generate_token(temp_email, temp_user_id, minutes=15, is_temp=True)
 
                 response = requests.get(
                     f"{server_base}/register/validate/receive",
                     params={
-                        "token": temp_token
+                        "token": auth_token
                     }
                 )
                 response.raise_for_status()

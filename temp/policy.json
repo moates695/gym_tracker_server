@@ -1,0 +1,15 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticache:Connect"
+            ],
+            "Resource": [
+                "arn:aws:elasticache:ap-southeast-2:822961100047:serverlesscache:gym-junkie-redis",
+                "arn:aws:elasticache:ap-southeast-2:822961100047:user:moates"
+            ]
+        }
+    ]
+}

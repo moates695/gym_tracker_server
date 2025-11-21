@@ -25,7 +25,7 @@ async def setup_connection() -> asyncpg.connection.Connection:
     
 async def redis_connection():
     try:
-        redis_url = f"redis://:{os.environ['REDIS_PASSWORD']}@{os.environ['REDIS_HOST']}:{os.environ['REDIS_PORT']}"
+        redis_url = f"redis://{os.environ['REDIS_HOST']}:{os.environ['REDIS_PORT']}"
         return await aioredis.from_url(
             redis_url,
             encoding='utf-8',

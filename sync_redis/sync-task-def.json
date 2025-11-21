@@ -1,0 +1,64 @@
+{
+  "family": "gym-junkie-sync-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::822961100047:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::822961100047:role/myEcsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "gym-junkie-sync-redis",
+      "image": "822961100047.dkr.ecr.ap-southeast-2.amazonaws.com/ecs-sync-redis:latest",
+      "stopTimeout": 10,
+      "portMappings": [],
+      "essential": true,
+      "environmentFiles": [
+        {
+          "value": "arn:aws:s3:::gym-junkie/env-files/prod.env",
+          "type": "s3"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DB_USER",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/postgres-kQtGJc:username::"
+        },
+        {
+          "name": "DB_HOST",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/postgres-kQtGJc:host::"
+        },
+        {
+          "name": "DB_PORT",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/postgres-kQtGJc:port::"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/postgres-kQtGJc:password::"
+        },
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/api-SWmGeE:SECRET_KEY::"
+        },
+        {
+          "name": "TEMP_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/api-SWmGeE:TEMP_SECRET_KEY::"
+        },
+        {
+          "name": "EMAIL_PWD",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/api-SWmGeE:EMAIL_PWD::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/gym-junkie/sync-redis",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

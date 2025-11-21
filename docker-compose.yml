@@ -1,31 +1,32 @@
 name: backend-${ENV_NAME}
 services:
-  server:
-    image: gymjunkie-server:latest 
-    container_name: server-${ENV_NAME}
-    build: .
+  api:
+    image: gymjunkie-api:latest 
+    container_name: api-${ENV_NAME}
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     env_file:
       - app/envs/${ENV_NAME}.env
     volumes:
-      - ./app:/server/app
+      - ./app:/api/app
     ports: 
       - "${SERVER_PORT}:${SERVER_PORT}"
   redis: 
     image: redis
     container_name: redis-${ENV_NAME}
-    command: ["redis-server", "--requirepass", "password"]
+    command: ["redis-server"]
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
     restart: unless-stopped
   sync-redis:
-    image: gymjunkie-sync-redis:latest
+    image: gymjunkie-sync-redis:latest 
     container_name: sync-redis-${ENV_NAME}
     build:
-      context: ./lambda
-      dockerfile: sync-redis/Dockerfile
+      context: sync_redis
+      dockerfile: Dockerfile.sync_redis
     env_file:
       - app/envs/${ENV_NAME}.env
     volumes:
-      - ./lambda/sync-redis/app.py:/var/task/app.py
-    ports:
-      - "${LAMBDA_SYNC_REDIS_PORT}:8080"
+      - ./sync_redis/sync.py:/app/sync.py
+  
