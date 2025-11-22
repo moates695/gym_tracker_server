@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Gym Junkie Security Groups'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-0d007b7ab9400c3cc
+
+Resources:
+  GymJunkieDbSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: gym-junkie-db-sg-2
+      GroupDescription: gym junkie postgres db
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref GymJunkieApiSG
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref GymJunkieSyncRedisSG
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 120.155.40.94/32
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  GymJunkieApiSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: gym-junkie-api-sg-2
+      GroupDescription: gym junkie ecs api
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  GymJunkieRedisSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: gym-junkie-redis-sg-2
+      GroupDescription: gym junkie ecs api
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref GymJunkieSyncRedisSG
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  GymJunkieSyncRedisSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: gym-junkie-sync-redis-sg-2
+      GroupDescription: gym junkie ecs api
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
