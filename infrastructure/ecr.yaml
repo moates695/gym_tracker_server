@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Gym Junkie ECR'
+
+Parameters:
+  RepositoryName:
+    Type: String
+
+Resources:
+  ContainerRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref RepositoryName
+      ImageScanningConfiguration:
+        ScanOnPush: true
+
+  RepositoryLifecyclePolicy:
+    Type: AWS::ECR::LifecyclePolicy
+    Properties:
+      RepositoryName: !Ref RepositoryName
+      LifecyclePolicyText: |
+        {
+          "rules": [
+            {
+              "rulePriority": 1,
+              "description": "Expire untagged images after 1 day",
+              "selection": {
+                "tagStatus": "untagged",
+                "countType": "sinceImagePushed",
+                "countUnit": "days",
+                "countNumber": 1
+              },
+              "action": {
+                "type": "expire"
+              }
+            }
+          ]
+        }

@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Gym Junkie ECS task execution role'
+
+# Parameters:
+#   SecretsPolicyArn:
+#     Type: String
+#     Description: The ARN of the custom managed policy that grants Secrets Manager read access.
+
+Resources:
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ecsTaskExecutionRole2
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::822961100047:policy/gym-junkie-s3-policy
+        - arn:aws:iam::822961100047:policy/gym-junkie-secret-policy
