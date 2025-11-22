@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Gym Junkie Cloud Map Namespace and Service Discovery
+
+Parameters:
+  VpcId:
+    Type: String
+    Default: vpc-0d007b7ab9400c3cc
+
+Resources:
+  PrivateNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: gym-junkie.internal
+      Vpc: !Ref VpcId
+      Description: private namespace for gym junkie
+
+  DiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: redis.gym-junkie.internal
+      NamespaceId: !Ref PrivateNamespace
+      Description: Cloud Map Service for ECS Service Tasks
+      DnsConfig:
+        DnsRecords:
+          - TTL: 60
+            Type: A
+        RoutingPolicy: MULTIVALUE
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+
+  
+
+# Outputs:
+#   ServiceDiscoveryFQDN:
+#     Description: The fully qualified domain name (FQDN) for the service discovery.
+#     Value: !Sub ${ServiceName}.${NamespaceName}
+#   CloudMapNamespaceId:
+#     Description: The ID of the Cloud Map Private DNS Namespace.
+#     Value: !Ref PrivateNamespace
+#   CloudMapServiceArn:
+#     Description: The ARN of the Cloud Map Service.
+#     Value: !GetAtt DiscoveryService.Arn

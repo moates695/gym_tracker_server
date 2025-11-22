@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'ECS Fargate Cluster and Service Deployment'
+Description: ECS Fargate Cluster and Service Deployment
 
 Parameters:
   VpcId:
@@ -38,6 +38,9 @@ Parameters:
   RedisSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Default: sg-070a1750e31134c77
+  ServiceRegistryArn:
+    Type: String
+    Default: arn:aws:servicediscovery:ap-southeast-2:822961100047:service/srv-dtkzwmvohqnvhlma
 
 Resources:
   ECSCluster:
@@ -87,7 +90,6 @@ Resources:
             - ContainerPort: 6379
               Protocol: tcp
 
-
   # # --- 3. CloudWatch Log Group ---
   # LogGroup:
   #   Type: AWS::Logs::LogGroup
@@ -134,6 +136,9 @@ Resources:
           Subnets: !Ref PrivateSubnets
           SecurityGroups:
             - !Ref RedisSecurityGroupId
+      ServiceRegistries:
+        - RegistryArn: !Ref ServiceRegistryArn
+          ContainerName: gym-junkie-redis
 
 # Outputs:
 #   ECSClusterName:
