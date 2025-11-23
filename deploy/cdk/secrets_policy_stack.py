@@ -11,6 +11,10 @@ class SecretsManagerPolicyStackProps:
         self.secret_arns = secret_arns
 
 class SecretsManagerPolicyStack(Stack):
+    @property
+    def secrets_policy_arn(self) -> str:
+        return self._secrets_manager_read_policy
+
     def __init__(self, scope: Construct, construct_id: str, props: SecretsManagerPolicyStackProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 

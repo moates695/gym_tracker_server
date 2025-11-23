@@ -12,6 +12,9 @@ LOCAL_FILE_PATH = "../app/envs/"
 S3_OBJECT_KEY = "env-files"
 
 class S3Stack(Stack):
+    @property
+    def vpc(self) -> str:
+        return self._secrets_manager_read_policy
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
