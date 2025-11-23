@@ -8,6 +8,7 @@ from cdk.security_group_stack import SecurityGroupStack, SecurityGroupStackProps
 from cdk.secrets_policy_stack import SecretsManagerPolicyStack, SecretsManagerPolicyStackProps
 from cdk.ecr_stack import EcrStack
 from cdk.s3_stack import S3Stack
+from cdk.cloud_map_stack import CloudMapStack, CloudMapStackProps
 
 env = cdk.Environment(
     account='822961100047', 
@@ -53,6 +54,15 @@ s3_stack = S3Stack(
     app,
     "S3Stack",
     env=env
+)
+
+cloud_map_stack = CloudMapStack(
+    app,
+    "S3Stack",
+    env=env,
+    props=CloudMapStackProps(
+        vpc=vpc_stack.vpc
+    )
 )
 
 app.synth()
