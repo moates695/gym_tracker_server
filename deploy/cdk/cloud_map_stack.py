@@ -31,14 +31,10 @@ class CloudMapStack(Stack):
             name="redis.gym-junkie.internal",
             namespace=private_namespace,
             description="Cloud Map Service for ECS Service Tasks",
-            dns_config=servicediscovery.DnsConfig(
-                routing_policy=servicediscovery.DnsRoutingPolicy.MULTIVALUE,
-                dns_records=[servicediscovery.DnsRecordSpec(
-                    type=servicediscovery.DnsRecordType.A,
-                    ttl=Duration.seconds(60)
-                )]
-            ),
-            custom_health_check=servicediscovery.CustomHealthCheckConfig(
+            dns_record_type=servicediscovery.DnsRecordType.A,
+            dns_ttl=Duration.seconds(60),
+            routing_policy=servicediscovery.RoutingPolicy.MULTIVALUE,
+            custom_health_check=servicediscovery.HealthCheckCustomConfig(
                 failure_threshold=1
             )
         )
