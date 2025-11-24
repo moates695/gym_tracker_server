@@ -19,11 +19,19 @@ class CloudMapStackProps:
         self.namespace_name = namespace_name
         self.discovery_service_name = discovery_service_name
 
-class CloudMapStack(Stack):
+class CloudMapStack(Stack):   
+    @property
+    def private_namespace(self) -> servicediscovery.PrivateDnsNamespace:
+        return self._private_namespace
+
+    @property
+    def discovery_service(self) -> servicediscovery.Service:
+        return self._discovery_service
+
     def __init__(self, scope: Construct, construct_id: str, props: CloudMapStackProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        private_namespace = servicediscovery.PrivateDnsNamespace(
+        self._private_namespace = servicediscovery.PrivateDnsNamespace(
             self,
             "PrivateNamespace",
             name=props.namespace_name,
@@ -31,11 +39,11 @@ class CloudMapStack(Stack):
             description="private namespace for gym junkie"
         )
 
-        servicediscovery.Service(
+        self._discovery_service = servicediscovery.Service(
             self,
             "DiscoveryService",
             name=props.discovery_service_name,
-            namespace=private_namespace,
+            namespace=self._private_namespace,
             description="Cloud Map Service for ECS Service Tasks",
             dns_record_type=servicediscovery.DnsRecordType.A,
             dns_ttl=Duration.seconds(60),

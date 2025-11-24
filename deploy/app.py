@@ -18,9 +18,13 @@ env = cdk.Environment(
     region='ap-southeast-2'
 )
 
-namespace_name = "gym-junkie.interna"
+namespace_name = "gym-junkie.internal"
 discovery_service_name = "redis.gym-junkie.internal"
 certificate_arn = "arn:aws:acm:ap-southeast-2:822961100047:certificate/dcc73684-264a-4dd9-bdfc-1c4abd33337b"
+secret_arns=[
+    "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/api-SWmGeE",
+    "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/postgres-kQtGJc"
+]
 
 app = cdk.App()
 
@@ -43,17 +47,18 @@ secrets_policy_stack = SecretsPolicyStack(
     app,
     "SecretsPolicyStack",
     env=env,
-    props=SecretsPolicyStackProps(
-        secret_arns=[
-            "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/api-SWmGeE",
-            "arn:aws:secretsmanager:ap-southeast-2:822961100047:secret:prod/gym-junkie/postgres-kQtGJc"
-        ]
-    )
+    props=SecretsPolicyStackProps(secret_arns=secret_arns)
 )
 
 ecr_api_stack = EcrStack(
     app,
     "EcrApiStack",
+    env=env
+)
+
+ecr_redis_stack = EcrStack(
+    app,
+    "EcrRedisStack",
     env=env
 )
 
@@ -110,7 +115,12 @@ ecs_cluster_stack = EcsClusterStack(
         task_role=ecs_roles_stack.task_role,
         api_repository=ecr_api_stack.repository,
         api_sg=security_group_stack.api_sg,
-        target_group=nlb_stack.target_group
+        target_group=nlb_stack.target_group,
+        redis_repository=ecr_redis_stack.repository,
+        redis_sg=security_group_stack.redis_sg,
+        private_namespace=cloud_map_stack.private_namespace,
+        discovery_service_name=discovery_service_name,
+        discovery_service=cloud_map_stack.discovery_service
     )
 )
 
