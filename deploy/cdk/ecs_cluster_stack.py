@@ -5,7 +5,9 @@ from aws_cdk import (
     aws_ecr as ecr,
     aws_elasticloadbalancingv2 as elbv2,
     aws_servicediscovery as servicediscovery,
-
+    aws_ecs_patterns as ecs_patterns,
+    aws_events as events,
+    aws_applicationautoscaling as appscaling
 )
 from constructs import Construct
 from aws_cdk import Stack
@@ -24,6 +26,8 @@ class EcsClusterStackProps:
         private_namespace: servicediscovery.PrivateDnsNamespace,
         discovery_service_name: str,
         discovery_service: servicediscovery.Service,
+        sync_redis_repository: ecr.Repository,
+        sync_redis_sg: ec2.SecurityGroup,
         **kwargs
     ):
         self.vpc = vpc
@@ -37,36 +41,18 @@ class EcsClusterStackProps:
         self.private_namespace = private_namespace
         self.discovery_service_name = discovery_service_name
         self.discovery_service = discovery_service
+        self.sync_redis_repository = sync_redis_repository
+        self.sync_redis_sg = sync_redis_sg
 
 class EcsClusterStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, props: EcsClusterStackProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # existing_namespace = servicediscovery.PrivateDnsNamespace.from_private_dns_namespace_attributes(
-        #     self,
-        #     "ExistingNamespace",
-        #     namespace_name=props.private_namespace.namespace_name,
-        #     namespace_id=props.private_namespace.namespace_id,
-        #     namespace_arn=props.private_namespace.namespace_arn
-        #     # vpc=props.vpc,
-        # )
-
         cluster = ecs.Cluster(
             self,
             "Cluster",
             vpc=props.vpc,
-            # cloud_map_namespace=props.private_namespace
-            # default_cloud_map_namespace=existing_namespace
         )
-        # cluster.default_cloud_map_namespace = props.private_namespace
-        # cluster.add_default_cloud_map_namespace(
-        #     name=props.private_namespace.namespace_name,
-        #     vpc=props.vpc
-        # )
-
-        # namespace = cluster.add_default_cloud_map_namespace(
-        #     name=props.namespace_name
-        # )
 
         api_task_def = ecs.FargateTaskDefinition(
             self,
@@ -135,14 +121,38 @@ class EcsClusterStack(Stack):
             security_groups=[props.redis_sg],
             min_healthy_percent=100,
             max_healthy_percent=200,
-            # cloud_map_options=ecs.CloudMapOptions(
-            #     cloud_map_namespace=props.private_namespace,
-            #     name=props.discovery_service_name,
-            #     container=redis_task_def._containers[0],
-            #     container_port=6379
-            # )
         )
 
         redis_service.associate_cloud_map_service(
             service=props.discovery_service
+        )
+
+        sync_redis_task_def = ecs.FargateTaskDefinition(
+            self,
+            "SyncRedisTaskDef",
+            cpu=256,
+            memory_limit_mib=512,
+            execution_role=props.task_execution_role,
+            task_role=props.task_role,
+        )
+
+        sync_redis_task_def.add_container(
+            "SyncRedisContainer",
+            image=ecs.ContainerImage.from_ecr_repository(props.redis_repository),
+        )
+
+        ecs_patterns.ScheduledFargateTask(
+            self,
+            "SyncRedisCronTask",
+            cluster=cluster,
+            scheduled_fargate_task_definition_options=ecs_patterns.ScheduledFargateTaskDefinitionOptions(
+                task_definition=sync_redis_task_def
+            ),
+            subnet_selection=ec2.SubnetSelection(subnets=props.vpc.public_subnets),
+            security_groups=[props.sync_redis_sg],
+            schedule=appscaling.Schedule.cron(
+                minute="0",
+                hour="*/1",
+            ),
+            platform_version=ecs.FargatePlatformVersion.LATEST,
         )

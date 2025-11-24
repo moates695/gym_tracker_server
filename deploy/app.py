@@ -120,7 +120,9 @@ ecs_cluster_stack = EcsClusterStack(
         redis_sg=security_group_stack.redis_sg,
         private_namespace=cloud_map_stack.private_namespace,
         discovery_service_name=discovery_service_name,
-        discovery_service=cloud_map_stack.discovery_service
+        discovery_service=cloud_map_stack.discovery_service,
+        sync_redis_repository=ecr_sync_redis_stack.repository,
+        sync_redis_sg=security_group_stack.sync_redis_sg
     )
 )
 

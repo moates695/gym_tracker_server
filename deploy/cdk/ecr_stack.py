@@ -2,7 +2,8 @@ from aws_cdk import (
     Stack,
     aws_ecr as ecr,
     RemovalPolicy,
-    Duration
+    Duration,
+    CfnOutput
 )
 from constructs import Construct
 
@@ -25,4 +26,10 @@ class EcrStack(Stack):
             max_image_age=Duration.days(1),
             rule_priority=1,
             description="Expire untagged images after 1 day"
+        )
+
+        CfnOutput(
+            self, "RepoUri",
+            value=self._repository.repository_uri,
+            # export_name=f""
         )
