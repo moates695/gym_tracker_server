@@ -31,5 +31,4 @@ class EcrStack(Stack):
         CfnOutput(
             self, "RepoUri",
             value=self._repository.repository_uri,
-            # export_name=f""
         )

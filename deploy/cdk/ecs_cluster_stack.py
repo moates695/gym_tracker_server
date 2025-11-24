@@ -7,7 +7,8 @@ from aws_cdk import (
     aws_servicediscovery as servicediscovery,
     aws_ecs_patterns as ecs_patterns,
     aws_events as events,
-    aws_applicationautoscaling as appscaling
+    aws_applicationautoscaling as appscaling,
+    aws_events_targets as targets,
 )
 from constructs import Construct
 from aws_cdk import Stack
@@ -141,18 +142,34 @@ class EcsClusterStack(Stack):
             image=ecs.ContainerImage.from_ecr_repository(props.redis_repository),
         )
 
-        ecs_patterns.ScheduledFargateTask(
+        rule = events.Rule(
             self,
-            "SyncRedisCronTask",
-            cluster=cluster,
-            scheduled_fargate_task_definition_options=ecs_patterns.ScheduledFargateTaskDefinitionOptions(
-                task_definition=sync_redis_task_def
-            ),
-            subnet_selection=ec2.SubnetSelection(subnets=props.vpc.public_subnets),
-            security_groups=[props.sync_redis_sg],
-            schedule=appscaling.Schedule.cron(
-                minute="0",
-                hour="*/1",
-            ),
-            platform_version=ecs.FargatePlatformVersion.LATEST,
+            "CronRule",
+            schedule=events.Schedule.expression("rate(60 minutes)"),
         )
+
+        rule.add_target(
+            targets.EcsTask(
+                cluster=cluster,
+                task_definition=sync_redis_task_def,
+                platform_version=ecs.FargatePlatformVersion.LATEST,
+                subnet_selection=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+                assign_public_ip=True
+            )
+        )
+
+        # ecs_patterns.ScheduledFargateTask(
+        #     self,
+        #     "SyncRedisCronTask",
+        #     cluster=cluster,
+        #     scheduled_fargate_task_definition_options=ecs_patterns.ScheduledFargateTaskDefinitionOptions(
+        #         task_definition=sync_redis_task_def,
+        #     ),
+        #     subnet_selection=ec2.SubnetSelection(subnets=props.vpc.public_subnets),
+        #     security_groups=[props.sync_redis_sg],
+        #     schedule=appscaling.Schedule.cron(
+        #         minute="0",
+        #         hour="*/1",
+        #     ),
+        #     platform_version=ecs.FargatePlatformVersion.LATEST,
+        # )
