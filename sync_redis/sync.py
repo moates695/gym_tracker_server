@@ -6,6 +6,7 @@ import os
 import logging
 import sys
 import threading
+import time
 
 load_dotenv()
 
@@ -13,13 +14,14 @@ def main():
     thread = threading.Thread(target=sync)
     thread.daemon = True
     thread.start()
-    thread.join(timeout=15)
+    thread.join(timeout=60)
 
     if thread.is_alive(): raise TimeoutError("sync timed out")
 
 def sync():
     print("here556")
     try:
+        time.sleep(65)
         r = redis_connection()
         if not r.ping(): return
 
