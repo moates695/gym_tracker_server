@@ -5,20 +5,19 @@ from dotenv import load_dotenv
 import os
 import logging
 import sys
-
-print('here403')
+import threading
 
 load_dotenv()
 
-# logger = logging.getLogger()
-# logger.setLevel(logging.INFO)
-
-# handler = logging.StreamHandler(sys.stdout)
-# formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-# handler.setFormatter(formatter)
-# logger.addHandler(handler)
-
 def main():
+    thread = threading.Thread(target=sync)
+    thread.daemon = True
+    thread.start()
+    thread.join(timeout=15)
+
+    if thread.is_alive(): raise TimeoutError("sync timed out")
+
+def sync():
     print("here556")
     try:
         r = redis_connection()
@@ -33,7 +32,6 @@ def main():
 
     except Exception as e:
         print(str(e))
-        # logger.error(str(e))
     print("here558")
 
 def redis_connection():

@@ -203,6 +203,7 @@ class EcsClusterStack(Stack):
                 task_definition=sync_redis_task_def,
                 platform_version=ecs.FargatePlatformVersion.LATEST,
                 subnet_selection=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-                assign_public_ip=False
+                assign_public_ip=False,
+                security_groups=[props.sync_redis_sg]
             )
         )

@@ -1,10 +1,6 @@
-# import aws_cdk.aws_ec2 as ec2
 from aws_cdk import (
     Stack,
     aws_ec2 as ec2,
-    CfnParameter,
-    RemovalPolicy,
-    Aws,
     CfnOutput
 )
 from constructs import Construct
@@ -38,7 +34,6 @@ class SecurityGroupStack(Stack):
         self._sync_redis_sg = ec2.SecurityGroup(
             self, "GymJunkieSyncRedisSG",
             vpc=vpc,
-            # security_group_name=f"gym-junkie-sync-redis-sg-{suffix}",
             description="gym junkie ecs sync redis",
             allow_all_outbound=True
         )
@@ -46,7 +41,6 @@ class SecurityGroupStack(Stack):
         self._api_sg = ec2.SecurityGroup(
             self, "GymJunkieApiSG",
             vpc=vpc,
-            # security_group_name=f"gym-junkie-api-sg-{suffix}",
             description="gym junkie ecs api",
             allow_all_outbound=True
         )
@@ -64,7 +58,6 @@ class SecurityGroupStack(Stack):
         self._redis_sg = ec2.SecurityGroup(
             self, "GymJunkieRedisSG",
             vpc=vpc,
-            # security_group_name=f"gym-junkie-redis-sg-{suffix}",
             description="gym junkie redis cache",
             allow_all_outbound=True
         )
@@ -77,7 +70,6 @@ class SecurityGroupStack(Stack):
         self._db_sg = ec2.SecurityGroup(
             self, "GymJunkieDbSG",
             vpc=vpc,
-            # security_group_name=f"gym-junkie-db-sg-{suffix}",
             description="gym junkie postgres db",
             allow_all_outbound=True
         )
