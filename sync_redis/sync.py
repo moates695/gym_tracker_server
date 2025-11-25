@@ -58,7 +58,8 @@ def db_connection():
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
             host=os.environ["DB_HOST"],
-            port=os.environ["DB_PORT"]
+            port=os.environ["DB_PORT"],
+            connect_timeout=5
         )
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     except Exception as e:

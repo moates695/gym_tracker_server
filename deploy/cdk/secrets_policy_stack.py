@@ -6,16 +6,16 @@ from aws_cdk import (
 from constructs import Construct
 from typing import Union, List
 
-class SecretsManagerPolicyStackProps:
+class SecretsPolicyStackProps:
     def __init__(self, secret_arns: Union[str, List[str]]):
         self.secret_arns = secret_arns
 
-class SecretsManagerPolicyStack(Stack):
+class SecretsPolicyStack(Stack):
     @property
-    def secrets_policy_arn(self) -> str:
-        return self._secrets_manager_read_policy
+    def secrets_policy(self) -> str:
+        return self._secrets_policy
 
-    def __init__(self, scope: Construct, construct_id: str, props: SecretsManagerPolicyStackProps, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, props: SecretsPolicyStackProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         if isinstance(props.secret_arns, str):
@@ -25,7 +25,7 @@ class SecretsManagerPolicyStack(Stack):
         else:
             raise TypeError("secret_arns must be a string or a list of strings")
 
-        self._secrets_manager_read_policy = iam.ManagedPolicy(self, "SecretsManagerReadPolicy",
+        self._secrets_policy = iam.ManagedPolicy(self, "SecretsManagerReadPolicy",
             # managed_policy_name="gym-junkie-secret-policy",
             document=iam.PolicyDocument(
                 statements=[

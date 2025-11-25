@@ -4,7 +4,8 @@ from aws_cdk import (
     aws_ec2 as ec2,
     CfnParameter,
     RemovalPolicy,
-    Aws
+    Aws,
+    CfnOutput
 )
 from constructs import Construct
 
@@ -13,12 +14,28 @@ class SecurityGroupStackProps:
         self.vpc = vpc
 
 class SecurityGroupStack(Stack):
+    @property
+    def sync_redis_sg(self) -> ec2.SecurityGroup:
+        return self._sync_redis_sg
+    
+    @property
+    def api_sg(self) -> ec2.SecurityGroup:
+        return self._api_sg
+    
+    @property
+    def redis_sg(self) -> ec2.SecurityGroup:
+        return self._redis_sg
+    
+    @property
+    def db_sg(self) -> ec2.SecurityGroup:
+        return self._db_sg
+
     def __init__(self, scope: Construct, construct_id: str, props: SecurityGroupStackProps, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         vpc = props.vpc
 
-        gym_junkie_sync_redis_sg = ec2.SecurityGroup(
+        self._sync_redis_sg = ec2.SecurityGroup(
             self, "GymJunkieSyncRedisSG",
             vpc=vpc,
             # security_group_name=f"gym-junkie-sync-redis-sg-{suffix}",
@@ -26,7 +43,7 @@ class SecurityGroupStack(Stack):
             allow_all_outbound=True
         )
 
-        gym_junkie_api_sg = ec2.SecurityGroup(
+        self._api_sg = ec2.SecurityGroup(
             self, "GymJunkieApiSG",
             vpc=vpc,
             # security_group_name=f"gym-junkie-api-sg-{suffix}",
@@ -34,17 +51,17 @@ class SecurityGroupStack(Stack):
             allow_all_outbound=True
         )
         
-        gym_junkie_api_sg.add_ingress_rule(
+        self._api_sg.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(80),
         )
 
-        gym_junkie_api_sg.add_ingress_rule(
+        self._api_sg.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(443),
         )
 
-        gym_junkie_redis_sg = ec2.SecurityGroup(
+        self._redis_sg = ec2.SecurityGroup(
             self, "GymJunkieRedisSG",
             vpc=vpc,
             # security_group_name=f"gym-junkie-redis-sg-{suffix}",
@@ -52,12 +69,12 @@ class SecurityGroupStack(Stack):
             allow_all_outbound=True
         )
         
-        gym_junkie_redis_sg.add_ingress_rule(
-            peer=gym_junkie_sync_redis_sg,
+        self._redis_sg.add_ingress_rule(
+            peer=self._sync_redis_sg,
             connection=ec2.Port.tcp(6379),
         )
 
-        gym_junkie_db_sg = ec2.SecurityGroup(
+        self._db_sg = ec2.SecurityGroup(
             self, "GymJunkieDbSG",
             vpc=vpc,
             # security_group_name=f"gym-junkie-db-sg-{suffix}",
@@ -65,17 +82,22 @@ class SecurityGroupStack(Stack):
             allow_all_outbound=True
         )
 
-        gym_junkie_db_sg.add_ingress_rule(
-            peer=gym_junkie_api_sg,
+        self._db_sg.add_ingress_rule(
+            peer=self._api_sg,
             connection=ec2.Port.tcp(5432),
         )
         
-        gym_junkie_db_sg.add_ingress_rule(
-            peer=gym_junkie_sync_redis_sg,
+        self._db_sg.add_ingress_rule(
+            peer=self._sync_redis_sg,
             connection=ec2.Port.tcp(5432),
         )
         
-        gym_junkie_db_sg.add_ingress_rule(
+        self._db_sg.add_ingress_rule(
             peer=ec2.Peer.ipv4("120.155.40.94/32"),
             connection=ec2.Port.tcp(5432),
+        )
+
+        CfnOutput(
+            self, "DbSgId",
+            value=self._db_sg.security_group_id
         )
