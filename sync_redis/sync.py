@@ -6,7 +6,6 @@ import os
 import logging
 import sys
 import threading
-import time
 
 load_dotenv()
 
@@ -21,7 +20,6 @@ def main():
 def sync():
     print("here556")
     try:
-        time.sleep(65)
         r = redis_connection()
         if not r.ping(): return
 

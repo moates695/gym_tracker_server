@@ -102,7 +102,8 @@ class EcsClusterStack(Stack):
             logging=ecs.LogDriver.aws_logs(
                 log_group=props.log_group,
                 stream_prefix="ecs/api"
-            )
+            ),
+            enable_restart_policy=True
         )
 
         api_service = ecs.FargateService(
@@ -142,7 +143,8 @@ class EcsClusterStack(Stack):
             logging=ecs.LogDriver.aws_logs(
                 log_group=props.log_group,
                 stream_prefix="ecs/redis"
-            )
+            ),
+            enable_restart_policy=True
         )
 
         redis_service = ecs.FargateService(
