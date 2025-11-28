@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ "$ENVIRONMENT" = "dev" ]; then
+if [ "$ENVIRONMENT" != "prod" ]; then
   exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 else
-  exec uvicorn app.main:app --host 0.0.0.0 --port 80 --workers 4
+  exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 fi

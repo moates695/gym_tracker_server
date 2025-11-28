@@ -12,26 +12,30 @@ services:
       - ./app:/api/app
     ports: 
       - "${SERVER_PORT}:${SERVER_PORT}"
+    networks:
+      - api-network
   redis: 
     image: redis
     container_name: redis-${ENV_NAME}
     command: ["redis-server"]
-    ports:
-      - "${REDIS_PORT}:${REDIS_PORT}"
     restart: unless-stopped
+    networks:
+      - api-network
   sync-redis:
     image: gymjunkie-sync-redis:latest 
     container_name: sync-redis-${ENV_NAME}
     build:
-      context: sync_redis
-      dockerfile: Dockerfile.sync_redis
+      context: .
+      dockerfile: sync_redis/Dockerfile.sync_redis
     env_file:
       - app/envs/${ENV_NAME}.env
     volumes:
       - ./sync_redis/sync.py:/app/sync.py
+    networks:
+      - api-network
   nginx:
     image: nginx:alpine
-    container_name: nginx_proxy
+    container_name: nginx-proxy-${ENV_NAME}
     restart: unless-stopped
     env_file:
       - app/envs/${ENV_NAME}.env
@@ -43,3 +47,7 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       - api
+
+networks:
+  api-network:
+    driver: bridge
