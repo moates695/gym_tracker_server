@@ -21,4 +21,5 @@ set +a
 
 # lambda/sync_shared.sh
 
-ENV_NAME=$ENV_NAME docker-compose up -d --build 
+ENV_NAME=$ENV_NAME docker-compose -p backend-${ENV_NAME} down
+ENV_NAME=$ENV_NAME docker-compose -p backend-${ENV_NAME} up -d --build --force-recreate

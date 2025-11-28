@@ -7,3 +7,4 @@ venv/
 .pytest_cache
 *.env
 nginx/ssl/*
+.compose-up.sh.swp

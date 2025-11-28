@@ -1,4 +1,3 @@
-name: backend-${ENV_NAME}
 services:
   api:
     image: gymjunkie-api:latest 
@@ -43,8 +42,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
+      - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - api-network
     depends_on:
       - api
 
