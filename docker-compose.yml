@@ -10,7 +10,7 @@ services:
     volumes:
       - ./app:/api/app
     ports: 
-      - "${SERVER_PORT}:${SERVER_PORT}"
+      - "${API_PORT}:${API_PORT}"
     networks:
       - api-network
   redis: 
