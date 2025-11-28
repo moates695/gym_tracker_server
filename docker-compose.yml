@@ -29,4 +29,17 @@ services:
       - app/envs/${ENV_NAME}.env
     volumes:
       - ./sync_redis/sync.py:/app/sync.py
-  
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    restart: unless-stopped
+    env_file:
+      - app/envs/${ENV_NAME}.env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
