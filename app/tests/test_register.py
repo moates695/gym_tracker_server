@@ -62,15 +62,17 @@ def test_validate(delete_users):
     assert response.json()["status"] == "success"
     temp_token = response.json()["temp_token"]
 
-    params = {
+    response = client.get("/register/validate/receive", params={
         "token": temp_token
-    }
+    })
+    assert response.status_code == 401
 
-    response = client.get("/register/validate/receive", params=params)
+    auth_token = get_auth_token(temp_token)
+
+    response = client.get("/register/validate/receive", params={
+        "token": auth_token
+    })
     assert response.status_code == 200
-
-    response = client.get("/register/validate/receive", params=params)
-    assert response.status_code == 400
 
 def test_validate_past_expiry(delete_users):
     response = client.post("/register/new", json=valid_user)
@@ -129,8 +131,10 @@ def test_is_validated(delete_users):
     assert response.json()["auth_token"] == None
     assert response.json()["user_data"] == None
 
+    auth_token = get_auth_token(temp_token)
+
     response = client.get("/register/validate/receive", params={
-        "token": temp_token
+        "token": auth_token
     })
     assert response.status_code == 200
 
@@ -163,12 +167,7 @@ def test_login(delete_users):
     })
     assert response.status_code == 401
 
-    decoded_temp = decode_token(temp_token, is_temp=True)
-    auth_token = generate_token(
-        decoded_temp["email"],
-        decoded_temp["user_id"],
-        minutes=30
-    )
+    auth_token = get_auth_token(temp_token)
 
     response = client.get("/register/validate/receive", params={
         "token": auth_token
@@ -220,7 +219,7 @@ def test_sign_in(delete_users):
     response = client.post("/register/new", json=valid_user)
     assert response.status_code == 200
 
-    response = client.post("/sign-in", json={
+    response = client.post("/register/sign-in", json={
         "email": user["email"],
         "password": user["password"]
     })
@@ -228,12 +227,13 @@ def test_sign_in(delete_users):
     temp_token = response.json()["token"]
     decode_token(temp_token, is_temp=True)
 
+    auth_token = get_auth_token(temp_token)
     response = client.get("/register/validate/receive", params={
-        "token": temp_token
+        "token": auth_token
     })
     assert response.status_code == 200
 
-    response = client.post("/sign-in", json={
+    response = client.post("/register/sign-in", json={
         "email": user["email"],
         "password": user["password"]
     })
@@ -252,17 +252,24 @@ def test_sign_in(delete_users):
         "weight": valid_user["weight"],
     }
 
-    response = client.post("/sign-in", json={
+    response = client.post("/register/sign-in", json={
         "email": user["email"],
         "password": "incorrect"
     })
     assert response.json()["status"] == "incorrect-password"
     assert response.json()["token"] == None
 
-    response = client.post("/sign-in", json={
+    response = client.post("/register/sign-in", json={
         "email": "not@email.com",
         "password":  user["password"]
     })
     assert response.json()["status"] == "none"
     assert response.json()["token"] == None
 
+def get_auth_token(temp_token):
+    decoded_temp = decode_token(temp_token, is_temp=True)
+    return generate_token(
+        decoded_temp["email"],
+        decoded_temp["user_id"],
+        minutes=30
+    )
