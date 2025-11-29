@@ -2,6 +2,7 @@ import pytest
 import json
 from uuid import uuid4
 import math
+import os
 
 from ..api.middleware.database import setup_connection
 from ..local.update_exercises import update
@@ -9,7 +10,8 @@ from ..tests.test_register import valid_user
 
 @pytest.mark.asyncio
 async def test_base_case():
-    with open("app/local/exercises.json", "r") as file:
+    print(os.getcwd())
+    with open("local/exercises.json", "r") as file:
         exercises = json.load(file)
 
     try:
@@ -35,7 +37,7 @@ async def test_base_case():
 
 @pytest.mark.asyncio
 async def test_update_exercises():
-    with open("app/local/exercises.json", "r") as file:
+    with open("local/exercises.json", "r") as file:
         exercises = json.load(file)
 
     dummy1 = [
@@ -165,7 +167,7 @@ async def test_update_exercises():
 
 @pytest.mark.asyncio
 async def test_update_exercises_bodyweight():
-    with open("app/local/exercises.json", "r") as file:
+    with open("local/exercises.json", "r") as file:
         exercises = json.load(file)
 
     dummy = [
@@ -290,7 +292,7 @@ async def test_update_exercises_bodyweight():
 
 @pytest.mark.asyncio
 async def test_update_exercises_override():
-    with open("app/local/exercises.json", "r") as file:
+    with open("local/exercises.json", "r") as file:
         exercises = json.load(file)
 
     dummy1 = [
@@ -346,7 +348,7 @@ async def test_update_exercises_override():
 
 @pytest.mark.asyncio
 async def test_update_exercises_variations():
-    with open("app/local/exercises.json", "r") as file:
+    with open("local/exercises.json", "r") as file:
         exercises = json.load(file)
 
     dummy = [
@@ -535,7 +537,7 @@ async def test_update_exercises_variations():
 
 @pytest.mark.asyncio
 async def test_update_exercises_invalid_variations():
-    with open("app/local/exercises.json", "r") as file:
+    with open("local/exercises.json", "r") as file:
         exercises = json.load(file) 
 
     name = str(uuid4())
@@ -600,7 +602,7 @@ async def test_update_exercises_invalid_variations():
 
 @pytest.mark.asyncio
 async def test_invalid_inserts_exercises(delete_users, create_user):
-    with open("app/local/exercises.json", "r") as file:
+    with open("local/exercises.json", "r") as file:
         exercises = json.load(file)
 
     try:
@@ -753,7 +755,7 @@ async def test_invalid_inserts_exercises(delete_users, create_user):
 
 @pytest.mark.asyncio
 async def test_invalid_insert_exercises2():
-    with open("app/local/exercises.json", "r") as file:
+    with open("local/exercises.json", "r") as file:
         exercises = json.load(file)
 
     try:
@@ -866,7 +868,7 @@ async def fetch_exercise_data(conn, include_custom=False):
 ###################################
 
 def get_target_ratios(targets):
-    with open("app/local/muscles.json", "r") as file:
+    with open("local/muscles.json", "r") as file:
         muscles = json.load(file)
 
     ratios = {}
