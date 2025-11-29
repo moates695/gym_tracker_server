@@ -6,23 +6,9 @@ from uuid import uuid4
 
 from ..main import app
 from ..api.middleware.auth_token import decode_token, generate_token
+from .conftest import get_auth_token, valid_user
 
 client = TestClient(app)
-
-valid_user = {
-    "email": "test@pytest.com",
-    "password": "Password1!",
-    "username": "testname",
-    "first_name": "John",
-    "last_name": "Doe",
-    "gender": "male",
-    "height": 183,
-    "weight": 98,
-    "goal_status": "cutting",
-    "ped_status": 'natural',
-    "date_of_birth": "2001-09-11",
-    "send_email": False
-}
 
 def test_valid_register(delete_users):
     response = client.post("/register/new", json=valid_user)
@@ -266,10 +252,3 @@ def test_sign_in(delete_users):
     assert response.json()["status"] == "none"
     assert response.json()["token"] == None
 
-def get_auth_token(temp_token):
-    decoded_temp = decode_token(temp_token, is_temp=True)
-    return generate_token(
-        decoded_temp["email"],
-        decoded_temp["user_id"],
-        minutes=30
-    )
