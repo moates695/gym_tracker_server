@@ -10,7 +10,8 @@ from ..api.middleware.auth_token import decode_token
 from ..tests.test_workout_save import build_workouts, save_workouts
 from ..api.middleware.database import setup_connection
 from ..api.middleware.misc import datetime_to_timestamp_ms
-from ..api.routes.exercises import timespan_to_ms, get_days_past
+from ..api.routes.exercises.history import timespan_to_ms
+from ..api.routes.exercises.list_all import get_days_past
 
 client = TestClient(app)
 

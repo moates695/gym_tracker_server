@@ -25,7 +25,7 @@ valid_user = {
 }
 
 def test_valid_register(delete_users):
-    response = client.post("/register", json=valid_user)
+    response = client.post("/register/new", json=valid_user)
     assert response.status_code == 200
     assert "auth_token" not in response.json().keys()
     temp_token = response.json()["temp_token"]
@@ -34,31 +34,31 @@ def test_valid_register(delete_users):
 def test_email_taken(delete_users):
     user = valid_user.copy()
 
-    response = client.post("/register", json=user)
+    response = client.post("/register/new", json=user)
     assert response.json()["status"] == "success"
 
     user["username"] = "testname2"
     user["email"] = user["email"].upper()
 
-    response = client.post("/register", json=user)
+    response = client.post("/register/new", json=user)
     assert response.json()["status"] == "error"
     assert response.json()["fields"] == ["email"]
 
 def test_username_taken(delete_users):
     user = valid_user.copy()
 
-    response = client.post("/register", json=user)
+    response = client.post("/register/new", json=user)
     assert response.json()["status"] == "success"
 
     user["email"] = "test2@pytest.com"
     user["username"] = user["username"].upper()
 
-    response = client.post("/register", json=user)
+    response = client.post("/register/new", json=user)
     assert response.json()["status"] == "error"
     assert response.json()["fields"] == ["username"]
 
 def test_validate(delete_users):
-    response = client.post("/register", json=valid_user)
+    response = client.post("/register/new", json=valid_user)
     assert response.json()["status"] == "success"
     temp_token = response.json()["temp_token"]
 
@@ -73,7 +73,7 @@ def test_validate(delete_users):
     assert response.status_code == 400
 
 def test_validate_past_expiry(delete_users):
-    response = client.post("/register", json=valid_user)
+    response = client.post("/register/new", json=valid_user)
     assert response.status_code == 200
     temp_token = response.json()["temp_token"]
     decoded = decode_token(temp_token, is_temp=True)
@@ -99,7 +99,7 @@ def test_username_exists(delete_users):
     assert response.status_code == 200
     assert response.json()["taken"] == False
 
-    response = client.post("/register", json=valid_user)
+    response = client.post("/register/new", json=valid_user)
     assert response.status_code == 200
 
     response = client.get("/register/check/username", params={
@@ -115,7 +115,7 @@ def test_username_exists(delete_users):
     assert response.json()["taken"] == True
 
 def test_is_validated(delete_users):
-    response = client.post("/register", json=valid_user)
+    response = client.post("/register/new", json=valid_user)
     assert response.status_code == 200
     temp_token = response.json()["temp_token"]
 
@@ -154,12 +154,24 @@ def test_is_validated(delete_users):
     assert response.json()["user_data"] == None
 
 def test_login(delete_users):
-    response = client.post("/register", json=valid_user)
+    response = client.post("/register/new", json=valid_user)
     assert response.status_code == 200
     temp_token = response.json()["temp_token"]
 
     response = client.get("/register/validate/receive", params={
         "token": temp_token
+    })
+    assert response.status_code == 401
+
+    decoded_temp = decode_token(temp_token, is_temp=True)
+    auth_token = generate_token(
+        decoded_temp["email"],
+        decoded_temp["user_id"],
+        minutes=30
+    )
+
+    response = client.get("/register/validate/receive", params={
+        "token": auth_token
     })
     assert response.status_code == 200
 
@@ -183,7 +195,7 @@ def test_login(delete_users):
         "weight": valid_user["weight"],
     }
 
-    response = client.get("/login", headers={
+    response = client.get("/register/login", headers={
         "Authorization": f"Bearer {auth_token}"
     })
     assert response.status_code == 200
@@ -205,7 +217,7 @@ def test_login(delete_users):
 def test_sign_in(delete_users):
     user = valid_user.copy()
 
-    response = client.post("/register", json=valid_user)
+    response = client.post("/register/new", json=valid_user)
     assert response.status_code == 200
 
     response = client.post("/sign-in", json={

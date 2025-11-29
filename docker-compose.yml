@@ -20,6 +20,8 @@ services:
     restart: unless-stopped
     networks:
       - api-network
+    depends_on:
+      - api
   sync-redis:
     image: gymjunkie-sync-redis:latest 
     container_name: sync-redis-${ENV_NAME}
@@ -32,6 +34,8 @@ services:
       - ./sync_redis/sync.py:/app/sync.py
     networks:
       - api-network
+    depends_on:
+      - redis
   nginx:
     image: nginx:alpine
     container_name: nginx-proxy-${ENV_NAME}

@@ -160,8 +160,7 @@ except:
 - asynpg, use named paramaters instead of $1, $2, ... where apprporiate
 - on FE, load in fonts before putting user on main screen
 - BE to FE, probably shouldn't return a temp token to the FE, as then users can bypass email verification by sending the temp token straight to the API. Temp token should be sent to the email only?
-
-- BUILD LAMBDA with ENVFILE and provenance false
+- FE, dont allow sign in next button if errors in email, password or username. Also check for email like username if in use.
 
 ## Assumptions
 
