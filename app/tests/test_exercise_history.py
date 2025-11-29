@@ -40,7 +40,7 @@ async def test_exercise_history_match(delete_users, create_user):
 
         assert len(exercise_ids) > 0
         for exercise_id in exercise_ids:
-            response = client.get('/exercise/history', headers=headers, params={
+            response = client.get('/exercises/history', headers=headers, params={
                 "exercise_id": exercise_id
             })
             resp_json = response.json()
@@ -248,7 +248,7 @@ async def test_exercise_history_data(delete_users, create_user):
                 exercises[exercise["id"]].extend(set_data)
 
         for exercise_id, set_data_list in exercises.items():
-            response = client.get('/exercise/history', headers=headers, params={
+            response = client.get('/exercises/history', headers=headers, params={
                 "exercise_id": exercise_id
             })
             resp_json = response.json()

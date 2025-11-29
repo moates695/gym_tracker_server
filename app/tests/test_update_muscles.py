@@ -6,7 +6,7 @@ from ..local.update_muscles import update
 
 @pytest.mark.asyncio
 async def test_update_muscles():
-    with open("app/local/muscles.json", "r") as file:
+    with open("local/muscles.json", "r") as file:
         muscles_json = json.load(file)
 
     dummy_json = {
@@ -89,7 +89,7 @@ async def test_update_muscles():
 
 @pytest.mark.asyncio
 async def test_invalid_inserts_group():
-    with open("app/local/muscles.json", "r") as file:
+    with open("local/muscles.json", "r") as file:
         muscles_json = json.load(file)
         
     try:
@@ -133,7 +133,7 @@ async def test_invalid_inserts_group():
 
 @pytest.mark.asyncio
 async def test_invalid_inserts_targets():
-    with open("app/local/muscles.json", "r") as file:
+    with open("local/muscles.json", "r") as file:
         muscles_json = json.load(file)
         
     try:
