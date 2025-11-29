@@ -24,10 +24,10 @@ from app.api.middleware.misc import *
 
 router = APIRouter()
 
-@router.post("/validate/resend")
-async def resend_validation_email(credentials: dict = Depends(verify_temp_token)):
+@router.get("/validate/resend")
+async def resend_validation_email(send_email: bool = True, credentials: dict = Depends(verify_temp_token)):
     try:
-        await send_validation_email(credentials["email"], credentials["user_id"])
+        await send_validation_email(credentials["email"], credentials["user_id"], send_email)
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
@@ -35,7 +35,7 @@ async def resend_validation_email(credentials: dict = Depends(verify_temp_token)
         raise HTTPException(status_code=500)
     return {}
 
-async def send_validation_email(email: str, user_id: str):
+async def send_validation_email(email: str, user_id: str, send_email: bool = True):
     # token = generate_token(email, user_id, minutes=15)
     # link = f"{os.getenv('SERVER_ADDRESS')}/register/validate/receive?token={token}"
 
@@ -55,14 +55,6 @@ async def send_validation_email(email: str, user_id: str):
         )
         if not user_exists:
             raise HTTPException(status_code=400, detail="user does not exist")
-        
-        await conn.execute(
-            """
-            delete
-            from user_codes
-            where user_id = $1
-            """, user_id
-        )
 
         await conn.execute(
             """
@@ -70,6 +62,9 @@ async def send_validation_email(email: str, user_id: str):
             (user_id, code)
             values
             ($1, $2)
+            on conflict (user_id) do update
+            set
+                code = $2
             """, user_id, code
         )
 
@@ -80,6 +75,8 @@ async def send_validation_email(email: str, user_id: str):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+    if not send_email: return
 
     msg = EmailMessage()
     msg["To"] = email
@@ -109,37 +106,37 @@ async def validate_user(code: str, credentials: dict = Depends(verify_temp_token
     try:
         conn = await setup_connection()
 
-        try:
-            decoded = decode_token(credentials, is_temp=True)
-        except Exception as e:
-            raise HTTPException(status_code=401, detail="temp token is invalid")
-
         is_verified = await conn.fetchval(
             """
             select is_verified
             from users
             where lower(email) = lower($1)
-            """, decoded["email"]
+            """, credentials["email"]
         )
 
         if is_verified is None:
-            raise HTTPException(status_code=400, detail="user does not exist")
-        elif is_verified:
-            raise HTTPException(status_code=400, detail=f"user is already verified")
+            return {
+                "status": "error",
+                "message": "user does not exist"
+            }
 
         db_code = await conn.fetchval(
             """
             select code
             from user_codes
             where user_id = $1
-            """, decoded["user_id"]
+            """, credentials["user_id"]
         )
 
         if db_code is None:
-            raise HTTPException(status_code=400, detail="user does not have preset code")
+            return {
+                "status": "error",
+                "message": "code not set for user"
+            }
         elif code != db_code:
             return {
-                "status": "incorrect"
+                "status": "incorrect",
+                "message": "code is not correct"
             }
         
         await conn.execute(
@@ -147,16 +144,17 @@ async def validate_user(code: str, credentials: dict = Depends(verify_temp_token
             delete 
             from user_codes
             where user_id = $1
-            """, decoded["user_id"]
+            """, credentials["user_id"]
         )
 
-        await conn.execute(
-            """
-            update users
-            set is_verified = true
-            where user_id = $1
-            """, decoded["user_id"]
-        )
+        if not is_verified:
+            await conn.execute(
+                """
+                update users
+                set is_verified = true
+                where id = $1
+                """, credentials["user_id"]
+            )
 
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
@@ -175,6 +173,6 @@ async def validate_user(code: str, credentials: dict = Depends(verify_temp_token
         )
     }
 
-@router.get("/validate/check")
-async def validate_check(credentials: dict = Depends(verify_temp_token)):
-    return await login_user(credentials)
+# @router.get("/validate/check")
+# async def validate_check(credentials: dict = Depends(verify_temp_token)):
+#     return await login_user(credentials)

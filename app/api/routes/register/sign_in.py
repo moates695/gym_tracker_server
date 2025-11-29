@@ -40,22 +40,18 @@ async def sign_in(req: SignIn):
         if row is None:
             status = "none"
         elif bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')):
+            token = generate_token(
+                req.email,
+                row["id"],
+                minutes=15,
+                is_temp=True
+            )
             if row["is_verified"]:
                 status = "signed-in"
-                token = generate_token(
-                    req.email,
-                    row["id"],
-                    days=30
-                )
                 user_data = await fetch_user_data(row["id"])
             else:
                 status = "unverified"
-                token = generate_token(
-                    req.email,
-                    row["id"],
-                    minutes=15,
-                    is_temp=True
-                )
+                
         else:
             status = "incorrect-password"
 
