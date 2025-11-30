@@ -18,7 +18,6 @@ import random
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token, verify_temp_token
-from app.api.routes.register.login import login_user
 from app.api.routes.users.get_data import fetch_user_data
 from app.api.middleware.misc import *
 
@@ -170,7 +169,8 @@ async def validate_user(code: str, credentials: dict = Depends(verify_temp_token
             credentials["email"],
             credentials["user_id"],
             days=30
-        )
+        ),
+        "user_data": await fetch_user_data(credentials["user_id"])
     }
 
 # @router.get("/validate/check")
