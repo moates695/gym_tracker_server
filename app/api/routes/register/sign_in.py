@@ -37,12 +37,12 @@ async def sign_in(req: SignIn):
             """,  req.email
         )
 
-        token = None
+        temp_token = None
         if row is None:
             status = "none"
         elif bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')):
             status = "good"
-            token = generate_token(
+            temp_token = generate_token(
                 req.email,
                 row["id"],
                 minutes=15,
@@ -54,7 +54,7 @@ async def sign_in(req: SignIn):
 
         return {
             "status": status,
-            "token": token,
+            "temp_token": temp_token,
         }
 
     except HTTPException as e:
