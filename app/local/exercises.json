@@ -815,15 +815,6 @@
     "weight_type": "machine"
   },
   {
-    "name": "Seated Calf Raise",
-    "targets": {
-      "legs/calves": 10
-    },
-    "is_body_weight": false,
-    "description": "",
-    "weight_type": "machine"
-  },
-  {
     "name": "Standing Calf Raise Machine",
     "targets": {
       "legs/calves": 10
