@@ -53,7 +53,7 @@ async def create_user():
             "Authorization": f"Bearer {temp_token}"
         },
         params={
-            "code": get_code(decode_token(temp_token, is_temp=True)["user_id"])
+            "code": await get_code(decode_token(temp_token, is_temp=True)["user_id"])
         }
     )
     assert response.status_code == 200

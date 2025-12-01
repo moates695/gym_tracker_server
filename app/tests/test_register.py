@@ -262,7 +262,7 @@ async def test_sign_in(delete_users):
         "send_email": False
     })
     assert response.json()["status"] == "good"
-    temp_token = response.json()["token"]
+    temp_token = response.json()["temp_token"]
     decode_token(temp_token, is_temp=True)
 
     response = client.get("/register/validate/receive", 
@@ -287,7 +287,7 @@ async def test_sign_in(delete_users):
         "send_email": False
     })
     assert response.json()["status"] == "good"
-    temp_token = response.json()["token"]
+    temp_token = response.json()["temp_token"]
     decode_token(temp_token, is_temp=True)
 
     response = client.post("/register/sign-in", json={
@@ -296,7 +296,7 @@ async def test_sign_in(delete_users):
         "send_email": False
     })
     assert response.json()["status"] == "incorrect-password"
-    assert response.json()["token"] == None
+    assert response.json()["temp_token"] == None
 
     response = client.post("/register/sign-in", json={
         "email": "not@email.com",
@@ -304,6 +304,6 @@ async def test_sign_in(delete_users):
         "send_email": False
     })
     assert response.json()["status"] == "none"
-    assert response.json()["token"] == None
+    assert response.json()["temp_token"] == None
 
 

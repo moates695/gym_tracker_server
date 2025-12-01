@@ -35,9 +35,6 @@ async def resend_validation_email(send_email: bool = True, credentials: dict = D
     return {}
 
 async def send_validation_email(email: str, user_id: str, send_email: bool = True):
-    # token = generate_token(email, user_id, minutes=15)
-    # link = f"{os.getenv('SERVER_ADDRESS')}/register/validate/receive?token={token}"
-
     code = str(random.randint(100000,999999))
 
     try:
