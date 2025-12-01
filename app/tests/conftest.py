@@ -40,25 +40,45 @@ async def _delete_users():
     finally:
         if conn: await conn.close()
 
-@pytest.fixture
-def create_user():
+@pytest_asyncio.fixture
+async def create_user():
     client = TestClient(app)
 
     response = client.post("/register/new", json=valid_user)
     assert response.status_code == 200
     temp_token = response.json()["temp_token"]
     
-    auth_token = get_auth_token(temp_token)
-    response = client.get("/register/validate/receive", params={
-        "token": auth_token
-    })
+    response = client.get("/register/validate/receive", 
+        headers={
+            "Authorization": f"Bearer {temp_token}"
+        },
+        params={
+            "code": await get_code(decode_token(temp_token, is_temp=True)["user_id"])
+        }
+    )
     assert response.status_code == 200
-
-    response = client.get("/register/validate/check", headers={
-        "Authorization": f"Bearer {temp_token}"
-    })
-    assert response.status_code == 200
+    assert response.json()["status"] == "verified"
     return response.json()["auth_token"]
+
+async def get_code(user_id: str):
+    try:
+        conn = await setup_connection()
+
+        code = await conn.fetchval(
+            """
+            select code
+            from user_codes
+            where user_id = $1
+            """, user_id
+        )
+        assert code != None
+        return code
+
+    except Exception as e:
+        print(str(e))
+        raise e
+    finally:
+        if conn: await conn.close()
 
 def get_auth_token(temp_token):
     decoded_temp = decode_token(temp_token, is_temp=True)

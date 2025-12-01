@@ -44,3 +44,31 @@ async def valid_username(username: str):
         raise HTTPException(status_code=500, detail="Uncaught exception")
     finally:
         if conn: await conn.close()
+
+
+@router.get("/check/email")
+async def valid_username(email: str):
+    try:
+        conn = await setup_connection()
+
+        exists = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from users
+                where lower(email) = lower($1)
+            )
+            """, email
+        )
+
+        return {
+            "taken": exists
+        }
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()

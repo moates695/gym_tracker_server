@@ -13,6 +13,7 @@ import traceback
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token, verify_temp_token
+from app.api.routes.register.validate import send_validation_email
 from app.api.routes.users.get_data import fetch_user_data
 from app.api.middleware.misc import *
 
@@ -21,6 +22,7 @@ router = APIRouter()
 class SignIn(BaseModel):
     email: str = email_field
     password: str = password_field
+    send_email: bool = True
 
 @router.post("/sign-in")
 async def sign_in(req: SignIn):
@@ -35,34 +37,24 @@ async def sign_in(req: SignIn):
             """,  req.email
         )
 
-        token = None
-        user_data = None
+        temp_token = None
         if row is None:
             status = "none"
         elif bcrypt.checkpw(req.password.encode('utf-8'), row['password'].encode('utf-8')):
-            if row["is_verified"]:
-                status = "signed-in"
-                token = generate_token(
-                    req.email,
-                    row["id"],
-                    days=30
-                )
-                user_data = await fetch_user_data(row["id"])
-            else:
-                status = "unverified"
-                token = generate_token(
-                    req.email,
-                    row["id"],
-                    minutes=15,
-                    is_temp=True
-                )
+            status = "good"
+            temp_token = generate_token(
+                req.email,
+                row["id"],
+                minutes=15,
+                is_temp=True
+            )
+            await send_validation_email(req.email, row["id"], send_email=req.send_email)   
         else:
             status = "incorrect-password"
 
         return {
             "status": status,
-            "token": token,
-            "user_data": user_data
+            "temp_token": temp_token,
         }
 
     except HTTPException as e:

@@ -9,21 +9,24 @@ import os
 from datetime import date
 import bcrypt
 import traceback
+import base64
+from email.message import EmailMessage
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+import random
 
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token, verify_temp_token
-from app.api.routes.register.login import login_user
 from app.api.routes.users.get_data import fetch_user_data
 from app.api.middleware.misc import *
 
 router = APIRouter()
 
-# todo dont use temp token here, use user login details instead (user_id then lookup email?)
-@router.post("/validate/resend")
-async def resend_validation_email(credentials: dict = Depends(verify_temp_token)):
+@router.get("/validate/resend")
+async def resend_validation_email(send_email: bool = True, credentials: dict = Depends(verify_temp_token)):
     try:
-        await send_validation_email(credentials["email"], credentials["user_id"])
+        await send_validation_email(credentials["email"], credentials["user_id"], send_email)
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     except Exception as e:
@@ -31,50 +34,34 @@ async def resend_validation_email(credentials: dict = Depends(verify_temp_token)
         raise HTTPException(status_code=500)
     return {}
 
-async def send_validation_email(email: str, user_id: str):
-    token = generate_token(email, user_id, minutes=15)
-    link = f"{os.getenv('SERVER_ADDRESS')}/register/validate/receive?token={token}"
+async def send_validation_email(email: str, user_id: str, send_email: bool = True):
+    code = str(random.randint(100000,999999))
 
-    msg = EmailMessage()
-    msg["Subject"] = "Gym Tracker Email Validation"
-    msg["From"] = os.getenv("EMAIL")
-    msg["To"] = email
-    msg.set_content(f"Click this link to validate your email: {link}")
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(os.getenv("EMAIL"), os.getenv("EMAIL_PWD"))
-        smtp.send_message(msg)
-
-@router.get("/validate/receive")
-async def validate_user(token: str):
     try:
         conn = await setup_connection()
-
-        try:
-            decoded = decode_token(token)
-        except Exception as e:
-            raise HTTPException(status_code=401)
         
-        is_valid = await conn.fetchval(
+        user_exists = await conn.fetchval(
             """
             select exists (
                 select 1
                 from users
-                where lower(email) = lower($1)
-                and is_verified = false
+                where id = $1
             )
-            """, decoded["email"]
+            """, user_id
         )
-
-        if not is_valid:
-            raise HTTPException(status_code=400, detail=f"Email '{decoded['email']}' does not exist or is already verified")
+        if not user_exists:
+            raise HTTPException(status_code=400, detail="user does not exist")
 
         await conn.execute(
             """
-            update users
-            set is_verified = true
-            where lower(email) = lower($1)
-            """, decoded["email"]
+            insert into user_codes
+            (user_id, code)
+            values
+            ($1, $2)
+            on conflict (user_id) do update
+            set
+                code = $2
+            """, user_id, code
         )
 
     except HTTPException as e:
@@ -85,10 +72,104 @@ async def validate_user(token: str):
     finally:
         if conn: await conn.close()
 
+    if not send_email: return
+
+    msg = EmailMessage()
+    msg["To"] = email
+    msg["Subject"] = "Gym Junkie Email Validation"
+    msg["From"] = os.getenv("EMAIL")
+    msg.set_content(f"Your validation code is:\n\n\t{code}\n\nNever share your code with anyone.")
+
+    creds = Credentials(
+        None,
+        refresh_token=os.getenv("GOOGLE_REFRESH_TOKEN"),
+        client_id=os.getenv("GOOGLE_CLIENT_ID"),
+        client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+        token_uri="https://oauth2.googleapis.com/token"
+    )
+
+    service = build("gmail", "v1", credentials=creds)
+
+    encoded_msg = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+
+    service.users().messages().send(
+        userId="me",
+        body={"raw": encoded_msg}
+    ).execute()
+
+@router.get("/validate/receive")
+async def validate_user(code: str, credentials: dict = Depends(verify_temp_token)):
+    try:
+        conn = await setup_connection()
+
+        is_verified = await conn.fetchval(
+            """
+            select is_verified
+            from users
+            where lower(email) = lower($1)
+            """, credentials["email"]
+        )
+
+        if is_verified is None:
+            return {
+                "status": "error",
+                "message": "user does not exist"
+            }
+
+        db_code = await conn.fetchval(
+            """
+            select code
+            from user_codes
+            where user_id = $1
+            """, credentials["user_id"]
+        )
+
+        if db_code is None:
+            return {
+                "status": "error",
+                "message": "code not set for user"
+            }
+        elif code != db_code:
+            return {
+                "status": "incorrect",
+                "message": "code is not correct"
+            }
+        
+        await conn.execute(
+            """
+            delete 
+            from user_codes
+            where user_id = $1
+            """, credentials["user_id"]
+        )
+
+        if not is_verified:
+            await conn.execute(
+                """
+                update users
+                set is_verified = true
+                where id = $1
+                """, credentials["user_id"]
+            )
+
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Uncaught exception")
+    finally:
+        if conn: await conn.close()
+
     return {
-        "message": "email validation successful"
+        "status": "verified",
+        "auth_token": generate_token(
+            credentials["email"],
+            credentials["user_id"],
+            days=30
+        ),
+        "user_data": await fetch_user_data(credentials["user_id"])
     }
 
-@router.get("/validate/check")
-async def validate_check(credentials: dict = Depends(verify_temp_token)):
-    return await login_user(credentials)
+# @router.get("/validate/check")
+# async def validate_check(credentials: dict = Depends(verify_temp_token)):
+#     return await login_user(credentials)

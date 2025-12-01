@@ -102,10 +102,9 @@ async def register(req: Register):
         await new_muscle_totals(conn, user_id)
         await new_exercise_totals(conn, user_id)
         
-        if req.send_email:
-            await send_validation_email(req.email, user_id)
-
         await tx.commit()
+
+        await send_validation_email(req.email, user_id, req.send_email)
 
         return {
             "status": "success",

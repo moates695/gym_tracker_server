@@ -13,31 +13,40 @@ import traceback
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token, verify_temp_token
+from app.api.routes.register.validate import send_validation_email
 from app.api.routes.users.get_data import fetch_user_data
 from app.api.middleware.misc import *
 
 router = APIRouter()
 
 @router.get("/login")
-async def login(credentials: dict = Depends(verify_token)):
-    return await login_user(credentials)
+async def login(send_email: bool = True, credentials: dict = Depends(verify_token)):
+    return await login_user(send_email, credentials)
 
-async def login_user(credentials):
+async def login_user(send_email, credentials):
     try:
         account_state = await fetch_account_state(credentials["user_id"])
-        auth_token = None
+        token = None
         user_data = None
         if account_state == "good":
-            auth_token = generate_token(
+            token = generate_token(
                 credentials["email"],
                 credentials["user_id"],
                 days=30
             )
             user_data = await fetch_user_data(credentials["user_id"])
+        elif account_state == "unverified":
+            await send_validation_email(credentials["email"], credentials["user_id"], send_email)
+            token = generate_token(
+                credentials["email"],
+                credentials["user_id"],
+                minutes=30,
+                is_temp=True
+            )
 
         return {
             "account_state": account_state,
-            "auth_token": auth_token,
+            "token": token,
             "user_data": user_data 
         }
 
