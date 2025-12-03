@@ -92,27 +92,29 @@ async def main():
                 if resp_json["status"] != "success": 
                     raise Exception("register not successful")
                 temp_user_id = resp_json["user_id"]
-                auth_token = generate_token(temp_email, temp_user_id, minutes=15)
-                temp_token = generate_token(temp_email, temp_user_id, minutes=15, is_temp=True)
+                # auth_token = generate_token(temp_email, temp_user_id, minutes=15)
+                temp_token = generate_token(temp_email, temp_user_id, minutes=30, is_temp=True)
+
+                code = await conn.fetchval(
+                    """
+                    select code
+                    from user_codes
+                    where user_id = $1 
+                    """, temp_user_id
+                )
 
                 response = requests.get(
                     f"{server_base}/register/validate/receive",
+                    headers={
+                        "Authorization": f"Bearer {temp_token}"
+                    },
                     params={
-                        "token": auth_token
+                        "code": code,
                     }
                 )
                 response.raise_for_status()
-                
-                response = requests.get(
-                    f"{server_base}/register/validate/check",
-                    headers=get_headers(temp_token)
-                )
-                response.raise_for_status()
-                resp_json = response.json()
-                if resp_json["account_state"] != "good":
-                    raise Exception("account state not good")
-
-                user_map[temp_user_id] = resp_json["auth_token"]
+                assert response.json()["status"] == "verified"
+                user_map[temp_user_id] = response.json()["auth_token"]
             
             except Exception as e:
                 print(e)
