@@ -73,15 +73,15 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
         await update_overall_leaderboard(conn, user_id, totals, req)
 
         await tx.commit()
-
-    except HTTPException as e:
+    
+    except SafeError as e:
         if tx: await tx.rollback()
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+        raise e
     except Exception as e:
-        print(e)
+        print(str(e))
         if tx: await tx.rollback()
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
     return {}

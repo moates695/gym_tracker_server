@@ -41,11 +41,11 @@ async def stats_leaderboards_overall(
             )
         }
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        print(str(e))
+        raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
 
@@ -87,11 +87,11 @@ async def stats_exercises(credentials: dict = Depends(verify_token)):
             "exercises": exercises
         }
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        print(str(e))
+        raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
 
@@ -125,11 +125,11 @@ async def stats_leaderboards_overall(
             )
         }
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        print(str(e))
+        raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
 

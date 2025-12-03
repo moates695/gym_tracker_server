@@ -14,7 +14,27 @@ from app.api.routes.users import router as users_router
 from app.api.routes.exercises import router as exercises_router
 from app.api.routes.stats import router as stats_router
 
+from app.api.middleware.misc import SafeError
+
 app = FastAPI(title="Gym Tracker API")
+
+@app.exception_handler(SafeError)
+async def safe_error_handler(_, exc: SafeError):
+    return JSONResponse(
+        status_code=400,
+        content={
+            "message": str(exc)
+        },
+    )
+
+@app.exception_handler(Exception)
+async def generic_error_handler(_, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "message": "server error"
+        },
+    )
 
 @app.get("/")
 async def root():

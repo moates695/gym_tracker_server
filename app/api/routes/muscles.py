@@ -11,6 +11,7 @@ import random
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
+from app.api.middleware.misc import SafeError
 
 router = APIRouter()
 security = HTTPBearer()
@@ -19,11 +20,11 @@ security = HTTPBearer()
 async def muscles_get_maps_route(credentials: dict = Depends(verify_token)):
     try:
         return await get_muscle_maps()
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        print(str(e))
+        raise Exception('uncaught error')
 
 async def get_muscle_maps():
     try:

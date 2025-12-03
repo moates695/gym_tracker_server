@@ -117,14 +117,14 @@ async def register(req: Register):
             "user_id": user_id
         }
 
-    except HTTPException as e:
+    except SafeError as e:
         if tx: await tx.rollback()
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+        raise e
     except Exception as e:
-        print(e)
+        print(str(e))
         traceback.print_exc()
         if tx: await tx.rollback()
-        raise HTTPException(status_code=500)
+        raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
 

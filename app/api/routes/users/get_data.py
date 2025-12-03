@@ -16,10 +16,11 @@ async def users_data(credentials: dict = Depends(verify_token)):
         return {
             "user_data": await fetch_user_data(credentials["user_id"])
         }
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        return HTTPException(status_code=500)
+        print(str(e))
+        raise Exception('uncaught error')
 
 async def fetch_user_data(user_id: str) -> dict | None:
     try:

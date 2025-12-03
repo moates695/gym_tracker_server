@@ -27,11 +27,11 @@ router = APIRouter()
 async def resend_validation_email(send_email: bool = True, credentials: dict = Depends(verify_temp_token)):
     try:
         await send_validation_email(credentials["email"], credentials["user_id"], send_email)
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500)
+        print(str(e))
+        raise Exception('uncaught error')
     return {}
 
 async def send_validation_email(email: str, user_id: str, send_email: bool = True):
@@ -64,11 +64,11 @@ async def send_validation_email(email: str, user_id: str, send_email: bool = Tru
             """, user_id, code
         )
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        print(str(e))
+        raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
 
@@ -152,11 +152,11 @@ async def validate_user(code: str, credentials: dict = Depends(verify_temp_token
                 """, credentials["user_id"]
             )
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        print(str(e))
+        raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
 
