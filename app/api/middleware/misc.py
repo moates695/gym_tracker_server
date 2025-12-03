@@ -91,3 +91,7 @@ exercise_column_map = {
 }
 def exercise_zset_name(exercise_id, metric):
     return f"exercise:{exercise_id}:{metric}:leaderboard"
+
+class SafeError(Exception):
+    """Error with a message safe to show to the client."""
+    pass
