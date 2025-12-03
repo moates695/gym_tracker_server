@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from ..api.middleware.database import setup_connection
 from .existing_users_db import check_totals
+from .update_exercises import can_delete
 
 load_dotenv(override=True)
 
@@ -42,8 +43,19 @@ async def update(muscles_json: dict):
             "muscle_groups": valid_group_ids,
             "muscle_targets": valid_target_ids,
         }
-
+        
         for table, ids in delete_map.items():
+            invalid_id_rows = await conn.fetch(
+                f"""
+                select id
+                from {table}
+                where not (id = any($1))
+                """, ids
+            )
+            invalid_ids = [row["id"] for row in invalid_id_rows]
+        
+            if not can_delete(table, invalid_ids): continue
+            
             await conn.execute(
                 f"""
                 delete 

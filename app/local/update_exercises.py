@@ -55,15 +55,27 @@ async def update(exercises):
             exercise_id = await update_exercise(conn, exercise, db_exercises, group_name_to_target_ids, target_name_to_id)
             valid_exercise_ids.append(exercise_id)
 
-        await conn.execute(
-            f"""
-            delete 
+        invalid_id_rows = await conn.fetch(
+            """
+            select id
             from exercises
             where not (id = any($1))
             and user_id is null
             and parent_id is null;
             """, valid_exercise_ids
         )
+        invalid_ids = [row["id"] for row in invalid_id_rows]
+
+        if can_delete("exercises", invalid_ids):
+            await conn.execute(
+                f"""
+                delete 
+                from exercises
+                where not (id = any($1))
+                and user_id is null
+                and parent_id is null;
+                """, valid_exercise_ids
+            )
 
     except Exception as e:
         raise e
@@ -145,14 +157,25 @@ async def update_exercise_base(conn, exercise, db_exercises, group_name_to_targe
         muscle_target_id = await update_exercise_muscle_target(conn, target_id, ratios, exercise_id, db_exercise_target_ids)
         valid_exercise_muscle_target_ids.append(muscle_target_id)
 
-    await conn.execute(
+    invalid_id_rows = await conn.fetch(
         """
-        delete
+        select id
         from exercise_muscle_targets
         where exercise_id = $1
         and not (id = any($2::uuid[]))
         """, exercise_id, valid_exercise_muscle_target_ids
     )
+    invalid_ids = [row["id"] for row in invalid_id_rows]
+
+    if can_delete("exercise_muscle_targets", invalid_ids):
+        await conn.execute(
+            """
+            delete
+            from exercise_muscle_targets
+            where exercise_id = $1
+            and not (id = any($2::uuid[]))
+            """, exercise_id, valid_exercise_muscle_target_ids
+        )
 
     return exercise_id
 
@@ -174,14 +197,25 @@ async def update_exercise_variations(conn, parent_id, parent_exercise, db_exerci
         valid_id = await update_exercise_variation(conn, parent_id, parent_exercise, variation, db_variations, group_name_to_target_ids, target_name_to_id)
         valid_variation_ids.append(valid_id)
 
-    await conn.execute(
+    invalid_id_rows = await conn.fetch(
         """
-        delete 
+        select id
         from exercises
         where parent_id = $1
         and not (id = any($2)) 
         """, parent_id, valid_variation_ids
     )
+    invalid_ids = [row["id"] for row in invalid_id_rows]
+
+    if can_delete("variations", invalid_ids):
+        await conn.execute(
+            """
+            delete 
+            from exercises
+            where parent_id = $1
+            and not (id = any($2)) 
+            """, parent_id, valid_variation_ids
+        )
 
 async def update_exercise_variation(conn, parent_id, parent_exercise, variation, db_variations, group_name_to_target_ids, target_name_to_id) -> str:
     if "targets" not in variation.keys() or variation["targets"] == {}:
@@ -239,14 +273,25 @@ async def update_exercise_variation(conn, parent_id, parent_exercise, variation,
         muscle_target_id = await update_exercise_muscle_target(conn, target_id, ratio, variation_id, db_exercise_target_ids)
         valid_exercise_muscle_target_ids.append(muscle_target_id)
 
-    await conn.execute(
+    invalid_id_rows = await conn.fetch(
         """
-        delete
+        select id
         from exercise_muscle_targets
         where exercise_id = $1
         and not (id = any($2::uuid[]))
         """, variation_id, valid_exercise_muscle_target_ids
     )
+    invalid_ids = [row["id"] for row in invalid_id_rows]
+
+    if can_delete("exercise_muscle_targets", invalid_ids):
+        await conn.execute(
+            """
+            delete
+            from exercise_muscle_targets
+            where exercise_id = $1
+            and not (id = any($2::uuid[]))
+            """, variation_id, valid_exercise_muscle_target_ids
+        )
 
     return variation_id
 
@@ -293,6 +338,10 @@ def get_target_data(exercise, group_name_to_target_ids, target_name_to_id):
         target_data[target_name_to_id[muscle_str.split("/")[-1]]] = ratio
 
     return target_data
+
+def can_delete(key: str, to_delete_ids: list[str]) -> bool:
+    if len(to_delete_ids) == 0 or os.environ["ENVIRONMENT"] in ["dev", "pytest"]: return True
+    return input(f"From {key} delete rows with id {to_delete_ids}? (y/n)").lower() == 'y'
 
 if __name__ == "__main__":
     asyncio.run(main())
