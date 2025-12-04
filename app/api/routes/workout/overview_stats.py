@@ -96,11 +96,11 @@ async def workout_overview_stats(credentials: dict = Depends(verify_token)):
                 "muscles": muscles
             })
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        print(str(e))
+        raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
 

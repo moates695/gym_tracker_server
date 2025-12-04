@@ -50,11 +50,11 @@ async def login_user(send_email, credentials):
             "user_data": user_data 
         }
 
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except SafeError as e:
+        raise e
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Uncaught exception")
+        print(str(e))
+        raise Exception('uncaught error')
 
 async def fetch_account_state(user_id):
     try:
@@ -76,6 +76,7 @@ async def fetch_account_state(user_id):
             return "good"
         
     except Exception as e:
-        raise e
+        print(e)
+        raise SafeError('error fetching account state')
     finally:
         if conn: await conn.close()
