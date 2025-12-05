@@ -36,6 +36,8 @@ async def exercises_list_all(credentials: dict = Depends(verify_token)):
                     "is_custom": variation_row["is_custom"],
                     "frequency": await fetch_exercise_frequency(conn, variation_row["id"], user_id),
                 })
+                if variation_row["is_body_weight"]:
+                    variations[-1]["ratios"] = await fetch_bodyweight_ratios(conn, str(variation_row["id"]))
 
             exercises.append({
                 "id": exercise_id,

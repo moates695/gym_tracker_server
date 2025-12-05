@@ -361,21 +361,27 @@ async def test_update_exercises_variations():
                 "core": 4,
                 "core/upper abs": 5,
             },
-            "is_body_weight": False,
+            "is_body_weight": True,
             "description": "description1",
             "weight_type": "machine",
+            "ratio": 0.2,
             "variations": [
                 {
                     "name": "wide grip"
                 },
                 {
                     "name": "close grip",
-                    "description": "description2"
+                    "description": "description2",
+                    "ratio": 0.7
                 },
                 {
                     "name": "narrow grip",
                     "targets": {
                         "arms/exterior forearm": 3,
+                    },
+                    "ratio": {
+                        "male": 0.5,
+                        "female": 0.6
                     }
                 }
             ]
@@ -403,6 +409,32 @@ async def test_update_exercises_variations():
 
         await compare_target_ratios(conn, dummy[0]["variations"][0]["name"], dummy[0]["targets"], parent_id)
         await compare_target_ratios(conn, dummy[0]["variations"][2]["name"], dummy[0]["variations"][2]["targets"], parent_id)
+
+        ratio_rows = await conn.fetch(
+            """
+            select e.name, ber.ratio, ber.gender
+            from bodyweight_exercise_ratios ber
+            inner join exercises e
+            on ber.exercise_id = e.id
+            where e.parent_id = $1
+            """, parent_id
+        )
+        ratio_exp = {
+            "wide grip": {
+                "male": 0.2,
+                "female": 0.2
+            },
+            "close grip": {
+                "male": 0.7,
+                "female": 0.7
+            },
+            "narrow grip": {
+                "male": 0.5,
+                "female": 0.6
+            }
+        }
+        for ratio_row in ratio_rows:
+            assert math.isclose(ratio_row["ratio"], ratio_exp[ratio_row["name"]][ratio_row["gender"]], abs_tol=0.01)
 
         length = await conn.fetchval(
             """

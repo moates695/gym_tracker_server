@@ -119,12 +119,13 @@ async def update_exercise_base(conn, exercise, db_exercises, group_name_to_targe
         exercise_id = db_exercises[exercise["name"]]["id"]
 
     if exercise["is_body_weight"]:
-        ratios = exercise["ratio"]
-        if isinstance(ratios, (int, float)):
+        if isinstance(exercise["ratio"], (int, float)):
             ratios = {
-                "male": ratios,
-                "female": ratios
+                "male": exercise["ratio"],
+                "female": exercise["ratio"]
             }
+        else:
+            ratios = exercise["ratio"]
 
         for gender, ratio in ratios.items():
             await conn.execute(
@@ -137,7 +138,6 @@ async def update_exercise_base(conn, exercise, db_exercises, group_name_to_targe
                     set ratio = EXCLUDED.ratio
                 """, exercise_id, ratio, gender
             )
-        
 
     rows = await conn.fetch(
         """
@@ -224,6 +224,9 @@ async def update_exercise_variation(conn, parent_id, parent_exercise, variation,
     if "description" not in variation.keys():
         variation["description"] = ""
 
+    if parent_exercise["is_body_weight"] and "ratio" not in variation.keys():
+        variation["ratio"] = parent_exercise["ratio"]
+
     if variation["name"] not in db_variations.keys():
         variation_id = await conn.fetchval(
             """
@@ -254,6 +257,27 @@ async def update_exercise_variation(conn, parent_id, parent_exercise, variation,
 
     if variation["name"] in db_variations.keys():
         variation_id = db_variations[variation["name"]]["id"]
+
+    if parent_exercise["is_body_weight"]:
+        if isinstance(variation["ratio"], (int, float)):
+            ratios = {
+                "male": variation["ratio"],
+                "female": variation["ratio"]
+            }
+        else:
+            ratios = variation["ratio"]
+
+        for gender, ratio in ratios.items():
+            await conn.execute(
+                """
+                insert into bodyweight_exercise_ratios
+                (exercise_id, ratio, gender)
+                values 
+                ($1, $2, $3)
+                on conflict (exercise_id, gender) do update
+                    set ratio = EXCLUDED.ratio
+                """, variation_id, ratio, gender
+            )
 
     rows = await conn.fetch(
         """
