@@ -998,7 +998,12 @@
     },
     "is_body_weight": false,
     "description": "",
-    "weight_type": "machine"
+    "weight_type": "machine",
+    "variations": [
+      {
+        "name": "Hammer Strength"
+      }
+    ]
   },
   {
     "name": "Seated Incline Chest Press",
@@ -1213,8 +1218,11 @@
       {
         "name": "low row"
       },
-       {
+      {
         "name": "high row"
+      },
+      {
+        "name": "45 degree"
       }
     ]
   },
