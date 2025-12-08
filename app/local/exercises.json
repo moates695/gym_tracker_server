@@ -52,6 +52,28 @@
     "weight_type": "free"
   },
   {
+    "name": "Hanging Dumbbell Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
+    "name": "Hanging Dumbbell Hammer Bicep Curl",
+    "targets": {
+      "arms/bicep": 10,
+      "arms/exterior forearm": 2,
+      "arms/interior forearm": 2
+    },
+    "is_body_weight": false,
+    "description": "",
+    "weight_type": "free"
+  },
+  {
     "name": "Barbell Bicep Curl",
     "targets": {
       "arms/bicep": 10,

@@ -18,7 +18,6 @@ def main():
     if thread.is_alive(): raise TimeoutError("sync timed out")
 
 def sync():
-    print("here556")
     try:
         r = redis_connection()
         if not r.ping(): return
@@ -32,7 +31,6 @@ def sync():
 
     except Exception as e:
         print(str(e))
-    print("here558")
 
 def redis_connection():
     r = None
