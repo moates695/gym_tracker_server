@@ -72,9 +72,6 @@ def sync_overall(r, conn, cur):
         "overall:duration:leaderboard": "duration_mins",
     }
 
-    for key in overall_map.keys():
-        r.delete(key)
-
     cur.execute(
         """
         select *
@@ -83,8 +80,9 @@ def sync_overall(r, conn, cur):
     )
     rows = cur.fetchall()
 
-    for row in rows:
-        for zset, column in overall_map.items():
+    for zset, column in overall_map.items():
+        r.delete(zset)
+        for row in rows:
             r.zadd(zset, {
                 str(row["user_id"]): row[column]
             })

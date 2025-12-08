@@ -27,7 +27,7 @@ async def stats_leaderboards_overall(
         user_id = credentials["user_id"]
         zset = overall_zset_name(metric)
         if not await zset_exists(r, zset):
-            await resync_overall_zset(conn, r, zset, metric)
+            await sync_overall_zset(conn, r, zset, metric)
 
         return {
             "leaderboard": await leaderboard_data(
@@ -49,7 +49,7 @@ async def stats_leaderboards_overall(
     finally:
         if conn: await conn.close()
 
-async def resync_overall_zset(conn, r, zset, metric):
+async def sync_overall_zset(conn, r, zset, metric):
     await r.delete(zset)
     
     column = overall_column_map[metric]
@@ -111,7 +111,7 @@ async def stats_leaderboards_overall(
         user_id = credentials["user_id"]
         zset = exercise_zset_name(exercise_id, metric)
         if not await zset_exists(r, zset):
-            await resync_exercise_zset(conn, r, zset, exercise_id, metric)
+            await sync_exercise_zset(conn, r, zset, exercise_id, metric)
 
         return {
             "leaderboard": await leaderboard_data(
@@ -133,7 +133,7 @@ async def stats_leaderboards_overall(
     finally:
         if conn: await conn.close()
 
-async def resync_exercise_zset(conn, r, zset, exercise_id, metric):
+async def sync_exercise_zset(conn, r, zset, exercise_id, metric):
     await r.delete(zset)
     
     column = exercise_column_map[metric]

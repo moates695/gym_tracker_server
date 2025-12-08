@@ -380,18 +380,32 @@ async def update_overall_leaderboard(conn, user_id, totals, req: WorkoutSave):
 
     r = await redis_connection()
 
-    data_map = {
-        "overall:volume:leaderboard": volume,
-        "overall:sets:leaderboard": num_sets,
-        "overall:reps:leaderboard": reps,
-        "overall:exercises:leaderboard": num_exercises,
-        "overall:workouts:leaderboard": num_workouts,
-        "overall:duration:leaderboard": duration_mins,
+    metric_map = {
+        "volume": volume,
+        "sets": num_sets,
+        "reps": reps,
+        "exercises": num_exercises,
+        "workouts": num_workouts,
+        "duration": duration_mins,
     }
-    for key, value in data_map.items():
-        await r.zadd(key, {
-            user_id: value
-        })
+    for metric, value in metric_map.items():
+        await r.zadd(
+            overall_zset_name(metric),
+            {user_id: value}
+        )
+
+    # data_map = {
+    #     "overall:volume:leaderboard": volume,
+    #     "overall:sets:leaderboard": num_sets,
+    #     "overall:reps:leaderboard": reps,
+    #     "overall:exercises:leaderboard": num_exercises,
+    #     "overall:workouts:leaderboard": num_workouts,
+    #     "overall:duration:leaderboard": duration_mins,
+    # }
+    # for key, value in data_map.items():
+    #     await r.zadd(key, {
+    #         user_id: value
+    #     })
 
     # todo add to user specific leaderboard catagories (gender, weight, etc)
 
@@ -452,6 +466,7 @@ async def update_exercise_leaderboards(conn, user_id, exercise: Exercise, exerci
             exercise_id=exercise.id, 
             metric=metric
         )
-        await r.zadd(leaderboard, {
-            user_id: value
-        })
+        await r.zadd(
+            leaderboard, 
+            {user_id: value}
+        )
