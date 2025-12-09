@@ -6,5 +6,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY sync_redis/sync_redis.py .
+COPY app/api/middleware/database.py .
+COPY app/api/middleware/misc.py .
 
 CMD ["python", "sync_redis.py"]

@@ -149,6 +149,21 @@ async def sync_exercise_zset(conn, r, zset, exercise_id, metric):
             row["user_id"]: row[column]
         })
 
+# todo: for customisable leaderboards, create a custom zset from data \
+# todo: and then use that to return data
+@router.get("/leaderboard/record/{metric}")
+async def stats_leaderboard_record(
+    top_num: int,
+    side_num: int,
+    num_rank_points: int,
+    metric: exercise_leaderboard_literal,
+    credentials: dict = Depends(verify_token)
+):
+    return {}
+
+#####################################################
+### Helpers
+
 async def zset_exists(r, zset_key) -> bool:
     return await r.exists(zset_key)
 

@@ -408,6 +408,12 @@ async def update_overall_leaderboard(conn, user_id, totals, req: WorkoutSave):
     #     })
 
     # todo add to user specific leaderboard catagories (gender, weight, etc)
+    # todo bucket ends have no overlap i.e. 18-21, 21-24, ...
+    # gender -> 3 catagories
+    # age -> <18, 18-22, 22-26, 26-30, ..., >50
+    # weight -> <40, 40-50, 50-60, ..., >150
+    # height -> <120, 120-125, 125-130, ..., >220
+    # bodyfat -> <5, 5-10, 10-15, ..., >40
 
 async def update_exercise_leaderboards(conn, user_id, exercise: Exercise, exercise_totals):
     current = await conn.fetchrow(
