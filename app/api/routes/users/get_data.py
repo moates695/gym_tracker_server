@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Annotated, Optional
 import json
+from datetime import date
 
 from app.api.routes.auth import verify_token
 from app.api.middleware.database import setup_connection
@@ -56,6 +57,7 @@ async def fetch_user_data(user_id: str) -> dict | None:
             "height": row["height"],
             "ped_status": row["ped_status"],
             "weight": row["weight"],
+            "age": (date.today() - row["date_of_birth"]).days / 365.2425
         }
 
     except Exception as e:

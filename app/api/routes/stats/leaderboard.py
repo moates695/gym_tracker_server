@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
 import random
+from typing import Optional
+from uuid import uuid4
 
 from app.api.middleware.database import setup_connection, redis_connection
 from app.api.middleware.auth_token import *
@@ -21,6 +23,7 @@ async def stats_leaderboards_overall(
     credentials: dict = Depends(verify_token)
 ):
     try:
+        conn = r = None
         conn = await setup_connection()
         r = await redis_connection()
 
@@ -48,6 +51,7 @@ async def stats_leaderboards_overall(
         raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
+        if r: await r.close()
 
 async def sync_overall_zset(conn, r, zset, metric):
     await r.delete(zset)
@@ -83,8 +87,21 @@ async def stats_exercises(credentials: dict = Depends(verify_token)):
                 "variations": variations
             }
 
+        rows = await conn.fetch(
+            """
+            select distinct on (exercise_id, reps) *
+            from exercise_records
+            """
+        )
+        exercise_record_reps = {}
+        for row in rows:
+            if row["exercise_id"] not in exercise_record_reps.keys():
+                exercise_record_reps[row["exercise_id"]] = []
+            exercise_record_reps[row["exercise_id"]].append(row["reps"])
+
         return {
-            "exercises": exercises
+            "exercises": exercises,
+            "exercise_record_reps": exercise_record_reps
         }
 
     except SafeError as e:
@@ -105,6 +122,7 @@ async def stats_leaderboards_overall(
     credentials: dict = Depends(verify_token)
 ):
     try:
+        conn = r = None
         conn = await setup_connection()
         r = await redis_connection()
 
@@ -132,6 +150,7 @@ async def stats_leaderboards_overall(
         raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
+        if r: await r.close()
 
 async def sync_exercise_zset(conn, r, zset, exercise_id, metric):
     await r.delete(zset)
@@ -149,17 +168,76 @@ async def sync_exercise_zset(conn, r, zset, exercise_id, metric):
             row["user_id"]: row[column]
         })
 
-# todo: for customisable leaderboards, create a custom zset from data \
-# todo: and then use that to return data
-@router.get("/leaderboard/record/{metric}")
-async def stats_leaderboard_record(
+@router.get("/leaderboard/record/{exercise_id}/{reps}")
+async def stats_exercise_record(
     top_num: int,
     side_num: int,
     num_rank_points: int,
-    metric: exercise_leaderboard_literal,
+    exercise_id: str,
+    reps: int,
+    gender: Optional[gender_literal] = None,
+    age_min: Optional[float] = None,
+    age_max: Optional[float] = None,
+    ped_status: Optional[ped_status_literal] = None,
+    height_min: Optional[float] = None,
+    height_max: Optional[float] = None,
+    user_weight_min: Optional[float] = None,
+    user_weight_max: Optional[float] = None,
     credentials: dict = Depends(verify_token)
 ):
-    return {}
+    try:
+        conn = r = None
+        conn = await setup_connection()
+        r = await redis_connection()
+
+        query =  """
+            select *
+            from exercise_records
+            where exercise_id = $1
+            and reps = $2
+        """
+        if age_min != None:
+            query += f"\nand age >= {age_min}"
+        if age_max != None:
+            query += f"\nand age <= {age_max}"
+
+        rows = await conn.fetch(
+           query,
+           exercise_id,
+           reps
+        )
+
+        zset = str(uuid4())
+        for row in rows:
+            await r.zadd(
+                zset,
+                {str(row["user_id"]): row["weight"]}
+            )
+
+        leaderboard = await leaderboard_data(
+            conn, 
+            r, 
+            credentials["user_id"], 
+            zset, 
+            top_num, 
+            side_num, 
+            num_rank_points
+        )
+
+        await r.delete(zset)
+
+        return {
+            "leaderboard": leaderboard
+        }   
+
+    except SafeError as e:
+        raise e
+    except Exception as e:
+        print(str(e))
+        raise Exception('uncaught error')
+    finally:
+        if conn: await conn.close()
+        if r: await r.close()
 
 #####################################################
 ### Helpers
