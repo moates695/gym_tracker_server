@@ -8,3 +8,6 @@ venv/
 *.env
 nginx/ssl/*
 .compose-up.sh.swp
+
+sync_redis/database.py
+sync_redis/misc.py

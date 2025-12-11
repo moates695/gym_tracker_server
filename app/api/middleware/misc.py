@@ -78,6 +78,7 @@ overall_column_map = {
     "workouts": "num_workouts",
     "duration": "duration_mins",
 }
+
 def overall_zset_name(metric):
     return f"overall:{metric}:leaderboard"
 
@@ -89,8 +90,11 @@ exercise_column_map = {
     "reps": "reps",
     "workouts": "num_workouts",
 }
+
 def exercise_zset_name(exercise_id, metric):
     return f"exercise:{exercise_id}:{metric}:leaderboard"
+
+
 
 class SafeError(Exception):
     """Error with a message safe to show to the client."""

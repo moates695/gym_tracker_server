@@ -5,11 +5,13 @@ from typing import List, Literal
 from datetime import datetime, timezone
 from copy import deepcopy
 import traceback
+import json
 
 from app.api.middleware.database import setup_connection, redis_connection
 from app.api.middleware.auth_token import *
 from app.api.routes.auth import verify_token
 from app.api.middleware.misc import *
+from app.api.routes.users.get_data import fetch_user_data
 
 router = APIRouter()
 
@@ -63,9 +65,12 @@ async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_toke
             "target": {}
         }
 
+        user_data = await fetch_user_data(user_id)
+
         for i, exercise in enumerate(req.exercises):
             await save_exercise(conn, workout_id, exercise, i)
             await process_exercise(conn, user_id, exercise, totals)
+            await update_exercise_records(conn, user_id, exercise, user_data)
 
         await update_workout_totals(conn, user_id, totals, req)
         await update_muscle_totals(conn, user_id, totals)
@@ -214,6 +219,95 @@ def process_exercise_sets(set_data, totals, exercise_totals, group_rows, target_
         totals["target"][target_row["target_id"]]["volume"] += (target_row["ratio"] / 10) * volume
         totals["target"][target_row["target_id"]]["num_sets"] += set_data.num_sets
         totals["target"][target_row["target_id"]]["reps"] += set_data.reps
+
+async def update_exercise_records(conn, user_id, exercise, user_data):
+    temp_maxes = {}
+    for set_data in exercise.set_data:
+        temp_max = temp_maxes.get(set_data.reps, 0)
+        if set_data.weight <= temp_max: continue
+        temp_maxes[set_data.reps] = set_data.weight
+    
+    age_tol = 0.25
+    weight_tol = 0.1
+    height_tol = 0.1
+    rows = await conn.fetch(
+        """
+        select *
+        from exercise_records
+        where user_id = $1
+        and exercise_id = $2
+        and abs(age - $3) <= $4
+        and ped_status = $5
+        and abs(height - $6) <= $7
+        and abs(user_weight - $8) <= $9
+        """, 
+        user_id, 
+        exercise.id,
+        user_data["age"],
+        age_tol,
+        user_data["ped_status"],
+        user_data["height"],
+        height_tol,
+        user_data["weight"],
+        weight_tol
+    )
+    
+    curr_maxes = {}
+    curr_row_ids = {}
+    for row in rows:
+        temp_max = curr_maxes.get(row["reps"], 0)
+        if row["weight"] <= temp_max: continue
+        curr_maxes[row["reps"]] = row["weight"]
+        curr_row_ids[row["reps"]] = row["id"]
+
+    new_maxes = {}
+    old_row_ids = []
+    for rep, weight in temp_maxes.items():
+        if rep not in curr_maxes.keys():
+            new_maxes[rep] = weight
+            continue
+        elif curr_maxes[rep] <= weight:
+            continue
+
+        new_maxes[rep] = weight
+        old_row_ids.append(curr_row_ids[rep])
+
+    try:
+        tx = conn.transaction() 
+        await tx.start()
+
+        for reps, weight in new_maxes.items():
+            await conn.execute(
+                """
+                insert into exercise_records
+                (user_id, exercise_id, reps, weight, age, ped_status, height, user_weight)
+                values
+                ($1, $2, $3, $4, $5, $6, $7, $8)
+                """,
+                user_id,
+                exercise.id,
+                reps,
+                weight,
+                user_data["age"],
+                user_data["ped_status"],
+                user_data["height"],
+                user_data["weight"],
+            )
+
+        await conn.execute(
+            """
+            delete
+            from exercise_records
+            where id = any($1)
+            """, old_row_ids
+        )
+
+        await tx.commit()
+
+    except Exception as e:
+        print(e)
+        if tx: await tx.rollback()
+        raise SafeError("error updating exercise_records")
 
 async def update_workout_totals(conn, user_id, totals, req):
     current_totals = await conn.fetchrow(
@@ -380,20 +474,40 @@ async def update_overall_leaderboard(conn, user_id, totals, req: WorkoutSave):
 
     r = await redis_connection()
 
-    data_map = {
-        "overall:volume:leaderboard": volume,
-        "overall:sets:leaderboard": num_sets,
-        "overall:reps:leaderboard": reps,
-        "overall:exercises:leaderboard": num_exercises,
-        "overall:workouts:leaderboard": num_workouts,
-        "overall:duration:leaderboard": duration_mins,
+    metric_map = {
+        "volume": volume,
+        "sets": num_sets,
+        "reps": reps,
+        "exercises": num_exercises,
+        "workouts": num_workouts,
+        "duration": duration_mins,
     }
-    for key, value in data_map.items():
-        await r.zadd(key, {
-            user_id: value
-        })
+    for metric, value in metric_map.items():
+        await r.zadd(
+            overall_zset_name(metric),
+            {user_id: value}
+        )
+
+    # data_map = {
+    #     "overall:volume:leaderboard": volume,
+    #     "overall:sets:leaderboard": num_sets,
+    #     "overall:reps:leaderboard": reps,
+    #     "overall:exercises:leaderboard": num_exercises,
+    #     "overall:workouts:leaderboard": num_workouts,
+    #     "overall:duration:leaderboard": duration_mins,
+    # }
+    # for key, value in data_map.items():
+    #     await r.zadd(key, {
+    #         user_id: value
+    #     })
 
     # todo add to user specific leaderboard catagories (gender, weight, etc)
+    # todo bucket ends have no overlap i.e. 18-21, 21-24, ...
+    # gender -> 3 catagories
+    # age -> <18, 18-22, 22-26, 26-30, ..., >50
+    # weight -> <40, 40-50, 50-60, ..., >150
+    # height -> <120, 120-125, 125-130, ..., >220
+    # bodyfat -> <5, 5-10, 10-15, ..., >40
 
 async def update_exercise_leaderboards(conn, user_id, exercise: Exercise, exercise_totals):
     current = await conn.fetchrow(
@@ -452,6 +566,7 @@ async def update_exercise_leaderboards(conn, user_id, exercise: Exercise, exerci
             exercise_id=exercise.id, 
             metric=metric
         )
-        await r.zadd(leaderboard, {
-            user_id: value
-        })
+        await r.zadd(
+            leaderboard, 
+            {user_id: value}
+        )

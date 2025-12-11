@@ -18,6 +18,7 @@ client = TestClient(app)
 load_dotenv(override=True)
 
 async def main():
+    if input(f"Insert dummy data into {os.environ['ENVIRONMENT']}? [y/n] ") != 'y': return
     try:
         conn = await setup_connection()
 

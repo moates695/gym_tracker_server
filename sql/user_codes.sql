@@ -4,7 +4,6 @@ CREATE TABLE public.user_codes (
     created_at timestamp without time zone DEFAULT (now() AT TIME ZONE 'utc'::text) NOT NULL
 );
 
-
 ALTER TABLE public.user_codes OWNER TO postgres;
 
 --
