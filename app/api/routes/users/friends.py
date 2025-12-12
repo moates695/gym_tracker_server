@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Annotated, Optional
 import json
+from datetime import datetime, timezone
 
 from app.api.routes.auth import verify_token
 from app.api.middleware.database import setup_connection
@@ -69,8 +70,25 @@ async def users_search(username: str, credentials: dict = Depends(verify_token))
                 """, credentials["user_id"], row["id"]
             )
 
+            inbound = await  conn.fetchval(
+                """
+                select exists (
+                    select 1
+                    from friend_requests
+                    where requestor_id = $1
+                    and target_id = $2
+                )    
+                """, row["id"], credentials["user_id"] 
+            )
+
+            if requested and inbound:
+                await add_friend(row["id"], credentials["user_id"])
+                continue
+
             if requested: 
                 relation = "requested"
+            elif inbound:
+                relation = "inbound"
             else:
                 relation = "none"
 
@@ -99,7 +117,7 @@ async def users_request_all(credentials: dict = Depends(verify_token)):
 
         inbound = await conn.fetch(
             """
-            select fr.requestor_id id, u.username
+            select fr.requestor_id id, u.username, request_state
             from friend_requests fr
             inner join users u
             on fr.requestor_id = u.id
@@ -109,7 +127,7 @@ async def users_request_all(credentials: dict = Depends(verify_token)):
 
         outbound = await conn.fetch(
             """
-            select fr.target_id id, u.username
+            select fr.target_id id, u.username, request_state
             from friend_requests fr
             inner join users u
             on fr.target_id = u.id
@@ -133,7 +151,7 @@ async def users_request_all(credentials: dict = Depends(verify_token)):
 class RequestAdd(BaseModel):
     target_id: str
 
-@router.post("/request/add")
+@router.post("/request/send")
 async def users_request_add(req: RequestAdd, credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
@@ -151,7 +169,6 @@ async def users_request_add(req: RequestAdd, credentials: dict = Depends(verify_
             credentials["user_id"],
         )
         if exists: 
-            print("EXISTS")
             return {
                 "status": await add_friend(credentials["user_id"], req.target_id)
             }
@@ -159,13 +176,17 @@ async def users_request_add(req: RequestAdd, credentials: dict = Depends(verify_
         await conn.execute(
             """
             insert into friend_requests
-            (requestor_id, target_id, request_state)
+            (requestor_id, target_id, request_state, last_updated)
             values
-            ($1, $2, $3)
+            ($1, $2, 'requested', $3)
+            on conflict (requestor_id, target_id)
+            do update
+            set requested_state = 'requested'
+            and last_updated = $3
             """, 
             credentials["user_id"], 
             req.target_id,
-            "requested"
+            datetime.now(tz=timezone.utc).replace(tzinfo=None),
         )
 
         return {
@@ -220,10 +241,13 @@ async def users_request_add(req: RequestDeny, credentials: dict = Depends(verify
         await conn.execute(
             """
             update friend_requests
-            set request_state = 'denied'
-            where requestor_id = $1
-            and target_id = $2
+            set 
+                request_state = 'denied',
+               last_updated = $1
+            where requestor_id = $2
+            and target_id = $3
             """, 
+            datetime.now(tz=timezone.utc).replace(tzinfo=None),
             req.requestor_id,
             credentials["user_id"]
         )
@@ -346,17 +370,7 @@ async def add_friend(user1_id, user2_id):
             """, user1_id, user2_id
         )
 
-        await conn.execute(
-            """
-            delete
-            from friend_requests
-            where (
-                requestor_id = $1 and target_id = $2
-            ) or (
-                requestor_id = $2 and target_id = $1
-            )
-            """, user1_id, user2_id
-        )
+        await accept_request(conn, user1_id, user2_id)
 
         await tx.commit()
 
@@ -372,6 +386,34 @@ async def add_friend(user1_id, user2_id):
     finally:
         if conn: await conn.close()
 
+async def accept_request(conn, user1_id, user2_id):
+    await conn.execute(
+        """
+        update friend_requests
+        set 
+            request_state = 'accepted',
+            last_updated = $1
+        where requestor_id = $2
+        and target_id = $3
+        """, 
+        datetime.now(tz=timezone.utc).replace(tzinfo=None),
+        user1_id,
+        user2_id
+    )
+
+    await conn.execute(
+        """
+        update friend_requests
+        set 
+            request_state = 'accepted',
+            last_updated = $1
+        where requestor_id = $2
+        and target_id = $3
+        """, 
+        datetime.now(tz=timezone.utc).replace(tzinfo=None),
+        user2_id,
+        user1_id
+    )
 
 @router.get("/friends/all")
 async def users_friends_all(credentials: dict = Depends(verify_token)):
