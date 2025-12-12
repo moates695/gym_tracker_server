@@ -46,20 +46,6 @@ async def users_search(username: str, credentials: dict = Depends(verify_token))
 
         matches = []
         for row in rows:
-            relation = "none"
-
-            is_friend = await conn.fetchval(
-                """
-                select exists (
-                    select 1
-                    from friend_requests
-                    where requestor_id = $1
-                    and target_id = $2
-                )    
-                """, credentials["user_id"], row["id"]
-            )
-            if is_friend: relation = "requested"
-
             is_friend = await conn.fetchval(
                 """
                 select exists (
@@ -70,7 +56,23 @@ async def users_search(username: str, credentials: dict = Depends(verify_token))
                 )    
                 """, credentials["user_id"], row["id"]
             )
-            if is_friend: relation = "friend"
+            if is_friend: continue
+            
+            requested = await conn.fetchval(
+                """
+                select exists (
+                    select 1
+                    from friend_requests
+                    where requestor_id = $1
+                    and target_id = $2
+                )    
+                """, credentials["user_id"], row["id"]
+            )
+
+            if requested: 
+                relation = "requested"
+            else:
+                relation = "none"
 
             matches.append({
                 "id": row["id"],
@@ -80,6 +82,44 @@ async def users_search(username: str, credentials: dict = Depends(verify_token))
 
         return {
             "matches": matches
+        }
+
+    except SafeError as e:
+        raise e
+    except Exception as e:
+        print(str(e))
+        raise Exception('uncaught error')
+    finally:
+        if conn: await conn.close()
+
+@router.get("/request/all")
+async def users_request_all(credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+
+        inbound = await conn.fetch(
+            """
+            select fr.requestor_id id, u.username
+            from friend_requests fr
+            inner join users u
+            on fr.requestor_id = u.id
+            where fr.target_id = $1
+            """, credentials["user_id"]
+        )
+
+        outbound = await conn.fetch(
+            """
+            select fr.target_id id, u.username
+            from friend_requests fr
+            inner join users u
+            on fr.target_id = u.id
+            where fr.requestor_id = $1
+            """, credentials["user_id"]
+        )
+
+        return {
+            "inbound": inbound,
+            "outbound": outbound,
         }
 
     except SafeError as e:
@@ -200,15 +240,66 @@ async def users_request_add(req: RequestDeny, credentials: dict = Depends(verify
     finally:
         if conn: await conn.close()
 
-class AddFriend(BaseModel):
-    user1_id: str
-    user2_id: str
+class RequestAccept(BaseModel):
+    requestor_id: str
 
-@router.post("/friends/add")
-async def users_friend_add(req: AddFriend, credentials: dict = Depends(verify_token)):
-    return {
-        "status": await add_friend(req.user1_id, req.user2_id)
-    }
+@router.post("/request/accept")
+async def users_request_add(req: RequestAccept, credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+
+        exists = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from friend_requests
+                where requestor_id = $1
+                and target_id = $2
+            )
+            """, req.requestor_id, credentials["user_id"]
+        )
+        if not exists:
+            return {
+                "status": "no-request"
+            }
+        
+        result = await add_friend(req.requestor_id, credentials["user_id"])
+        status = "accepted" if result == "added" else result
+
+        if status == "existing":
+            await conn.execute(
+                """
+                delete
+                from friend_requests 
+                where (
+                    requestor_id = $1 and target_id = $2
+                ) or (
+                    requestor_id = $2 and target_id = $1
+                )
+                """, req.requestor_id, credentials["user_id"]
+            )
+
+        return {
+            "status": status
+        }
+
+    except SafeError as e:
+        raise e
+    except Exception as e:
+        print(str(e))
+        raise Exception('uncaught error')
+    finally:
+        if conn: await conn.close()
+
+# class AddFriend(BaseModel):
+#     user1_id: str
+#     user2_id: str
+
+# @router.post("/friends/add")
+# async def users_friend_add(req: AddFriend, credentials: dict = Depends(verify_token)):
+#     return {
+#         "status": await add_friend(req.user1_id, req.user2_id)
+#     }
 
 async def add_friend(user1_id, user2_id):
     try:
@@ -266,8 +357,6 @@ async def add_friend(user1_id, user2_id):
             )
             """, user1_id, user2_id
         )
-        print(user1_id)
-        print(user2_id)
 
         await tx.commit()
 
