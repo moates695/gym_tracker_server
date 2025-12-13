@@ -22,6 +22,66 @@ router = APIRouter()
 #   remove friends
 #   look at friends stats?
 
+@router.get("/friends/all")
+async def users_friends_all(credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+
+        friends = await conn.fetch(
+            """
+            select f.user1_id user_id, u.username
+            from friends f
+            inner join users u
+            on u.id = f.user1_id
+            where f.user2_id = $1
+            union
+            select f.user2_id user_id, u.username
+            from friends f
+            inner join users u
+            on u.id = f.user2_id
+            where f.user1_id = $1
+            """, credentials["user_id"]
+        )
+
+        return {
+            "friends": friends
+        }
+
+    except SafeError as e:
+        raise e
+    except Exception as e:
+        print(str(e))
+        raise Exception('uncaught error')
+    finally:
+        if conn: await conn.close()
+
+@router.get("/blocked/all")
+async def users_friends_all(credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+
+        blocked = await conn.fetch(
+            """
+            select b.blocked_id user_id, username
+            from blocked_users b
+            inner join users u
+            on b.blocked_id = u.id
+            where b.victim_id = $1
+            """, credentials["user_id"]
+        )
+
+        return {
+            "blocked": blocked
+        }
+
+    except SafeError as e:
+        raise e
+    except Exception as e:
+        print(str(e))
+        raise Exception('uncaught error')
+    finally:
+        if conn: await conn.close()
+
 @router.get("/search")
 async def users_search(username: str, credentials: dict = Depends(verify_token)):
     try:
@@ -122,6 +182,7 @@ async def users_request_all(credentials: dict = Depends(verify_token)):
             inner join users u
             on fr.requestor_id = u.id
             where fr.target_id = $1
+            order by last_updated desc
             """, credentials["user_id"]
         )
 
@@ -132,6 +193,7 @@ async def users_request_all(credentials: dict = Depends(verify_token)):
             inner join users u
             on fr.target_id = u.id
             where fr.requestor_id = $1
+            order by last_updated desc
             """, credentials["user_id"]
         )
 
@@ -156,7 +218,7 @@ async def users_request_add(req: RequestAdd, credentials: dict = Depends(verify_
     try:
         conn = await setup_connection()
 
-        exists = await conn.fetchval(
+        incoming_exists = await conn.fetchval(
             """
             select exists (
                 select 1
@@ -168,7 +230,7 @@ async def users_request_add(req: RequestAdd, credentials: dict = Depends(verify_
             req.target_id,
             credentials["user_id"],
         )
-        if exists: 
+        if incoming_exists: 
             return {
                 "status": await add_friend(credentials["user_id"], req.target_id)
             }
@@ -237,6 +299,21 @@ class RequestDeny(BaseModel):
 async def users_request_add(req: RequestDeny, credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
+
+        exists = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from friend_requests
+                where requestor_id = $1
+                and target_id = $2
+            )
+            """, req.requestor_id, credentials["user_id"]
+        )
+        if not exists:
+            return {
+                "status": "no-request"
+            }
 
         await conn.execute(
             """
@@ -323,7 +400,7 @@ async def add_friend(user1_id, user2_id):
             select exists (
                 select 1
                 from blocked_users
-                where  (
+                where (
                     victim_id = $1 and blocked_id = $2
                 ) or (
                     blocked_id = $2 and victim_id = $1
@@ -331,7 +408,19 @@ async def add_friend(user1_id, user2_id):
             )
             """, user1_id, user2_id
         )
-        if blocked: return "blocked" 
+        if blocked: 
+            await conn.execute(
+                """
+                delete
+                from friend_requests
+                where (requestor_id = $1 and target_id = $2)
+                or (requestor_id = $2 and target_id = $1)
+                """,
+                user1_id,
+                user2_id
+            )
+            await tx.commit()
+            return "blocked" 
 
         exists = await conn.fetchval(
             """
@@ -405,35 +494,129 @@ async def accept_request(conn, user1_id, user2_id):
         user1_id
     )
 
-@router.get("/friends/all")
-async def users_friends_all(credentials: dict = Depends(verify_token)):
+class UnfriendUser(BaseModel):
+    target_id: str
+
+@router.post("/friends/unfriend")
+async def users_friends_unfriend(req: UnfriendUser, credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
+        tx = conn.transaction()
+        await tx.start()
 
-        friends = await conn.fetch(
-            """
-            select f.user1_id user_id, u.username
-            from friends f
-            inner join users u
-            on u.id = f.user1_id
-            where f.user2_id = $1
-            union
-            select f.user2_id user_id, u.username
-            from friends f
-            inner join users u
-            on u.id = f.user2_id
-            where f.user1_id = $1
-            """, credentials["user_id"]
-        )
+        await unfriend_user(conn, req.target_id, credentials["user_id"])
+
+        await tx.commit()
 
         return {
-            "friends": friends
+            "status": "success"
         }
 
     except SafeError as e:
+        if tx: await tx.rollback()
         raise e
     except Exception as e:
         print(str(e))
+        if tx: await tx.rollback()
+        raise Exception('uncaught error')
+    finally:
+        if conn: await conn.close()
+
+async def unfriend_user(conn, target_id, user_id):
+    await conn.execute(
+        """
+        delete
+        from friends
+        where (user1_id = $1 and user2_id = $2)
+        or (user1_id = $2 and user2_id = $1)
+        """,
+        target_id,
+        user_id
+    )
+
+    await conn.execute(
+        """
+        delete
+        from friend_requests
+        where (requestor_id = $1 and target_id = $2)
+        or (requestor_id = $2 and target_id = $1)
+        """,
+        target_id,
+        user_id
+    )
+
+class BlockUser(BaseModel):
+    target_id: str
+
+@router.post("/friends/block")
+async def users_friends_block(req: BlockUser, credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+        tx = conn.transaction()
+        await tx.start()
+
+        await unfriend_user(conn, req.target_id, credentials["user_id"])
+
+        await conn.execute(
+            """
+            insert into blocked_users
+            (victim_id, blocked_id)
+            values
+            ($1, $2)
+            """, 
+            credentials["user_id"],
+            req.target_id
+        )
+
+        await tx.commit()
+
+        return {
+            "status": "success"
+        }
+
+    except SafeError as e:
+        if tx: await tx.rollback()
+        raise e
+    except Exception as e:
+        print(str(e))
+        if tx: await tx.rollback()
+        raise Exception('uncaught error')
+    finally:
+        if conn: await conn.close()
+
+class UnblockUser(BaseModel):
+    target_id: str
+
+@router.post("/friends/unblock")
+async def users_friends_block(req: UnblockUser, credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+        tx = conn.transaction()
+        await tx.start()
+
+        await conn.execute(
+            """
+            delete
+            from blocked_users
+            where victim_id = $1
+            and blocked_id = $2
+            """, 
+            credentials["user_id"],
+            req.target_id
+        )
+
+        await tx.commit()
+
+        return {
+            "status": "success"
+        }
+
+    except SafeError as e:
+        if tx: await tx.rollback()
+        raise e
+    except Exception as e:
+        print(str(e))
+        if tx: await tx.rollback()
         raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
