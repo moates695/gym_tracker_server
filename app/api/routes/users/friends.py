@@ -243,7 +243,7 @@ async def users_request_add(req: RequestDeny, credentials: dict = Depends(verify
             update friend_requests
             set 
                 request_state = 'denied',
-               last_updated = $1
+                last_updated = $1
             where requestor_id = $2
             and target_id = $3
             """, 
@@ -289,19 +289,6 @@ async def users_request_add(req: RequestAccept, credentials: dict = Depends(veri
         
         result = await add_friend(req.requestor_id, credentials["user_id"])
         status = "accepted" if result == "added" else result
-
-        if status == "existing":
-            await conn.execute(
-                """
-                delete
-                from friend_requests 
-                where (
-                    requestor_id = $1 and target_id = $2
-                ) or (
-                    requestor_id = $2 and target_id = $1
-                )
-                """, req.requestor_id, credentials["user_id"]
-            )
 
         return {
             "status": status
@@ -359,7 +346,10 @@ async def add_friend(user1_id, user2_id):
             )
             """, user1_id, user2_id
         )
-        if exists: return "existing"
+        if exists: 
+            await accept_request(conn, user1_id, user2_id)
+            await tx.commit()
+            return "existing"
         
         await conn.execute(
             """
