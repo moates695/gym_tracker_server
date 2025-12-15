@@ -16,6 +16,7 @@ from app.api.routes.auth import verify_token, verify_temp_token
 from app.api.routes.register.validate import send_validation_email
 from app.api.routes.users.get_data import fetch_user_data
 from app.api.middleware.misc import *
+from app.api.routes.users.permissions import permission_keys
 
 router = APIRouter()
 
@@ -101,6 +102,7 @@ async def register(req: Register):
         await new_workout_totals(conn, user_id)
         await new_muscle_totals(conn, user_id)
         await new_exercise_totals(conn, user_id)
+        await new_user_permissions(conn, user_id)
         
         await tx.commit()
 
@@ -172,4 +174,17 @@ async def new_exercise_totals(conn, user_id):
             values
             ($1, $2, 0.0, 0, 0, 0)
             """, user_id, exercise_id_row["id"]
+        )
+
+async def new_user_permissions(conn, user_id):
+    for permission_key in permission_keys:
+        await conn.execute(
+            """
+            insert into user_permissions
+            (user_id, permission_key, permission_value)
+            values
+            ($1, $2, 'private')
+            """,
+            user_id,
+            permission_key
         )

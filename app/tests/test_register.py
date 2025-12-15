@@ -86,7 +86,10 @@ async def test_validate(delete_users):
         assert response.status_code == 200
         assert response.json()["status"] == "verified"
         assert "auth_token" in response.json()
-        assert response.json()["user_data"] == {
+        user_data = response.json()["user_data"]
+        assert "age" in user_data
+        del user_data["age"]
+        assert user_data == {
             "user_id": decoded_temp["user_id"],
             "email": valid_user["email"],
             "username": valid_user["username"],
@@ -225,7 +228,10 @@ async def test_login(delete_users):
     )
     assert response.status_code == 200
     assert response.json()["account_state"] == "good"
-    assert response.json()["user_data"] == {
+    user_data = response.json()["user_data"]
+    assert "age" in user_data
+    del user_data["age"]
+    assert user_data == {
         "user_id": decode_token(response.json()["token"])["user_id"],
         "email": valid_user["email"],
         "username": valid_user["username"],

@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from app.api.routes.auth import verify_token
 from app.api.middleware.database import setup_connection
 from app.api.middleware.misc import *
+from app.api.routes.users.permissions import get_permission_values
 
 router = APIRouter()
 
@@ -97,6 +98,12 @@ async def users_search(username: str, credentials: dict = Depends(verify_token))
                 select blocked_id
                 from blocked_users
                 where victim_id = $1
+            )
+            and id not in (
+                select user_id
+                from user_permissions
+                where permission_key = 'searchable'
+                and permission_value = 'private'
             )
             order by username
             limit 50
@@ -217,6 +224,19 @@ class RequestAdd(BaseModel):
 async def users_request_add(req: RequestAdd, credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
+
+        permission = await conn.fetchval(
+            """
+            select permission_value
+            from user_permissions
+            where user_id = $1
+            and permission_key = 'searchable'
+            """, req.target_id
+        )
+        if permission != "public":
+            return {
+                "status": "private"
+            }
 
         incoming_exists = await conn.fetchval(
             """
