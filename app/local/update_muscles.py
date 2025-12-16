@@ -9,6 +9,9 @@ from .update_exercises import can_delete
 
 load_dotenv(override=True)
 
+valid_group_ids = []
+valid_target_ids = []
+
 async def main():
     if input(f"Update muscles in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
 
@@ -18,12 +21,13 @@ async def main():
     await update(muscles_json)
     await check_totals()
 
+
 async def update(muscles_json: dict):
     try:
+        conn = tx = None
         conn = await setup_connection()
-
-        valid_group_ids = []
-        valid_target_ids = []
+        tx = conn.transaction()
+        await tx.start()
 
         rows = await conn.fetch(
             """
@@ -31,13 +35,12 @@ async def update(muscles_json: dict):
             from muscle_groups;
             """
         )
-
-        db_muscle_groups = {
+        db_groups = {
             row["name"]: row["id"] for row in rows
         } 
 
-        for muscle_group, muscle_targets in muscles_json.items():
-            await update_muscle_groups(conn, muscle_group, muscle_targets, db_muscle_groups, valid_group_ids, valid_target_ids)     
+        for group, targets in muscles_json.items():
+            await update_muscle_groups(conn, group, targets, db_groups)     
         
         delete_map = {
             "muscle_groups": valid_group_ids,
@@ -64,13 +67,18 @@ async def update(muscles_json: dict):
                 """, ids
             )
 
+        await tx.commit()
+
     except Exception as e:
+        if tx: await tx.rollback()
         raise e
     finally:
         if conn: await conn.close()
 
-async def update_muscle_groups(conn, muscle_group, muscle_targets, db_muscle_groups, valid_group_ids, valid_target_ids):
-    if muscle_group not in db_muscle_groups.keys():
+async def update_muscle_groups(conn, group, targets, db_groups):
+    global valid_group_ids
+
+    if group not in db_groups.keys():
         temp_id = await conn.fetchval(
             """
             insert into muscle_groups
@@ -78,29 +86,33 @@ async def update_muscle_groups(conn, muscle_group, muscle_targets, db_muscle_gro
             values
             ($1)
             returning id;
-            """, muscle_group
+            """, group
         )
-        db_muscle_groups[muscle_group] = temp_id
+        group_id = temp_id
+    else:
+        group_id = db_groups[group]
 
-    valid_group_ids.append(db_muscle_groups[muscle_group])
+    valid_group_ids.append(group_id)
 
     rows = await conn.fetch(
         """
         select id, name
         from muscle_targets
         where muscle_group_id = $1
-        """, db_muscle_groups[muscle_group]
+        """, group_id
     )
-    db_muscle_targets = {
+    db_targets = {
         row["name"]: row["id"] for row in rows
     }
 
-    for muscle_target in muscle_targets:
-        await update_muscle_targets(conn, muscle_target, db_muscle_targets, valid_target_ids, db_muscle_groups[muscle_group])
+    for target in targets:
+        await update_muscle_targets(conn, target, db_targets, group_id)
 
-async def update_muscle_targets(conn, muscle_target, db_muscle_targets, valid_target_ids, muscle_group_id):
-    if muscle_target in db_muscle_targets.keys():
-        valid_target_ids.append(db_muscle_targets[muscle_target])
+async def update_muscle_targets(conn, target, db_targets, group_id):
+    global valid_target_ids
+
+    if target in db_targets.keys():
+        valid_target_ids.append(db_targets[target])
         return
     
     temp_id = await conn.fetchval(
@@ -110,7 +122,7 @@ async def update_muscle_targets(conn, muscle_target, db_muscle_targets, valid_ta
         values
         ($1, $2)
         returning id;
-        """, muscle_group_id, muscle_target
+        """, group_id, target
     )
     valid_target_ids.append(temp_id)
 
