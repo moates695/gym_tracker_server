@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 
 from ..api.middleware.database import setup_connection
 from .existing_users_db import check_totals
-from .update_exercises import can_delete
 
 load_dotenv(override=True)
 
@@ -18,12 +17,13 @@ async def main():
     await update(muscles_json)
     await check_totals()
 
+
 async def update(muscles_json: dict):
     try:
+        conn = tx = None
         conn = await setup_connection()
-
-        valid_group_ids = []
-        valid_target_ids = []
+        tx = conn.transaction()
+        await tx.start()
 
         rows = await conn.fetch(
             """
@@ -31,14 +31,18 @@ async def update(muscles_json: dict):
             from muscle_groups;
             """
         )
-
-        db_muscle_groups = {
+        db_groups = {
             row["name"]: row["id"] for row in rows
         } 
 
-        for muscle_group, muscle_targets in muscles_json.items():
-            await update_muscle_groups(conn, muscle_group, muscle_targets, db_muscle_groups, valid_group_ids, valid_target_ids)     
-        
+        valid_group_ids = []
+        valid_target_ids = []
+
+        for group, targets in muscles_json.items():
+            group_id, target_ids = await update_muscle_group(conn, group, targets, db_groups)     
+            valid_group_ids.append(group_id)
+            valid_target_ids.extend(target_ids)
+
         delete_map = {
             "muscle_groups": valid_group_ids,
             "muscle_targets": valid_target_ids,
@@ -64,55 +68,63 @@ async def update(muscles_json: dict):
                 """, ids
             )
 
+        await tx.commit()
+
     except Exception as e:
+        if tx: await tx.rollback()
         raise e
     finally:
         if conn: await conn.close()
 
-async def update_muscle_groups(conn, muscle_group, muscle_targets, db_muscle_groups, valid_group_ids, valid_target_ids):
-    if muscle_group not in db_muscle_groups.keys():
-        temp_id = await conn.fetchval(
+async def update_muscle_group(conn, group, targets, db_groups):
+    if group not in db_groups.keys():
+        group_id = await conn.fetchval(
             """
             insert into muscle_groups
             (name)
             values
             ($1)
             returning id;
-            """, muscle_group
+            """, group
         )
-        db_muscle_groups[muscle_group] = temp_id
-
-    valid_group_ids.append(db_muscle_groups[muscle_group])
+    else:
+        group_id = db_groups[group]
 
     rows = await conn.fetch(
         """
         select id, name
         from muscle_targets
         where muscle_group_id = $1
-        """, db_muscle_groups[muscle_group]
+        """, group_id
     )
-    db_muscle_targets = {
+    db_targets = {
         row["name"]: row["id"] for row in rows
     }
 
-    for muscle_target in muscle_targets:
-        await update_muscle_targets(conn, muscle_target, db_muscle_targets, valid_target_ids, db_muscle_groups[muscle_group])
+    valid_target_ids = []
+    for target in targets:
+        target_id = await update_muscle_targets(conn, target, db_targets, group_id)
+        valid_target_ids.append(target_id)
 
-async def update_muscle_targets(conn, muscle_target, db_muscle_targets, valid_target_ids, muscle_group_id):
-    if muscle_target in db_muscle_targets.keys():
-        valid_target_ids.append(db_muscle_targets[muscle_target])
-        return
+    return group_id, valid_target_ids
+
+async def update_muscle_targets(conn, target, db_targets, group_id):
+    if target in db_targets.keys():
+        return db_targets[target]
     
-    temp_id = await conn.fetchval(
+    return await conn.fetchval(
         """
         insert into muscle_targets
         (muscle_group_id, name)
         values
         ($1, $2)
         returning id;
-        """, muscle_group_id, muscle_target
+        """, group_id, target
     )
-    valid_target_ids.append(temp_id)
+
+def can_delete(table: str, to_delete_ids: list[str]) -> bool:
+    if len(to_delete_ids) == 0 or os.environ["ENVIRONMENT"] in ["dev", "pytest"]: return True
+    return input(f"From {table} delete rows with id {to_delete_ids}? (y/n)").lower() == 'y'
 
 if __name__ == "__main__":
     asyncio.run(main())

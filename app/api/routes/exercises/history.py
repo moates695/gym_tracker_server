@@ -266,12 +266,24 @@ def build_history(rows):
 
 def build_reps_sets_weight(rows):
     points = []
+    reps = 0
+    num_sets = 0
     for row in rows:
-        points.append({
-            "x": row["reps"],
-            "y": row["weight"],
-            "z": row["num_sets"]
-        })
+        for _ in range(row["num_sets"]):
+            for _ in range(row["reps"]):
+                points.append({
+                    "x": reps,
+                    "y": row["weight"],
+                    "z": num_sets
+                })
+                reps += 1
+            num_sets += 1
+    # for row in rows:
+    #     points.append({
+    #         "x": row["reps"],
+    #         "y": row["weight"],
+    #         "z": row["num_sets"]
+    #     })
     return points
 
 def sort_timeseries(data, key, convert_timestamp=False):
