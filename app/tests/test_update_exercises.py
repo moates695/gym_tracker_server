@@ -3,9 +3,10 @@ import json
 from uuid import uuid4
 import math
 import os
+from copy import deepcopy
 
 from ..api.middleware.database import setup_connection
-from ..local.update_exercises import update
+from ..local.update_exercises import update, does_exercise_exist
 from ..tests.test_register import valid_user
 
 @pytest.mark.asyncio
@@ -16,19 +17,14 @@ async def test_base_case():
 
     try:
         conn = await setup_connection()
-        original_rows = await fetch_exercise_data(conn)
         await update(exercises)
-        original_rows2 = await fetch_exercise_data(conn)
+        temp_rows = await fetch_exercise_data(conn)
 
-        # assert len(original_rows) == len(original_rows2)
-        # for e1, e2 in zip(original_rows, original_rows2):
-        #     try:
-        #         assert e1 == e2
-        #     except Exception as e:
-        #         print(e1)
-        #         print(e2)
-        #         raise e
-        assert original_rows == original_rows2
+        await update(exercises)
+        temp_rows2 = await fetch_exercise_data(conn)
+        
+        assert len(temp_rows) == len(temp_rows2)
+        assert temp_rows == temp_rows2
 
     except Exception as e:
         raise e

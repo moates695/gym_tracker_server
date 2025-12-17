@@ -2,6 +2,7 @@ import json
 import asyncio
 import os
 from dotenv import load_dotenv
+from copy import deepcopy
 
 from ..api.middleware.database import *
 from ..api.middleware.database import setup_connection
@@ -15,29 +16,14 @@ async def main():
     with open("app/local/exercises.json", "r") as file:
         exercises = json.load(file)
 
-    check_json(exercises)
-
     await update(exercises)
     await check_totals()
 
-def check_json(exercises):
-    exercise_names = []
-    for exercise in exercises:
-        variation_names = []
-        for variation in exercise.get("variations", []):
-            variation_names.append(variation["name"].strip().lower())
-
-        if len(variation_names) != len(set(variation_names)):
-            raise Exception(f"exercise {exercise['name']} have variations with same name")
-
-        exercise_names.append(exercise["name"].strip().lower())
-
-    if len(exercise_names) != len(set(exercise_names)):
-        raise Exception("exercises have the same name")
-
-# todo: delete old exercises with permission
-
 async def update(exercises):
+    exercises_copy = deepcopy(exercises)
+
+    check_json(exercises_copy)
+
     try:
         conn = tx = None
         conn = await setup_connection()
@@ -45,12 +31,14 @@ async def update(exercises):
         await tx.start()
 
         valid_exercise_ids = []
-        for exercise in exercises:
+        for exercise in exercises_copy:
             exercise_id = await update_exercise(conn, exercise)
             valid_exercise_ids.append(exercise_id)
             for variation in exercise.get("variations", []):
                 variation_id = await update_exercise_variation(conn, variation, exercise, exercise_id)
                 valid_exercise_ids.append(variation_id)
+
+        # todo: delete old exercises with permission
 
         await conn.execute(
             """
@@ -68,6 +56,24 @@ async def update(exercises):
         raise e
     finally:
         if conn: await conn.close()
+
+def check_json(exercises):
+    exercise_names = []
+    for exercise in exercises:
+        variation_names = []
+        for variation in exercise.get("variations", []):
+            variation_names.append(variation["name"].strip().lower())
+
+        if len(variation_names) != len(set(variation_names)):
+            raise Exception(f"exercise {exercise['name']} have variations with same name")
+
+        exercise_names.append(exercise["name"].strip().lower())
+
+    if len(exercise_names) != len(set(exercise_names)):
+        for e1 in exercise_names:
+            for e2 in exercise_names:
+                if e1 != e2: continue
+                raise Exception(f"exercise {e1} have the same name")
 
 async def update_exercise(conn, exercise, parent_id=None) -> str:
     if not await does_exercise_exist(conn, exercise, parent_id):
@@ -89,14 +95,19 @@ async def update_exercise(conn, exercise, parent_id=None) -> str:
         exercise_id = await conn.fetchval(
             """
             update exercises
-            set is_body_weight = $1, description = $2, weight_type = $3
+            set 
+                is_body_weight = $1, 
+                description = $2, 
+                weight_type = $3
             where name = $4
+            and parent_id is not distinct from $5
             returning id
             """, 
             exercise["is_body_weight"],
             exercise["description"],
             exercise["weight_type"],
             exercise["name"],
+            parent_id
         )
 
     if exercise["is_body_weight"]:
@@ -108,11 +119,11 @@ async def update_exercise(conn, exercise, parent_id=None) -> str:
 
 async def update_exercise_variation(conn, variation, parent, parent_id):
     if "targets" not in variation.keys() or variation["targets"] == {}:
-        variation["targets"] = parent["targets"]
+        variation["targets"] = deepcopy(parent["targets"])
 
     variation["is_body_weight"] = parent["is_body_weight"]
     if variation["is_body_weight"] and "ratio" not in variation:
-        variation["ratio"] = parent["ratio"]
+        variation["ratio"] = deepcopy(parent["ratio"])
 
     if "description" not in variation.keys():
         variation["description"] = ""
@@ -183,12 +194,14 @@ async def get_target_data(conn, exercise):
     
     for muscle_str, ratio in exercise["targets"].items():
         if "/" in muscle_str: continue
-        for target_id in await group_name_to_target_ids(conn, muscle_str):
+        target_ids = await group_name_to_target_ids(conn, muscle_str)
+        for target_id in target_ids:
             target_data[target_id] = ratio
     
     for muscle_str, ratio in exercise["targets"].items():
         if "/" not in muscle_str: continue
         target_id = await target_name_to_id(conn, muscle_str.split("/")[-1])
+        if target_id == None: raise Exception("could not find target")
         target_data[target_id] = ratio
 
     return target_data
@@ -211,10 +224,6 @@ async def target_name_to_id(conn, target_name):
         where target_name = $1
         """, target_name
     )
-
-def can_delete(table: str, to_delete_ids: list[str]) -> bool:
-    if len(to_delete_ids) == 0 or os.environ["ENVIRONMENT"] in ["dev", "pytest"]: return True
-    return input(f"From {table} delete rows with id {to_delete_ids}? (y/n)").lower() == 'y'
 
 async def does_exercise_exist(conn, exercise, parent_id):
     return await conn.fetchval(

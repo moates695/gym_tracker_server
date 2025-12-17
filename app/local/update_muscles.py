@@ -5,12 +5,8 @@ from dotenv import load_dotenv
 
 from ..api.middleware.database import setup_connection
 from .existing_users_db import check_totals
-from .update_exercises import can_delete
 
 load_dotenv(override=True)
-
-# valid_group_ids = []
-# valid_target_ids = []
 
 async def main():
     if input(f"Update muscles in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
@@ -125,6 +121,10 @@ async def update_muscle_targets(conn, target, db_targets, group_id):
         returning id;
         """, group_id, target
     )
+
+def can_delete(table: str, to_delete_ids: list[str]) -> bool:
+    if len(to_delete_ids) == 0 or os.environ["ENVIRONMENT"] in ["dev", "pytest"]: return True
+    return input(f"From {table} delete rows with id {to_delete_ids}? (y/n)").lower() == 'y'
 
 if __name__ == "__main__":
     asyncio.run(main())

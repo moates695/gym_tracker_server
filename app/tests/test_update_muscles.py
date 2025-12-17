@@ -225,3 +225,4 @@ async def fetch_muscles_groups_targets(conn):
         from muscle_groups_targets
         """
     )
+    
