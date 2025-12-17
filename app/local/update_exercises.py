@@ -9,8 +9,6 @@ from .existing_users_db import check_totals
 
 load_dotenv(override=True)
 
-valid_exercise_ids = []
-
 async def main():
     if input(f"Update exercises in {os.environ['ENVIRONMENT']}? [y/n] ").lower() != 'y': return
 
@@ -46,10 +44,22 @@ async def update(exercises):
         tx = conn.transaction()
         await tx.start()
 
+        valid_exercise_ids = []
         for exercise in exercises:
             exercise_id = await update_exercise(conn, exercise)
+            valid_exercise_ids.append(exercise_id)
             for variation in exercise.get("variations", []):
-                await update_exercise_variation(conn, variation, exercise, exercise_id)
+                variation_id = await update_exercise_variation(conn, variation, exercise, exercise_id)
+                valid_exercise_ids.append(variation_id)
+
+        await conn.execute(
+            """
+            delete
+            from exercises
+            where not (id = any($1::uuid[]))
+            and user_id is null
+            """, valid_exercise_ids
+        )
 
         await tx.commit()
 
@@ -101,7 +111,7 @@ async def update_exercise_variation(conn, variation, parent, parent_id):
         variation["targets"] = parent["targets"]
 
     variation["is_body_weight"] = parent["is_body_weight"]
-    if variation["is_body_weight"]:
+    if variation["is_body_weight"] and "ratio" not in variation:
         variation["ratio"] = parent["ratio"]
 
     if "description" not in variation.keys():
@@ -109,7 +119,7 @@ async def update_exercise_variation(conn, variation, parent, parent_id):
 
     variation["weight_type"] = parent["weight_type"]
 
-    await update_exercise(conn, variation, parent_id)
+    return await update_exercise(conn, variation, parent_id)
 
 async def update_bodyweight_ratios(conn, exercise, exercise_id):
     if isinstance(exercise["ratio"], dict):
@@ -163,7 +173,7 @@ async def update_exercise_muscle_targets(conn, exercise, exercise_id):
         where exercise_id = $1
         and not (id = any($2::uuid[]))
         """, exercise_id, valid_target_ids
-        )
+    )
 
 ###########################################
 ### Helpers

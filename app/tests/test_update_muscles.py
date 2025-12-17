@@ -5,7 +5,7 @@ from ..api.middleware.database import setup_connection
 from ..local.update_muscles import update
 
 @pytest.mark.asyncio
-async def test_update_muscles():
+async def test_update_muscles_base():
     with open("local/muscles.json", "r") as file:
         muscles_json = json.load(file)
 
