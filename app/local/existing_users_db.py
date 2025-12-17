@@ -31,11 +31,6 @@ async def check_totals():
             await check_exercise_totals(conn, user_id)
             await check_overall_leaderboards(conn, user_id)
             await check_exercise_leaderboards(conn, user_id)
-            await check_exercise_records(conn, user_id)
-
-            # exercise_records
-            # exercises_leaderboard
-            # overall_leaderboard
 
     except Exception as e:
         raise e
@@ -201,9 +196,6 @@ async def check_exercise_leaderboards(conn, user_id):
             ($1, $2, 0.0, 0, 0, 0)
             """, user_id, exercise_id_row["id"]
         )
-
-async def check_exercise_records(conn, user_id):
-
 
 if __name__ == "__main__":
     asyncio.run(main())
