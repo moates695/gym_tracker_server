@@ -29,8 +29,13 @@ async def check_totals():
             await check_workout_muscle_group_totals(conn, user_id)
             await check_workout_muscle_target_totals(conn, user_id)
             await check_exercise_totals(conn, user_id)
-            # todo use new methods with redis
-            # await check_overall_leaderboards(conn, user_id)
+            await check_overall_leaderboards(conn, user_id)
+            await check_exercise_leaderboards(conn, user_id)
+            await check_exercise_records(conn, user_id)
+
+            # exercise_records
+            # exercises_leaderboard
+            # overall_leaderboard
 
     except Exception as e:
         raise e
@@ -52,6 +57,7 @@ async def check_workout_totals(conn, user_id):
     await conn.execute(
         """
         insert into workout_totals
+        (user_id, volume, num_sets, reps, duration, num_workouts, num_exercises)
         values
         ($1, 0.0, 0, 0, 0.0, 0, 0)
         """, user_id
@@ -81,6 +87,7 @@ async def check_workout_muscle_group_totals(conn, user_id):
         await conn.execute(
             """
             insert into workout_muscle_group_totals
+            (user_id, muscle_group_id, volume, num_sets, reps, counter)
             values
             ($1, $2, 0.0, 0, 0, 0)
             """, user_id, group_id_row["id"]
@@ -110,6 +117,7 @@ async def check_workout_muscle_target_totals(conn, user_id):
         await conn.execute(
             """
             insert into workout_muscle_target_totals
+            (user_id, muscle_target_id, volume, num_sets, reps, counter)
             values
             ($1, $2, 0.0, 0, 0, 0)
             """, user_id, target_id_row["id"]
@@ -144,28 +152,58 @@ async def check_exercise_totals(conn, user_id):
             """, user_id, exercise_id_row["id"]
         )
 
-# async def check_overall_leaderboards(conn, user_id):
-#     for table in ["volume", "sets", "reps"]:
-#         column = table if table != "sets" else "num_sets"
-#         exists = await conn.fetchval(
-#             f"""
-#             select exists (
-#                 select 1
-#                 from {table}_leaderboard
-#                 where user_id = $1
-#             )
-#             """, user_id
-#         )
-#         if exists: continue
+async def check_overall_leaderboards(conn, user_id):
+    exists = await conn.fetchval(
+        """
+        select exists (
+            select 1
+            from overall_leaderboard
+            where user_id = $1
+        )
+        """, user_id
+    )
+    if exists: return
 
-#         await conn.execute(
-#             f"""
-#             insert into {table}_leaderboard
-#             (user_id, {column}, last_updated)
-#             values
-#             ($1, $2, $3)
-#             """, user_id, 0.0, datetime.now(tz=timezone.utc).replace(tzinfo=None)
-#         )
+    await conn.execute(
+        """
+        insert into overall_leaderboard
+        (user_id, volume, num_sets, reps, num_exercises, num_workouts, duration_mins)
+        values
+        ($1, 0.0, 0, 0, 0, 0, 0)
+        """, user_id
+    )
+
+async def check_exercise_leaderboards(conn, user_id):
+    exercise_id_rows = await conn.fetch(
+        """
+        select id
+        from exercises
+        """
+    )
+    for exercise_id_row in exercise_id_rows:
+        exists = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from exercise_leaderboard
+                where user_id = $1
+                and exercise_id = $2
+            )
+            """, user_id, exercise_id_row["id"]
+        )
+        if exists: continue
+
+        await conn.execute(
+            """
+            insert into exercise_leaderboard
+            (user_id, exercise_id, volume, num_sets, reps, num_workouts)
+            values
+            ($1, $2, 0.0, 0, 0, 0)
+            """, user_id, exercise_id_row["id"]
+        )
+
+async def check_exercise_records(conn, user_id):
+
 
 if __name__ == "__main__":
     asyncio.run(main())
