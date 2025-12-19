@@ -12,6 +12,7 @@ from ..main import app
 from ..api.middleware.database import setup_connection
 from ..tests.test_workout_save import build_workouts, save_workouts
 from ..api.middleware.auth_token import generate_token
+from ..api.middleware.misc import *
 
 client = TestClient(app)
 
@@ -85,6 +86,7 @@ async def main():
                         "goal_status": random.choice(["bulking", "cutting", "maintaining"]),
                         "ped_status": random.choice(["natural", "juicing", "silent"]),
                         "date_of_birth": pick_date(),
+                        "bodyfat": 15.0,
                         "send_email": False,
                     }
                 )
@@ -126,6 +128,32 @@ async def main():
             await save_workouts(workouts, headers={
                 "Authorization": f"Bearer {token}"
             }, skip_fail=True)
+
+            for _ in range(20):
+                await conn.execute(
+                    """
+                    insert into user_weights
+                    (user_id, weight, created_at)
+                    values
+                    ($1, $2, $3)
+                    """,
+                    user_id,
+                    random_weight(),
+                    datetime.fromtimestamp(random_timestamp_ms() / 1000).replace(tzinfo=None)
+                )
+
+            for _ in range(10):
+                await conn.execute(
+                    """
+                    insert into user_heights
+                    (user_id, height, created_at)
+                    values
+                    ($1, $2, $3)
+                    """,
+                    user_id,
+                    random.randint(130, 190),
+                    datetime.fromtimestamp(random_timestamp_ms() / 1000).replace(tzinfo=None)
+                )
 
     except Exception as e:
         raise e

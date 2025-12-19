@@ -7,6 +7,7 @@ import json
 from app.api.routes.auth import verify_token
 from app.api.middleware.database import setup_connection
 from app.api.middleware.misc import *
+from app.api.routes.exercises.history import timestamp_ms_to_date_str
 
 router = APIRouter()
 
@@ -28,10 +29,22 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
                 """, credentials["user_id"]
             )
 
-            history[key] = [{
-                "value": row[data_map["column"]],
-                "created_at": datetime_to_timestamp_ms(row["created_at"])
-            } for row in rows]
+            history[key] = {
+                "graph": [],
+                "table": []
+            }
+            for row in rows:
+                value = row[data_map["column"]]
+                timestamp = datetime_to_timestamp_ms(row["created_at"])
+                history[key]["table"].append({
+                    "value": value,
+                    "date": timestamp_ms_to_date_str(timestamp)
+                })
+                if key not in ["bodyfat", "weight", "height"]: continue
+                history[key]["graph"].append({
+                    "x": timestamp,
+                    "y": value
+                })
 
         return {
             "data_history": history
