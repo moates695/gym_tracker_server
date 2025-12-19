@@ -30,7 +30,7 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
 
             history[key] = [{
                 "value": row[data_map["column"]],
-                "created_at": row["created_at"].timestamp()
+                "created_at": datetime_to_timestamp_ms(row["created_at"])
             } for row in rows]
 
         return {

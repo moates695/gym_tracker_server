@@ -100,5 +100,6 @@ valid_user = {
     "goal_status": "cutting",
     "ped_status": 'natural',
     "date_of_birth": "2001-09-11",
+    "bodyfat": 15.2,
     "send_email": False
 }
