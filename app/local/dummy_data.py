@@ -155,6 +155,14 @@ async def main():
                     datetime.fromtimestamp(random_timestamp_ms() / 1000).replace(tzinfo=None)
                 )
 
+        await conn.execute(
+            """
+            update user_permissions
+            set permission_value = 'public'
+            where permission_key = 'searchable'
+            """
+        )
+
     except Exception as e:
         raise e
     finally:

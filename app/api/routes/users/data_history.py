@@ -31,13 +31,19 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
 
             history[key] = {
                 "graph": [],
-                "table": []
+                "table": {
+                    "headers": [
+                        get_table_header(key),
+                        "date"
+                    ],
+                    "rows": []
+                }
             }
             for row in rows:
                 value = row[data_map["column"]]
                 timestamp = datetime_to_timestamp_ms(row["created_at"])
-                history[key]["table"].append({
-                    "value": value,
+                history[key]["table"]["rows"].append({
+                    get_table_header(key): value,
                     "date": timestamp_ms_to_date_str(timestamp)
                 })
                 if key not in ["bodyfat", "weight", "height"]: continue
@@ -57,3 +63,16 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
         raise Exception('uncaught error')
     finally:
         if conn: await conn.close()
+
+def get_table_header(key: str) -> str:
+    match key:
+        case 'height':
+            return 'height'
+        case 'weight':
+            return 'weight'
+        case 'goal_status':
+            return 'Phase'
+        case 'ped_status':
+            return 'Natty Status'
+        case 'bodyfat':
+            return 'Bodyfat %'
