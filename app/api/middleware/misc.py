@@ -36,6 +36,7 @@ height_field = Field(ge=0, le=500)
 weight_field = Field(ge=0, le=500)
 goal_status_literal = Literal["bulking", "cutting", "maintaining"]
 ped_status_literal = Literal["natural", "juicing", "silent"]
+bodyfat_field = Field(ge=0, le=100)
     
 user_data_tables_map = {
     "first_name": {
@@ -65,6 +66,10 @@ user_data_tables_map = {
     "ped_status": {
         "table": 'user_ped_status',
         "column": 'ped_status',
+    },
+    "bodyfat": {
+        "table": "user_bodyfats",
+        "column": "bodyfat"
     }
 }
  

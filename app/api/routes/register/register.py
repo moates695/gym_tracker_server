@@ -32,6 +32,7 @@ class Register(BaseModel):
     goal_status: goal_status_literal
     ped_status: ped_status_literal
     date_of_birth: str
+    bodyfat: float
     send_email: bool = True
 
     @field_validator('password')
