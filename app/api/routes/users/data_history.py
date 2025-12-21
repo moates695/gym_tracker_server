@@ -13,6 +13,11 @@ router = APIRouter()
 
 @router.get("/data/get/history")
 async def users_data_get_history(credentials: dict = Depends(verify_token)):
+    return {
+        "data_history": await data_history(credentials["user_id"])
+    }
+
+async def data_history(user_id: str):
     try:
         conn = await setup_connection()
 
@@ -26,7 +31,7 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
                 from {data_map["table"]}
                 where user_id = $1
                 order by created_at desc
-                """, credentials["user_id"]
+                """, user_id
             )
 
             history[key] = {
@@ -41,20 +46,18 @@ async def users_data_get_history(credentials: dict = Depends(verify_token)):
             }
             for row in rows:
                 value = row[data_map["column"]]
-                timestamp = datetime_to_timestamp_ms(row["created_at"])
+                timestamp_ms = datetime_to_timestamp_ms(row["created_at"])
                 history[key]["table"]["rows"].append({
                     get_table_header(key): value,
-                    "date": timestamp_ms_to_date_str(timestamp)
+                    "date": timestamp_ms_to_date_str(timestamp_ms)
                 })
                 if key not in ["bodyfat", "weight", "height"]: continue
                 history[key]["graph"].append({
-                    "x": timestamp,
+                    "x": timestamp_ms,
                     "y": value
                 })
 
-        return {
-            "data_history": history
-        }
+        return history
 
     except SafeError as e:
         raise e

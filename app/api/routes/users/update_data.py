@@ -3,10 +3,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Annotated, Optional
 import json
+from datetime import datetime, timezone
 
 from app.api.routes.auth import verify_token
 from app.api.middleware.database import setup_connection
 from app.api.middleware.misc import *
+from app.api.routes.users.data_history import data_history
 
 router = APIRouter()
 
@@ -20,7 +22,7 @@ class Update(BaseModel):
     ped_status: Optional[ped_status_literal] = None
     bodyfat: Optional[Annotated[float, bodyfat_field]] = None
 
-@router.put("/data/update")
+@router.post("/data/update")
 async def users_weight(req: Update, credentials: dict = Depends(verify_token)):
     req_json = json.loads(req.model_dump_json())
 
@@ -39,23 +41,10 @@ async def users_weight(req: Update, credentials: dict = Depends(verify_token)):
                 """, credentials["user_id"], value
             )
 
-            # if data_map["table"] == "users":
-            #     await conn.execute(
-            #         f"""
-            #         update users
-            #         set {data_map["column"]} = $2
-            #         where id = $1
-            #         """, credentials["user_id"], value
-            #     )
-            # else:
-            #     await conn.execute(
-            #         f"""
-            #         insert into {data_map["table"]}
-            #         (user_id, {data_map["column"]})
-            #         values
-            #         ($1, $2);
-            #         """, credentials["user_id"], value
-            #     )
+        return {
+            "status": "good",
+            "data_history": await data_history(credentials["user_id"])
+        }
 
     except SafeError as e:
         raise e
