@@ -42,10 +42,26 @@ async def exercise_history(credentials: dict = Depends(verify_token)):
             "reps": 0,
         }
 
+        timespans = {
+            "week": timedelta(weeks=1),
+            "month": timedelta(days=30),
+            "3_months": timedelta(days=30) * 3,
+            "6_months": timedelta(days=30) * 6,
+            "year": timedelta(days=365),
+        }
+        utc_now = datetime.now(tz=timezone.utc)
+
         added_exercise_groups = {}
 
         data = {}
         for row in rows:
+            spans = []
+            for key, delta in timespans.items():
+                spans.append(key)
+                if row["started_at"] >= utc_now - delta: break
+            else:
+                spans.append("all")
+
             volume = row["reps"] * row["weight"] * row["num_sets"]
 
             group = row["group_name"]
