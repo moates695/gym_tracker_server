@@ -13,6 +13,7 @@ from app.api.routes import muscles
 from app.api.routes.users import router as users_router
 from app.api.routes.exercises import router as exercises_router
 from app.api.routes.stats import router as stats_router
+from app.api.routes.home import router as home_router
 
 from app.api.middleware.misc import SafeError
 
@@ -47,6 +48,7 @@ app.include_router(workout_router.router)
 app.include_router(muscles.router)
 app.include_router(users_router.router)
 app.include_router(stats_router.router)
+app.include_router(home_router.router)
 
 if __name__ == "__main__":
     import uvicorn
