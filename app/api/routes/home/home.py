@@ -51,9 +51,13 @@ async def exercise_history(credentials: dict = Depends(verify_token)):
         }
         utc_now = datetime.now(tz=timezone.utc)
 
-        added_exercise_groups = {}
-
         data = {}
+        added_exercise_groups = {}
+        all_spans = list(timespans.keys()) + ["all"]
+        for span in all_spans:
+            data[span] = {}
+            added_exercise_groups[span] = {}
+
         for row in rows:
             spans = []
             for key, delta in timespans.items():
@@ -64,29 +68,30 @@ async def exercise_history(credentials: dict = Depends(verify_token)):
 
             volume = row["reps"] * row["weight"] * row["num_sets"]
 
-            group = row["group_name"]
-            if group not in data:
-                data[group] = deepcopy(empty) | {
-                    "targets": {}
-                }
+            for span in spans:
+                group = row["group_name"]
+                if group not in data[span]:
+                    data[span][group] = deepcopy(empty) | {
+                        "targets": {}
+                    }
 
-            exercise_id = row["exercise_id"]
-            if exercise_id not in added_exercise_groups:
-                added_exercise_groups[exercise_id] = []
+                exercise_id = row["exercise_id"]
+                if exercise_id not in added_exercise_groups[span]:
+                    added_exercise_groups[span][exercise_id] = []
 
-            if group not in added_exercise_groups[exercise_id]:
-                data[group]["volume"] += volume
-                data[group]["sets"] += row["num_sets"]
-                data[group]["reps"] += row["reps"]
-                added_exercise_groups[exercise_id] = group
+                if group not in added_exercise_groups[span][exercise_id]:
+                    data[span][group]["volume"] += volume
+                    data[span][group]["sets"] += row["num_sets"]
+                    data[span][group]["reps"] += row["reps"]
+                    added_exercise_groups[span][exercise_id] = group
 
-            target = row["target_name"]
-            if target not in data[group]["targets"]:
-                data[group]["targets"][target] = deepcopy(empty)
+                target = row["target_name"]
+                if target not in data[span][group]["targets"]:
+                    data[span][group]["targets"][target] = deepcopy(empty)
 
-            data[group]["targets"][target]["volume"] += volume
-            data[group]["targets"][target]["sets"] += row["num_sets"]
-            data[group]["targets"][target]["reps"] += row["reps"]
+                data[span][group]["targets"][target]["volume"] += volume
+                data[span][group]["targets"][target]["sets"] += row["num_sets"]
+                data[span][group]["targets"][target]["reps"] += row["reps"]
             
         return {
             "data": data

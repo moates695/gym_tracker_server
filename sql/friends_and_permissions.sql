@@ -1,3 +1,5 @@
+drop table friends;
+
 CREATE TABLE public.blocked_users (
     victim_id uuid NOT NULL,
     blocked_id uuid NOT NULL
