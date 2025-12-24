@@ -9,6 +9,7 @@ import os
 from datetime import date
 import bcrypt
 import traceback
+from typing import Optional
 
 from app.api.middleware.database import setup_connection
 from app.api.middleware.auth_token import *
@@ -32,7 +33,7 @@ class Register(BaseModel):
     goal_status: goal_status_literal
     ped_status: ped_status_literal
     date_of_birth: str
-    bodyfat: float
+    bodyfat: Optional[float] = None 
     send_email: bool = True
 
     @field_validator('password')
@@ -91,6 +92,7 @@ async def register(req: Register):
 
         for key, data_map in user_data_tables_map.items():
             if data_map["table"] == "users": continue
+            if key == "bodyfat" and req_json[key] is None: continue
             await conn.execute(
                 f"""
                 insert into {data_map["table"]}

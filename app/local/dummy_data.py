@@ -23,7 +23,8 @@ async def main():
     try:
         conn = await setup_connection()
 
-        user_id = '31fbaa9c-a0f2-45f5-835b-aa2d80d68892'
+        # user_id = '31fbaa9c-a0f2-45f5-835b-aa2d80d68892'
+        user_id = 'df23687a-c71f-436d-b720-ea1ccd3ea977'
         user_email = 'moates695@gmail.com'
         user_map = {
             user_id: generate_token(user_email, user_id, minutes=15)

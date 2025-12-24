@@ -35,6 +35,7 @@ async def exercise_history(credentials: dict = Depends(verify_token)):
             credentials["user_id"],
             # datetime.now(tz=timezone.utc) - timedelta(days=365)
         )
+        print(f"Fetched {len(rows)} exercise history rows")
 
         empty = {
             "volume": 0,
