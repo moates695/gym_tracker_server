@@ -20,14 +20,15 @@ load_dotenv(override=True)
 
 async def main():
     if input(f"Insert dummy data into {os.environ['ENVIRONMENT']}? [y/n] ") != 'y': return
+    only_test_user = input(f"Update only test user data? [y/n] ") == 'y'
     try:
         conn = await setup_connection()
 
         # user_id = '31fbaa9c-a0f2-45f5-835b-aa2d80d68892'
-        user_id = 'df23687a-c71f-436d-b720-ea1ccd3ea977'
-        user_email = 'moates695@gmail.com'
+        test_user_id = 'df23687a-c71f-436d-b720-ea1ccd3ea977'
+        test_user_email = 'moates695@gmail.com'
         user_map = {
-            user_id: generate_token(user_email, user_id, minutes=15)
+            test_user_id: generate_token(test_user_email, test_user_id, minutes=15)
         }
 
         tables = [
@@ -42,7 +43,7 @@ async def main():
                 delete
                 from {table}
                 where user_id = $1
-                """, user_id
+                """, test_user_id
             )
 
         dummy_domain = "@dummydomain.com"
@@ -65,67 +66,72 @@ async def main():
                 or 
                 u.email = $2
             )
-            """, dummy_domain, user_email
+            """, dummy_domain, test_user_email
         )
 
         server_base = os.environ['SERVER_ADDRESS']
 
-        for _ in range(random.randint(20, 30)):
-            try:
-                temp_email = f"{str(uuid4())}{dummy_domain}"
-                response = requests.post(
-                    f"{server_base}/register/new",
-                    json={
-                        "email": temp_email,
-                        "password": "Password1!",
-                        "username": str(uuid4())[:20],
-                        "first_name": "",
-                        "last_name": "",
-                        "gender": random.choice(["male", "female", "other"]),
-                        "height": random.randint(130, 210),
-                        "weight": random.randint(50, 130),
-                        "goal_status": random.choice(["bulking", "cutting", "maintaining"]),
-                        "ped_status": random.choice(["natural", "juicing", "silent"]),
-                        "date_of_birth": pick_date(),
-                        "bodyfat": 15.0,
-                        "send_email": False,
-                    }
-                )
-                response.raise_for_status()
-                resp_json = response.json()
-                if resp_json["status"] != "success": 
-                    raise Exception("register not successful")
-                temp_user_id = resp_json["user_id"]
-                # auth_token = generate_token(temp_email, temp_user_id, minutes=15)
-                temp_token = generate_token(temp_email, temp_user_id, minutes=30, is_temp=True)
+        if not only_test_user:
+            for _ in range(random.randint(20, 30)):
+                try:
+                    temp_email = f"{str(uuid4())}{dummy_domain}"
+                    response = requests.post(
+                        f"{server_base}/register/new",
+                        json={
+                            "email": temp_email,
+                            "password": "Password1!",
+                            "username": str(uuid4())[:20],
+                            "first_name": "",
+                            "last_name": "",
+                            "gender": random.choice(["male", "female", "other"]),
+                            "height": random.randint(130, 210),
+                            "weight": random.randint(50, 130),
+                            "goal_status": random.choice(["bulking", "cutting", "maintaining"]),
+                            "ped_status": random.choice(["natural", "juicing", "silent"]),
+                            "date_of_birth": pick_date(),
+                            "bodyfat": 15.0,
+                            "send_email": False,
+                        }
+                    )
+                    response.raise_for_status()
+                    resp_json = response.json()
+                    if resp_json["status"] != "success": 
+                        raise Exception("register not successful")
+                    temp_user_id = resp_json["user_id"]
+                    # auth_token = generate_token(temp_email, temp_user_id, minutes=15)
+                    temp_token = generate_token(temp_email, temp_user_id, minutes=30, is_temp=True)
 
-                code = await conn.fetchval(
-                    """
-                    select code
-                    from user_codes
-                    where user_id = $1 
-                    """, temp_user_id
-                )
+                    code = await conn.fetchval(
+                        """
+                        select code
+                        from user_codes
+                        where user_id = $1 
+                        """, temp_user_id
+                    )
 
-                response = requests.get(
-                    f"{server_base}/register/validate/receive",
-                    headers={
-                        "Authorization": f"Bearer {temp_token}"
-                    },
-                    params={
-                        "code": code,
-                    }
-                )
-                response.raise_for_status()
-                assert response.json()["status"] == "verified"
-                user_map[temp_user_id] = response.json()["auth_token"]
-            
-            except Exception as e:
-                print(e)
-                continue
+                    response = requests.get(
+                        f"{server_base}/register/validate/receive",
+                        headers={
+                            "Authorization": f"Bearer {temp_token}"
+                        },
+                        params={
+                            "code": code,
+                        }
+                    )
+                    response.raise_for_status()
+                    assert response.json()["status"] == "verified"
+                    user_map[temp_user_id] = response.json()["auth_token"]
+                
+                except Exception as e:
+                    print(e)
+                    continue
 
         for user_id, token in user_map.items():
             workouts = await build_workouts(conn, 10, 20)
+
+            if user_id == test_user_id:
+                workouts += await build_workouts(conn, 5, 10, recent=True)
+
             await save_workouts(workouts, headers={
                 "Authorization": f"Bearer {token}"
             }, skip_fail=True)

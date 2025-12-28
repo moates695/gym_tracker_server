@@ -346,15 +346,22 @@ async def save_workouts(workouts, headers, skip_fail=False):
 
 # todo: check that if register misses workout_totals (+ others) that the workout save func inserts baseline
 
-async def build_workouts(conn, lower_lim=5, upper_lim=10):
+async def build_workouts(conn, lower_lim=5, upper_lim=10, recent=False):
     workouts = []
     start_timestamps = []
     for _ in range(random.randint(lower_lim, upper_lim)):
-        while 1:
-            start_time = int(random_timestamp_ms())
-            if start_time in start_timestamps: continue
-            start_timestamps.append(start_time)
-            break
+        if recent:
+            while 1:
+                start_time = now_timestamp_ms() - random.randint(0, 30*24*60*60*1000)
+                if start_time in start_timestamps: continue
+                start_timestamps.append(start_time)
+                break
+        else:
+            while 1:
+                start_time = int(random_timestamp_ms())
+                if start_time in start_timestamps: continue
+                start_timestamps.append(start_time)
+                break
 
         duration = random.randint(5*60, 120*60) * 1000
         rows = await conn.fetch(

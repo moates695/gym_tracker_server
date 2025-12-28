@@ -143,7 +143,7 @@ async def fetch_exercise_frequency(conn, exercise_id, user_id):
         order by started_at desc
         """, exercise_id, user_id
     )
-
+    
     days_past_volume = {}
     for history_row in history_rows:
         days_past = get_days_past(history_row["started_at"])
