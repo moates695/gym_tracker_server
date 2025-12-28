@@ -184,8 +184,10 @@ async def online_friends(credentials: dict = Depends(verify_token)):
 
         rows = await conn.fetch(
             """
-            select of.user_id
+            select u.username
             from online_users of
+            inner join users u
+            on of.user_id = u.id
             where of.is_online = true
             and user_id in (
                 select user1_id
@@ -202,7 +204,7 @@ async def online_friends(credentials: dict = Depends(verify_token)):
         
         online_friends = []
         for row in rows:
-            online_friends.append(str(row["user_id"]))
+            online_friends.append(str(row["username"]))
 
         return {
             "data": {
