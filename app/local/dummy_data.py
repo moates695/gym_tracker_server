@@ -7,6 +7,7 @@ from uuid import uuid4
 import requests
 import random
 from datetime import datetime, timedelta
+import uuid
 
 from ..main import app
 from ..api.middleware.database import setup_connection
@@ -46,28 +47,40 @@ async def main():
                 """, test_user_id
             )
 
-        dummy_domain = "@dummydomain.com"
-        await conn.execute(
-            """
-            delete
-            from users
-            where email like '%' || $1
-            """, dummy_domain
-        )
-
-        await conn.execute(
-            """
-            delete 
-            from workouts w
-            using users u
-            where w.user_id = u.id
-            and (
-                u.email like '%' || $1
-                or 
-                u.email = $2
+        if not only_test_user:
+            dummy_domain = "@dummydomain.com"
+            await conn.execute(
+                """
+                delete
+                from users
+                where email like '%' || $1
+                """, dummy_domain
             )
-            """, dummy_domain, test_user_email
-        )
+
+        if only_test_user:
+            await conn.execute(
+                """
+                delete 
+                from workouts w
+                using users u
+                where w.user_id = u.id
+                and u.email = $1
+                """, test_user_email
+            )
+        else:
+            await conn.execute(
+                """
+                delete 
+                from workouts w
+                using users u
+                where w.user_id = u.id
+                and (
+                    u.email like '%' || $1
+                    or 
+                    u.email = $2
+                )
+                """, dummy_domain, test_user_email
+            )
 
         server_base = os.environ['SERVER_ADDRESS']
 
@@ -161,6 +174,52 @@ async def main():
                     random.randint(130, 190),
                     datetime.fromtimestamp(random_timestamp_ms() / 1000).replace(tzinfo=None)
                 )
+
+        await conn.execute(
+            """
+            delete
+            from friends
+            where user1_id = $1
+            or user2_id = $1
+            """, test_user_id
+        )
+
+        user_id_rows = await conn.fetch(
+            """
+            select id
+            from users
+            where id != $1
+            """, test_user_id
+        )
+        user_ids = [str(row["id"]) for row in user_id_rows]
+
+        for user_id in user_ids:
+            if random.random() < 0.25: continue
+            await conn.execute(
+                """
+                insert into friends
+                (user1_id, user2_id)
+                values
+                ($1, $2)
+                """,
+                test_user_id,
+                user_id
+            )
+            await conn.execute(
+                """
+                insert into online_users
+                (user_id, is_online)
+                values
+                ($1, $2)
+                on conflict (user_id, is_online) 
+                do update
+                set is_online = $2
+                """,
+                user_id,
+                random.random() < 0.5
+            )
+
+
 
         await conn.execute(
             """

@@ -123,7 +123,7 @@ async def exercise_history(credentials: dict = Depends(verify_token)):
         if conn: await conn.close()
 
 @router.get("/volume-frequency")
-async def exercise_history(credentials: dict = Depends(verify_token)):
+async def volume_frequency(credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
         
@@ -149,6 +149,66 @@ async def exercise_history(credentials: dict = Depends(verify_token)):
 
         return {
             "frequency": days_past_volume
+        }
+
+    except SafeError as e:
+        raise e
+    except Exception as e:
+        print(str(e))
+        raise Exception('uncaught error')
+    finally:
+        if conn: await conn.close()
+
+@router.get("/online-friends")
+async def online_friends(credentials: dict = Depends(verify_token)):
+    try:
+        conn = await setup_connection()
+        
+        has_friends = await conn.fetchval(
+            """
+            select exists (
+                select 1
+                from friends
+                where user1_id = $1
+                or user2_id = $1
+            )
+            """, credentials["user_id"]
+        )
+        if not has_friends:
+            return {
+                "data": {
+                    "has_friends": False,
+                    "online_friends": []
+                }
+            }
+
+        rows = await conn.fetch(
+            """
+            select of.user_id
+            from online_users of
+            where of.is_online = true
+            and user_id in (
+                select user1_id
+                from friends
+                where user2_id = $1
+                union
+                select user2_id
+                from friends
+                where user1_id = $1
+            )
+            limit 10
+            """, credentials["user_id"]
+        )
+        
+        online_friends = []
+        for row in rows:
+            online_friends.append(str(row["user_id"]))
+
+        return {
+            "data": {
+                "has_friends": True,
+                "online_friends": online_friends
+            }
         }
 
     except SafeError as e:
