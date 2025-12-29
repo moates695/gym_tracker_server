@@ -206,6 +206,7 @@ async def online_friends(credentials: dict = Depends(verify_token)):
         for row in rows:
             online_friends.append(str(row["username"]))
 
+        # todo: if more than 10 online friends, indicate there are more
         return {
             "data": {
                 "has_friends": True,

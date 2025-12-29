@@ -25,8 +25,8 @@ async def main():
     try:
         conn = await setup_connection()
 
-        # user_id = '31fbaa9c-a0f2-45f5-835b-aa2d80d68892'
-        test_user_id = 'df23687a-c71f-436d-b720-ea1ccd3ea977'
+        test_user_id = '31fbaa9c-a0f2-45f5-835b-aa2d80d68892'
+        # test_user_id = 'df23687a-c71f-436d-b720-ea1ccd3ea977'
         test_user_email = 'moates695@gmail.com'
         user_map = {
             test_user_id: generate_token(test_user_email, test_user_id, minutes=15)
@@ -211,7 +211,7 @@ async def main():
                 (user_id, is_online)
                 values
                 ($1, $2)
-                on conflict (user_id, is_online) 
+                on conflict (user_id) 
                 do update
                 set is_online = $2
                 """,
