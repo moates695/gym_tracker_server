@@ -24,9 +24,6 @@ def test_users_data_update(delete_users, create_user):
 
     for _ in range(random.randint(20,30)):
         options = {
-            "first_name": str(uuid4()),
-            "last_name": str(uuid4()),
-            "gender": random.choice(['male','female','other']),
             "height": random.randint(20,200) + random.random(),
             "weight": random.randint(20,200) + random.random(),
             "goal_status": random.choice(['bulking','cutting','maintaining']),
@@ -41,7 +38,7 @@ def test_users_data_update(delete_users, create_user):
 
         user_data.update(body)
 
-        response = client.put("/users/data/update", json=body, headers=headers)
+        response = client.post("/users/data/update", json=body, headers=headers)
         assert response.status_code == 200
 
         response = client.get("/users/data/get", headers=headers)
@@ -89,7 +86,7 @@ def test_users_data_history(delete_users, create_user):
             # assert user[key] == options[key]
             user_data_history[key].append(value)
 
-        response = client.put("/users/data/update", json=body, headers=headers)
+        response = client.post("/users/data/update", json=body, headers=headers)
         assert response.status_code == 200
 
     response = client.get("/users/data/get/history", headers=headers)
