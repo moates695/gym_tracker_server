@@ -38,6 +38,8 @@ async def online_friends(credentials: dict = Depends(verify_token)):
                 }
             }
 
+        return_count = 8
+
         rows = await conn.fetch(
             """
             select u.username
@@ -54,7 +56,24 @@ async def online_friends(credentials: dict = Depends(verify_token)):
                 from friends
                 where user1_id = $1
             )
-            limit 10
+            limit $2
+            """, credentials["user_id"], return_count
+        )
+
+        num_friends = await conn.fetchval(
+            """
+            select count(*)
+            from online_users of
+            where of.is_online = true
+            and user_id in (
+                select user1_id
+                from friends
+                where user2_id = $1
+                union
+                select user2_id
+                from friends
+                where user1_id = $1
+            )
             """, credentials["user_id"]
         )
         
@@ -62,11 +81,11 @@ async def online_friends(credentials: dict = Depends(verify_token)):
         for row in rows:
             online_friends.append(str(row["username"]))
 
-        # todo: if more than 10 online friends, indicate there are more
         return {
             "data": {
                 "has_friends": True,
-                "online_friends": online_friends
+                "online_friends": online_friends,
+                "more_online_friends": num_friends > return_count
             }
         }
 
