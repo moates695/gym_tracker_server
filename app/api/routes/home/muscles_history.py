@@ -16,7 +16,7 @@ router = APIRouter()
 security = HTTPBearer()
 
 @router.get("/muscles-history")
-async def exercise_history(credentials: dict = Depends(verify_token)):
+async def muscles_history(credentials: dict = Depends(verify_token)):
     try:
         conn = await setup_connection()
 
@@ -112,106 +112,6 @@ async def exercise_history(credentials: dict = Depends(verify_token)):
 
         return {
             "data": data
-        }
-
-    except SafeError as e:
-        raise e
-    except Exception as e:
-        print(str(e))
-        raise Exception('uncaught error')
-    finally:
-        if conn: await conn.close()
-
-@router.get("/volume-frequency")
-async def volume_frequency(credentials: dict = Depends(verify_token)):
-    try:
-        conn = await setup_connection()
-        
-        rows = await conn.fetch(
-            """
-            select w.started_at, pws.volume
-            from workouts w
-            inner join previous_workout_stats pws
-            on pws.workout_id = w.id
-            where w.user_id = $1
-            and w.started_at >= now() - interval '28 days'
-            """, credentials["user_id"]
-        )
-        
-        days_past_volume = {}
-        for history_row in rows:
-            days_past = get_days_past(history_row["started_at"])
-            if days_past == 0 or days_past > 28: continue
-            
-            if days_past not in days_past_volume.keys():
-                days_past_volume[days_past] = 0
-            days_past_volume[days_past] += history_row["volume"]
-
-        return {
-            "frequency": days_past_volume
-        }
-
-    except SafeError as e:
-        raise e
-    except Exception as e:
-        print(str(e))
-        raise Exception('uncaught error')
-    finally:
-        if conn: await conn.close()
-
-@router.get("/online-friends")
-async def online_friends(credentials: dict = Depends(verify_token)):
-    try:
-        conn = await setup_connection()
-        
-        has_friends = await conn.fetchval(
-            """
-            select exists (
-                select 1
-                from friends
-                where user1_id = $1
-                or user2_id = $1
-            )
-            """, credentials["user_id"]
-        )
-        if not has_friends:
-            return {
-                "data": {
-                    "has_friends": False,
-                    "online_friends": []
-                }
-            }
-
-        rows = await conn.fetch(
-            """
-            select u.username
-            from online_users of
-            inner join users u
-            on of.user_id = u.id
-            where of.is_online = true
-            and user_id in (
-                select user1_id
-                from friends
-                where user2_id = $1
-                union
-                select user2_id
-                from friends
-                where user1_id = $1
-            )
-            limit 10
-            """, credentials["user_id"]
-        )
-        
-        online_friends = []
-        for row in rows:
-            online_friends.append(str(row["username"]))
-
-        # todo: if more than 10 online friends, indicate there are more
-        return {
-            "data": {
-                "has_friends": True,
-                "online_friends": online_friends
-            }
         }
 
     except SafeError as e:
