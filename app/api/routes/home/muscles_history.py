@@ -62,12 +62,10 @@ async def muscles_history(credentials: dict = Depends(verify_token)):
             added_exercise_groups[span] = {}
 
         for row in rows:
-            spans = []
-            for key, delta in timespans.items():
+            spans = ["all"]
+            for key, delta in list(timespans.items())[::-1]:
+                if row["started_at"] < utc_now - delta: break
                 spans.append(key)
-                if row["started_at"] >= utc_now - delta: break
-            else:
-                spans.append("all")
 
             volume = row["reps"] * row["weight"] * row["num_sets"]
 
@@ -95,21 +93,7 @@ async def muscles_history(credentials: dict = Depends(verify_token)):
                 data[span][group]["targets"][target]["volume"] += volume
                 data[span][group]["targets"][target]["sets"] += row["num_sets"]
                 data[span][group]["targets"][target]["reps"] += row["reps"]
-    
-        # muscle_maps = await get_muscle_maps()
-        # group_to_targets = muscle_maps["group_to_targets"]
-
-        # for span, group_data in data.items():
-        #     for group, targets in group_to_targets.items():
-        #         if group not in group_data:
-        #             group_data[group] = deepcopy(empty) | {
-        #                 "targets": {}
-        #             }
-        #         for target in targets:
-        #             if target in group_data[group]["targets"]: continue
-        #             group_data[group]["targets"][target] = deepcopy(empty)
-
-
+        
         return {
             "data": data
         }

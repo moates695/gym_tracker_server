@@ -23,4 +23,3 @@ ALTER TABLE ONLY public.online_users
 
 ALTER TABLE ONLY public.online_users
     ADD CONSTRAINT online_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-

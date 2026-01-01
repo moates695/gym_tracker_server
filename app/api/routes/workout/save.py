@@ -30,7 +30,6 @@ class WorkoutSave(BaseModel):
     start_time: int #? timestamp ms
     duration: int #? ms
 
-# todo update redis with new leaderboard data
 #? bodyweight determined on the client
 @router.post("/save") 
 async def workout_save(req: WorkoutSave, credentials: dict = Depends(verify_token)):
@@ -487,27 +486,6 @@ async def update_overall_leaderboard(conn, user_id, totals, req: WorkoutSave):
             overall_zset_name(metric),
             {user_id: value}
         )
-
-    # data_map = {
-    #     "overall:volume:leaderboard": volume,
-    #     "overall:sets:leaderboard": num_sets,
-    #     "overall:reps:leaderboard": reps,
-    #     "overall:exercises:leaderboard": num_exercises,
-    #     "overall:workouts:leaderboard": num_workouts,
-    #     "overall:duration:leaderboard": duration_mins,
-    # }
-    # for key, value in data_map.items():
-    #     await r.zadd(key, {
-    #         user_id: value
-    #     })
-
-    # todo add to user specific leaderboard catagories (gender, weight, etc)
-    # todo bucket ends have no overlap i.e. 18-21, 21-24, ...
-    # gender -> 3 catagories
-    # age -> <18, 18-22, 22-26, 26-30, ..., >50
-    # weight -> <40, 40-50, 50-60, ..., >150
-    # height -> <120, 120-125, 125-130, ..., >220
-    # bodyfat -> <5, 5-10, 10-15, ..., >40
 
 async def update_exercise_leaderboards(conn, user_id, exercise: Exercise, exercise_totals):
     current = await conn.fetchrow(
