@@ -38,8 +38,6 @@ def date_to_timestamp_ms(date, aest: bool = True):
         dt = dt.replace(tzinfo=aest_tz)
     return int(dt.timestamp() * 1000)
 
-
-
 email_field = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 password_field = Field(min_length=8, max_length=36)
 name_field = Field(min_length=0, max_length=255)

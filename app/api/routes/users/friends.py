@@ -184,7 +184,7 @@ async def users_request_all(credentials: dict = Depends(verify_token)):
 
         inbound = await conn.fetch(
             """
-            select fr.requestor_id id, u.username, request_state
+            select fr.requestor_id user_id, u.username, request_state
             from friend_requests fr
             inner join users u
             on fr.requestor_id = u.id
@@ -195,7 +195,7 @@ async def users_request_all(credentials: dict = Depends(verify_token)):
 
         outbound = await conn.fetch(
             """
-            select fr.target_id id, u.username, request_state
+            select fr.target_id user_id, u.username, request_state
             from friend_requests fr
             inner join users u
             on fr.target_id = u.id
