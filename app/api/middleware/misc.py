@@ -1,5 +1,5 @@
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Literal, get_args
 from pydantic import Field
 from dotenv import load_dotenv
@@ -22,11 +22,23 @@ def random_timestamp_ms():
 def now_timestamp_ms():
     return int(datetime.now(tz=timezone.utc).timestamp() * 1000)
 
-def datetime_to_timestamp_ms(dt):
+def datetime_to_timestamp_ms(dt, aest: bool = True):
+    if aest:
+        aest_tz = timezone(timedelta(hours=10))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=aest_tz)
+        else:
+            dt = dt.astimezone(aest_tz)
     return int(dt.timestamp() * 1000)
 
-def date_to_timestamp_ms(date):
-    return int(datetime.combine(date, datetime.min.time()).timestamp() * 1000)
+def date_to_timestamp_ms(date, aest: bool = True):
+    dt = datetime.combine(date, datetime.min.time())
+    if aest:
+        aest_tz = timezone(timedelta(hours=10))
+        dt = dt.replace(tzinfo=aest_tz)
+    return int(dt.timestamp() * 1000)
+
+
 
 email_field = Field(pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 password_field = Field(min_length=8, max_length=36)
